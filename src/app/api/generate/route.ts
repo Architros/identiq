@@ -1,69 +1,82 @@
 import { NextResponse } from "next/server";
+import { orchestratePrompt } from "@/lib/ai/llm/orchestrate-prompt";
+import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
+import { isAiDevMode } from "@/lib/ai/providers";
 import { buildComposedPrompt } from "@/lib/generation/build-prompt";
-import type { BrandAsset, BrandMemory } from "@/lib/brand/types";
-
-type GenerateRequestBody = {
-  brandId: string;
-  brandMemory: BrandMemory;
-  brandAssets: BrandAsset[];
-  presets: {
-    id: string;
-    title: string;
-    defaultPrompt: string;
-    aspectRatio: string;
-  }[];
-  userPrompt: string;
-  imageAssist: boolean;
-  referenceImageCount: number;
-  settings: {
-    aspectRatio: string;
-    resolution: string;
-    quantity: number;
-  };
-};
+import { generationRequestSchema } from "@/lib/generation/generate-request-schema";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as GenerateRequestBody;
+    const json = await request.json();
+    const parsed = generationRequestSchema.safeParse(json);
 
-    if (!body.brandId || !body.brandMemory) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing brand context" },
+        { error: "Invalid request body" },
         { status: 400 },
       );
     }
 
-    if (body.presets.length === 0 && !body.userPrompt?.trim()) {
+    const body = parsed.data;
+
+    if (body.presets.length === 0 && !body.userPrompt.trim()) {
       return NextResponse.json(
         { error: "Select a preset or enter a prompt" },
         { status: 400 },
       );
     }
 
-    const composedPrompt = buildComposedPrompt({
+    const basePrompt = buildComposedPrompt({
       brandMemory: body.brandMemory,
-      brandAssets: body.brandAssets ?? [],
-      presets: body.presets ?? [],
-      userPrompt: body.userPrompt ?? "",
-      imageAssist: body.imageAssist ?? false,
+      brandAssets: body.brandAssets,
+      presets: body.presets,
+      userPrompt: body.userPrompt,
+      imageAssist: body.imageAssist,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    let finalPrompt = basePrompt;
+    try {
+      finalPrompt = await orchestratePrompt({
+        basePrompt,
+        brandMemory: body.brandMemory,
+        brandAssets: body.brandAssets,
+        presets: body.presets,
+        userPrompt: body.userPrompt,
+        imageAssist: body.imageAssist,
+      });
+    } catch (llmError) {
+      console.warn(
+        "[generate] LLM orchestration failed, using base prompt:",
+        llmError,
+      );
+    }
+
+    const { images, modelId } = await generateBrandImage({
+      prompt: finalPrompt,
+      settings: body.settings,
+    });
 
     const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
 
     return NextResponse.json({
       jobId,
-      status: "queued",
-      message: "Generation stub — connect GPT Image API next",
-      composedPrompt,
-      referenceImageCount: body.referenceImageCount ?? 0,
+      status: "completed",
+      message: `Generated ${images.length} image${images.length === 1 ? "" : "s"}`,
+      composedPrompt: finalPrompt,
+      basePrompt,
+      images,
+      model: modelId,
+      devMode: isAiDevMode(),
+      referenceImageCount: body.referenceImageCount,
       settings: body.settings,
     });
-  } catch {
+  } catch (error) {
+    console.error("[generate] error:", error);
+    const message =
+      error instanceof Error ? error.message : "Generation failed";
     return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 },
+      { error: message },
+      { status: 502 },
     );
   }
 }

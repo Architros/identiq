@@ -19,7 +19,7 @@ export type NavItem = {
 
 export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home01Icon },
-  { label: "Images", href: "#", icon: Image01Icon, disabled: true },
+  { label: "Images", href: "/images", icon: Image01Icon },
   { label: "Ideas", href: "/ideas", icon: BulbIcon },
 ];
 

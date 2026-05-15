@@ -3,9 +3,17 @@
 import { IdeasPageHeader } from "@/components/generation/ideas-page-header";
 import { PresetCategorySection } from "@/components/generation/preset-category-section";
 import { GenerationDock } from "@/components/generation/generation-dock";
+import { IdeasChatView } from "@/components/generation/ideas-chat-view";
 import { presetCategories } from "@/lib/generation/presets";
+import { useGeneration } from "@/contexts/generation-context";
 
 export function IdeasCanvas() {
+  const { view } = useGeneration();
+
+  if (view === "chat") {
+    return <IdeasChatView />;
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl p-6 lg:p-8">
       <div id="preset-grid" className="space-y-10 pb-8">

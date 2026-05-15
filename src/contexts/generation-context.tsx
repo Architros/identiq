@@ -5,17 +5,26 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import type { AspectRatio, GenerationPreset, Resolution } from "@/lib/generation/presets";
 import { getPresetById } from "@/lib/generation/presets";
+import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import type { ImageResultData } from "@/lib/generation/chat-message-types";
+import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
+import { useBrandAssets } from "@/contexts/brand-assets-context";
 
 const MAX_PRESETS = 5;
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+export type IdeasView = "grid" | "chat";
 
 export type ReferenceImage = {
   id: string;
@@ -23,15 +32,8 @@ export type ReferenceImage = {
   previewUrl: string;
 };
 
-export type GenerationStatus = "idle" | "loading" | "success" | "error";
-
-export type GenerationResult = {
-  jobId: string;
-  message: string;
-  composedPrompt: string;
-};
-
 type GenerationContextValue = {
+  view: IdeasView;
   selectedPresets: GenerationPreset[];
   activePresetId: string | null;
   prompt: string;
@@ -40,9 +42,10 @@ type GenerationContextValue = {
   aspectRatio: AspectRatio;
   resolution: Resolution;
   quantity: number;
-  status: GenerationStatus;
-  lastResult: GenerationResult | null;
   errorMessage: string | null;
+  messages: IdentiqUIMessage[];
+  chatStatus: "submitted" | "streaming" | "ready" | "error";
+  isGenerating: boolean;
   addPreset: (preset: GenerationPreset) => void;
   removePreset: (id: string) => void;
   setActivePreset: (id: string) => void;
@@ -54,7 +57,9 @@ type GenerationContextValue = {
   setResolution: (value: Resolution) => void;
   setQuantity: (value: number) => void;
   submitGeneration: () => Promise<void>;
-  clearResult: () => void;
+  stopGeneration: () => void;
+  closeChat: () => void;
+  clearError: () => void;
 };
 
 const GenerationContext = createContext<GenerationContextValue | null>(null);
@@ -62,6 +67,9 @@ const GenerationContext = createContext<GenerationContextValue | null>(null);
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const { brandKit, brandMemory } = useBrand();
   const { availableTokens, deductTokens } = useCredits();
+  const { registerPendingAsset } = useBrandAssets();
+
+  const [view, setView] = useState<IdeasView>("grid");
   const [selectedPresets, setSelectedPresets] = useState<GenerationPreset[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -70,28 +78,111 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [quantity, setQuantity] = useState(1);
-  const [status, setStatus] = useState<GenerationStatus>("idle");
-  const [lastResult, setLastResult] = useState<GenerationResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const addPreset = useCallback((preset: GenerationPreset) => {
-    setSelectedPresets((prev) => {
-      if (prev.some((p) => p.id === preset.id)) {
+  const pendingTokenCostRef = useRef(0);
+  const registeredJobsRef = useRef<Set<string>>(new Set());
+
+  const buildGenerationBody = useCallback((): GenerationRequestBody => {
+    return {
+      brandId: brandKit.id,
+      brandMemory,
+      brandAssets: brandKit.assets,
+      presets: selectedPresets.map((p) => ({
+        id: p.id,
+        title: p.title,
+        defaultPrompt: p.defaultPrompt,
+        aspectRatio: p.aspectRatio,
+      })),
+      userPrompt: prompt,
+      imageAssist: imageAssistEnabled,
+      referenceImageCount: referenceImages.length,
+      settings: { aspectRatio, resolution, quantity },
+    };
+  }, [
+    brandKit,
+    brandMemory,
+    selectedPresets,
+    prompt,
+    imageAssistEnabled,
+    referenceImages.length,
+    aspectRatio,
+    resolution,
+    quantity,
+  ]);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport<IdentiqUIMessage>({
+        api: "/api/ideas/generate",
+      }),
+    [],
+  );
+
+  const { messages, sendMessage, stop, status, error } =
+    useChat<IdentiqUIMessage>({
+      transport,
+      onFinish: ({ isAbort, isError }) => {
+        if (!isAbort && !isError && pendingTokenCostRef.current > 0) {
+          deductTokens(pendingTokenCostRef.current);
+          pendingTokenCostRef.current = 0;
+        }
+      },
+      onData: (dataPart) => {
+        if (dataPart.type === "data-image-result") {
+          const data = dataPart.data as ImageResultData;
+          if (registeredJobsRef.current.has(data.jobId)) return;
+          registeredJobsRef.current.add(data.jobId);
+
+          const first = data.images[0];
+          if (!first) return;
+
+          registerPendingAsset({
+            id: data.jobId,
+            brandId: brandKit.id,
+            jobId: data.jobId,
+            presetId: data.presetTitles[0]
+              ? selectedPresets.find((p) => p.title === data.presetTitles[0])?.id
+              : undefined,
+            presetTitle: data.presetTitles[0],
+            prompt: data.userPrompt,
+            composedPrompt: data.composedPrompt,
+            previewUrl: `data:${first.mediaType};base64,${first.base64}`,
+            mediaType: first.mediaType,
+            aspectRatio: data.aspectRatio,
+            model: data.model,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      },
+      onError: (err) => {
+        setErrorMessage(err.message);
+      },
+    });
+
+  const isGenerating = status === "submitted" || status === "streaming";
+
+  const addPreset = useCallback(
+    (preset: GenerationPreset) => {
+      setSelectedPresets((prev) => {
+        if (prev.some((p) => p.id === preset.id)) {
+          setActivePresetId(preset.id);
+          setAspectRatio(preset.aspectRatio);
+          setResolution(preset.suggestedResolution);
+          return prev;
+        }
+        const next = [...prev, preset].slice(-MAX_PRESETS);
         setActivePresetId(preset.id);
         setAspectRatio(preset.aspectRatio);
         setResolution(preset.suggestedResolution);
-        return prev;
-      }
-      const next = [...prev, preset].slice(-MAX_PRESETS);
-      setActivePresetId(preset.id);
-      setAspectRatio(preset.aspectRatio);
-      setResolution(preset.suggestedResolution);
-      if (!prompt.trim()) {
-        setPrompt(preset.defaultPrompt);
-      }
-      return next;
-    });
-  }, [prompt]);
+        if (!prompt.trim()) {
+          setPrompt(preset.defaultPrompt);
+        }
+        return next;
+      });
+    },
+    [prompt],
+  );
 
   const removePreset = useCallback((id: string) => {
     setSelectedPresets((prev) => {
@@ -153,75 +244,61 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     });
 
     if (tokenCost > availableTokens) {
-      setStatus("error");
       setErrorMessage("Insufficient tokens");
       return;
     }
 
-    setStatus("loading");
     setErrorMessage(null);
-    setLastResult(null);
+    pendingTokenCostRef.current = tokenCost;
+    setView("chat");
 
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandId: brandKit.id,
-          brandMemory,
-          brandAssets: brandKit.assets,
-          presets: selectedPresets.map((p) => ({
-            id: p.id,
-            title: p.title,
-            defaultPrompt: p.defaultPrompt,
-            aspectRatio: p.aspectRatio,
-          })),
-          userPrompt: prompt,
-          imageAssist: imageAssistEnabled,
-          referenceImageCount: referenceImages.length,
-          settings: { aspectRatio, resolution, quantity },
-        }),
-      });
+    const messageText =
+      prompt.trim() ||
+      selectedPresets.map((p) => p.defaultPrompt).join(" ") ||
+      "Generate on-brand assets";
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error ?? "Generation failed");
-      }
-
-      const data = await response.json();
-      setLastResult({
-        jobId: data.jobId,
-        message: data.message,
-        composedPrompt: data.composedPrompt,
-      });
-      setStatus("success");
-      deductTokens(tokenCost);
-    } catch (err) {
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
-    }
+    await sendMessage(
+      {
+        text: messageText,
+        metadata: {
+          presetTitles: selectedPresets.map((p) => p.title),
+          presetIds: selectedPresets.map((p) => p.id),
+        },
+      },
+      { body: buildGenerationBody() },
+    );
   }, [
     selectedPresets,
     prompt,
-    brandKit,
-    brandMemory,
+    quantity,
+    resolution,
     imageAssistEnabled,
     referenceImages.length,
-    aspectRatio,
-    resolution,
-    quantity,
     availableTokens,
-    deductTokens,
+    buildGenerationBody,
+    sendMessage,
   ]);
 
-  const clearResult = useCallback(() => {
-    setStatus("idle");
-    setLastResult(null);
+  const stopGeneration = useCallback(() => {
+    stop();
+    pendingTokenCostRef.current = 0;
+  }, [stop]);
+
+  const closeChat = useCallback(() => {
+    if (isGenerating) {
+      stop();
+      pendingTokenCostRef.current = 0;
+    }
+    setView("grid");
+  }, [isGenerating, stop]);
+
+  const clearError = useCallback(() => {
     setErrorMessage(null);
   }, []);
 
   const value = useMemo(
     () => ({
+      view,
       selectedPresets,
       activePresetId,
       prompt,
@@ -230,9 +307,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
-      status,
-      lastResult,
-      errorMessage,
+      errorMessage: errorMessage ?? error?.message ?? null,
+      messages,
+      chatStatus: status,
+      isGenerating,
       addPreset,
       removePreset,
       setActivePreset,
@@ -244,9 +322,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setResolution,
       setQuantity,
       submitGeneration,
-      clearResult,
+      stopGeneration,
+      closeChat,
+      clearError,
     }),
     [
+      view,
       selectedPresets,
       activePresetId,
       prompt,
@@ -255,16 +336,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
-      status,
-      lastResult,
       errorMessage,
+      error,
+      messages,
+      status,
+      isGenerating,
       addPreset,
       removePreset,
       setActivePreset,
       addReferenceImage,
       removeReferenceImage,
       submitGeneration,
-      clearResult,
+      stopGeneration,
+      closeChat,
+      clearError,
     ],
   );
 

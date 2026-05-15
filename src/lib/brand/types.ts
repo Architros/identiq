@@ -27,3 +27,19 @@ export type BrandKit = {
   memory: BrandMemory;
   assets: BrandAsset[];
 };
+
+export type GeneratedBrandAsset = {
+  id: string;
+  brandId: string;
+  jobId: string;
+  presetId?: string;
+  presetTitle?: string;
+  prompt: string;
+  composedPrompt: string;
+  previewUrl: string;
+  mediaType: string;
+  aspectRatio: string;
+  model: string;
+  createdAt: string;
+  status: "pending" | "saved" | "discarded";
+};

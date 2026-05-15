@@ -14,8 +14,9 @@ export function DockCreateButton() {
     resolution,
     imageAssistEnabled,
     referenceImages,
-    status,
+    isGenerating,
     submitGeneration,
+    stopGeneration,
   } = useGeneration();
 
   const tokenCost = calculateGenerationTokenCost({
@@ -31,8 +32,24 @@ export function DockCreateButton() {
 
   const canSubmit =
     (selectedPresets.length > 0 || prompt.trim().length > 0) &&
-    status !== "loading" &&
+    !isGenerating &&
     !insufficient;
+
+  if (isGenerating) {
+    return (
+      <button
+        type="button"
+        onClick={() => stopGeneration()}
+        className={cn(
+          "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold transition-colors",
+          "border border-border bg-surface text-foreground hover:bg-sidebar-active",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        )}
+      >
+        Stop
+      </button>
+    );
+  }
 
   return (
     <button
@@ -45,7 +62,7 @@ export function DockCreateButton() {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
       )}
     >
-      {status === "loading" ? "Creating…" : "Create"}
+      Create
     </button>
   );
 }
