@@ -1,0 +1,27 @@
+"use client";
+
+import { IdeasPageHeader } from "@/components/generation/ideas-page-header";
+import { PresetCategorySection } from "@/components/generation/preset-category-section";
+import { GenerationDock } from "@/components/generation/generation-dock";
+import { presetCategories } from "@/lib/generation/presets";
+
+export function IdeasCanvas() {
+  return (
+    <div className="mx-auto w-full max-w-6xl p-6 lg:p-8">
+      <div id="preset-grid" className="space-y-10 pb-8">
+        <IdeasPageHeader />
+        {presetCategories.map((cat) => (
+          <PresetCategorySection
+            key={cat.id}
+            category={cat.id}
+            label={cat.label}
+          />
+        ))}
+      </div>
+
+      <div className="sticky bottom-0 z-30 -mx-2 flex justify-center px-2 pb-6 pt-20 bg-gradient-to-t from-background from-40% via-background/95 to-transparent">
+        <GenerationDock />
+      </div>
+    </div>
+  );
+}
