@@ -19,6 +19,7 @@ import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
 import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
+import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
 
 const MAX_PRESETS = 5;
 const MAX_REFERENCE_IMAGES = 4;
@@ -67,7 +68,7 @@ const GenerationContext = createContext<GenerationContextValue | null>(null);
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const { brandKit, brandMemory } = useBrand();
   const { availableTokens, deductTokens } = useCredits();
-  const { registerPendingAsset } = useBrandAssets();
+  const { registerPendingAsset, addBrandReference } = useBrandAssets();
 
   const [view, setView] = useState<IdeasView>("grid");
   const [selectedPresets, setSelectedPresets] = useState<GenerationPreset[]>([]);
@@ -137,17 +138,23 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           const first = data.images[0];
           if (!first) return;
 
+          const preset = data.presetTitles[0]
+            ? selectedPresets.find((p) => p.title === data.presetTitles[0])
+            : undefined;
           registerPendingAsset({
             id: data.jobId,
             brandId: brandKit.id,
             jobId: data.jobId,
-            presetId: data.presetTitles[0]
-              ? selectedPresets.find((p) => p.title === data.presetTitles[0])?.id
-              : undefined,
+            source: "ideas",
+            category: preset?.category === "social" ? "social" : "advertising",
+            catalogId: preset?.id,
+            presetId: preset?.id,
             presetTitle: data.presetTitles[0],
             prompt: data.userPrompt,
             composedPrompt: data.composedPrompt,
-            previewUrl: `data:${first.mediaType};base64,${first.base64}`,
+            previewUrl:
+              first.url ??
+              `data:${first.mediaType};base64,${first.base64 ?? ""}`,
             mediaType: first.mediaType,
             aspectRatio: data.aspectRatio,
             model: data.model,
@@ -203,25 +210,58 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setResolution(preset.suggestedResolution);
   }, []);
 
-  const addReferenceImage = useCallback((files: FileList | File[]) => {
-    const fileArray = Array.from(files);
-    setReferenceImages((prev) => {
-      const remaining = MAX_REFERENCE_IMAGES - prev.length;
-      if (remaining <= 0) return prev;
+  const addReferenceImage = useCallback(
+    (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      setReferenceImages((prev) => {
+        const remaining = MAX_REFERENCE_IMAGES - prev.length;
+        if (remaining <= 0) return prev;
 
-      const valid = fileArray
-        .filter((f) => ACCEPTED_TYPES.includes(f.type))
-        .slice(0, remaining);
+        const valid = fileArray
+          .filter((f) => ACCEPTED_TYPES.includes(f.type))
+          .slice(0, remaining);
 
-      const added = valid.map((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-      }));
+        const added = valid.map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          previewUrl: URL.createObjectURL(file),
+        }));
 
-      return [...prev, ...added];
-    });
-  }, []);
+        void (async () => {
+          for (const entry of added) {
+            try {
+              const uploaded = await uploadBrandReferenceToStorage({
+                file: entry.file,
+                brandId: brandKit.id,
+                referenceId: entry.id,
+              });
+              addBrandReference({
+                id: entry.id,
+                brandId: brandKit.id,
+                name: entry.file.name,
+                type: entry.file.type,
+                url: uploaded.url,
+                source: "ideas",
+                createdAt: new Date().toISOString(),
+              });
+              setReferenceImages((current) =>
+                current.map((img) =>
+                  img.id === entry.id
+                    ? { ...img, previewUrl: uploaded.url }
+                    : img,
+                ),
+              );
+            } catch {
+              // Keep local blob preview if upload fails
+            }
+          }
+        })();
+
+        return [...prev, ...added];
+      });
+    },
+    [addBrandReference, brandKit.id],
+  );
 
   const removeReferenceImage = useCallback((id: string) => {
     setReferenceImages((prev) => {

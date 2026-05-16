@@ -1,14 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { AspectRatio } from "@/lib/generation/presets";
-
-const aspectClass: Record<AspectRatio, string> = {
-  "1:1": "aspect-square max-w-sm",
-  "9:16": "aspect-[9/16] max-w-[220px]",
-  "16:9": "aspect-video max-w-xl",
-  "4:5": "aspect-[4/5] max-w-[280px]",
-};
+import {
+  aspectRatioClass,
+  parseAspectRatio,
+} from "@/lib/generation/aspect-ratio-styles";
 
 function formatImageModelLabel(modelId?: string): string {
   if (!modelId) return "GPT Image 2";
@@ -28,9 +24,7 @@ export function ImageSkeletonGrid({
   quantity,
   imageModel,
 }: ImageSkeletonGridProps) {
-  const ratio = (aspectRatio in aspectClass
-    ? aspectRatio
-    : "16:9") as AspectRatio;
+  const ratio = parseAspectRatio(aspectRatio);
   const count = Math.max(1, Math.min(quantity, 4));
 
   return (
@@ -44,7 +38,7 @@ export function ImageSkeletonGrid({
             key={i}
             className={cn(
               "w-full animate-pulse overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active",
-              aspectClass[ratio],
+              aspectRatioClass[ratio],
             )}
           />
         ))}

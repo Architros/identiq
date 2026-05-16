@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -36,12 +37,13 @@ const DEFAULT_BRAND_ID = "brand_bkreative";
 
 export function BrandProvider({ children }: { children: React.ReactNode }) {
   const [activeBrandId, setActiveBrandId] = useState(DEFAULT_BRAND_ID);
-  const [userKits, setUserKits] = useState<Record<string, BrandKit>>(() =>
-    loadUserBrandKits(),
-  );
-  const [userSummaries, setUserSummaries] = useState<BrandSummary[]>(() =>
-    loadUserBrandSummaries(),
-  );
+  const [userKits, setUserKits] = useState<Record<string, BrandKit>>({});
+  const [userSummaries, setUserSummaries] = useState<BrandSummary[]>([]);
+
+  useEffect(() => {
+    setUserKits(loadUserBrandKits());
+    setUserSummaries(loadUserBrandSummaries());
+  }, []);
 
   const resolveKit = useCallback(
     (id: string): BrandKit | undefined => {

@@ -10,11 +10,7 @@ import {
 import { generationPresets } from "@/lib/generation/presets";
 import { STARTER_PACK_PER_ASSET_TOKEN_COST } from "@/lib/brand/starter-pack";
 
-const CATEGORY_LABELS: Record<AssetCatalogCategory, string> = {
-  logo: "Logo marks",
-  social: "Social media",
-  advertising: "Advertising",
-};
+import { ASSET_CATEGORY_LABELS } from "@/lib/brand/asset-category-labels";
 
 type ReviewBrandAssetsProps = {
   assetSelections: Record<string, number>;
@@ -57,7 +53,7 @@ export function ReviewBrandAssets({ assetSelections }: ReviewBrandAssetsProps) {
         return (
           <section key={category} className="space-y-2">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {CATEGORY_LABELS[category]}
+              {ASSET_CATEGORY_LABELS[category]}
             </h4>
             <ul className="space-y-2">
               {items.map(({ item, qty }) => {

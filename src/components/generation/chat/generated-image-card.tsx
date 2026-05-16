@@ -5,14 +5,10 @@ import Image from "next/image";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
 import { cn } from "@/lib/utils";
-import type { AspectRatio } from "@/lib/generation/presets";
-
-const aspectClass: Record<AspectRatio, string> = {
-  "1:1": "aspect-square max-w-sm",
-  "9:16": "aspect-[9/16] max-w-[220px]",
-  "16:9": "aspect-video max-w-xl",
-  "4:5": "aspect-[4/5] max-w-[280px]",
-};
+import {
+  aspectRatioClass,
+  parseAspectRatio,
+} from "@/lib/generation/aspect-ratio-styles";
 
 type GeneratedImageCardProps = {
   data: ImageResultData;
@@ -24,10 +20,13 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
   const first = data.images[0];
   if (!first || hidden) return null;
 
-  const previewUrl = `data:${first.mediaType};base64,${first.base64}`;
-  const ratio = (data.aspectRatio in aspectClass
-    ? data.aspectRatio
-    : "16:9") as AspectRatio;
+  const previewUrl =
+    first.url ??
+    (first.base64
+      ? `data:${first.mediaType};base64,${first.base64}`
+      : "");
+  if (!previewUrl) return null;
+  const ratio = parseAspectRatio(data.aspectRatio);
   const isSaved = savedAssets.some((a) => a.jobId === data.jobId);
 
   return (
@@ -35,7 +34,7 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
       <div
         className={cn(
           "relative w-full overflow-hidden rounded-xl border border-border/80 bg-surface shadow-sm",
-          aspectClass[ratio],
+          aspectRatioClass[ratio],
         )}
       >
         <Image

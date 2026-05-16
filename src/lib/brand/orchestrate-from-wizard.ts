@@ -37,6 +37,9 @@ ${
       input.attachmentNames?.length
         ? `Reference files: ${input.attachmentNames.join(", ")}`
         : "",
+      input.attachmentUrls?.length
+        ? `Reference image URLs (brand inspiration): ${input.attachmentUrls.join(", ")}`
+        : "",
       input.colors.accent
         ? `Accent color (use in visual_language guidance): ${input.colors.accent}`
         : "",

@@ -16,8 +16,10 @@ export type GenerationStatusData = {
 };
 
 export type StreamImageResult = {
-  base64: string;
+  base64?: string;
   mediaType: string;
+  url?: string;
+  storageKey?: string;
 };
 
 export type ImageResultData = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Delete02Icon,
@@ -11,52 +11,86 @@ import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_MAX_BYTES,
-  ATTACHMENT_MAX_FILES,
   getAttachmentKind,
 } from "@/lib/brand/attachment-utils";
+import {
+  attachmentDisplayUrl,
+  uploadReferenceToStorage,
+} from "@/lib/storage/upload-client";
 
 type ReviewReferencesGridProps = {
+  draftId: string;
   attachments: BrandAttachment[];
   onChange: (attachments: BrandAttachment[]) => void;
 };
 
 export function ReviewReferencesGrid({
+  draftId,
   attachments,
   onChange,
 }: ReviewReferencesGridProps) {
   const replaceInputRef = useRef<HTMLInputElement>(null);
-  const replaceIndexRef = useRef<number | null>(null);
+  const replaceIdRef = useRef<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const remove = (id: string) => {
     const item = attachments.find((a) => a.id === id);
-    if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    if (item?.previewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
     onChange(attachments.filter((a) => a.id !== id));
   };
 
-  const triggerReplace = (index: number) => {
-    replaceIndexRef.current = index;
+  const triggerReplace = (id: string) => {
+    replaceIdRef.current = id;
     replaceInputRef.current?.click();
   };
 
-  const handleReplaceFile = (file: File | undefined) => {
-    const index = replaceIndexRef.current;
-    if (index === null || !file || file.size > ATTACHMENT_MAX_BYTES) return;
+  const handleReplaceFile = async (file: File | undefined) => {
+    const replaceId = replaceIdRef.current;
+    if (!replaceId || !file || file.size > ATTACHMENT_MAX_BYTES) return;
 
-    const prev = attachments[index];
-    if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+    const prev = attachments.find((a) => a.id === replaceId);
+    if (prev?.previewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(prev.previewUrl);
+    }
 
-    const isImage = file.type.startsWith("image/");
-    const previewUrl = isImage ? URL.createObjectURL(file) : undefined;
-    const next = [...attachments];
-    next[index] = {
-      id: prev?.id ?? `att_${crypto.randomUUID().slice(0, 8)}`,
+    const placeholder: BrandAttachment = {
+      id: replaceId,
       name: file.name,
       type: file.type,
       size: file.size,
-      previewUrl,
+      uploading: true,
     };
-    onChange(next);
-    replaceIndexRef.current = null;
+    onChange(
+      attachments.map((a) => (a.id === replaceId ? placeholder : a)),
+    );
+
+    try {
+      const uploaded = await uploadReferenceToStorage({
+        file,
+        draftId,
+        attachmentId: replaceId,
+      });
+      const stored: BrandAttachment = {
+        id: uploaded.id,
+        name: uploaded.name,
+        type: uploaded.type,
+        size: uploaded.size,
+        url: uploaded.url,
+        storageKey: uploaded.storageKey,
+        previewUrl: uploaded.previewUrl ?? uploaded.url,
+      };
+      onChange(
+        attachments.map((a) => (a.id === replaceId ? stored : a)),
+      );
+      setError(null);
+    } catch (err) {
+      onChange(attachments.map((a) => (a.id === replaceId ? prev! : a)));
+      setError(err instanceof Error ? err.message : "Replace failed");
+    }
+
+    replaceIdRef.current = null;
   };
 
   if (attachments.length === 0) {
@@ -71,22 +105,32 @@ export function ReviewReferencesGrid({
         accept={ATTACHMENT_ACCEPT}
         className="hidden"
         onChange={(e) => {
-          handleReplaceFile(e.target.files?.[0]);
+          void handleReplaceFile(e.target.files?.[0]);
           e.target.value = "";
         }}
       />
+      {error ? (
+        <p className="mb-2 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {attachments.map((file, index) => {
+        {attachments.map((file) => {
           const kind = getAttachmentKind(file);
+          const thumb = attachmentDisplayUrl(file);
           return (
             <div
               key={file.id}
               className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-sidebar-active"
             >
-              {kind === "image" && file.previewUrl ? (
+              {file.uploading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted">
+                  …
+                </div>
+              ) : kind === "image" && thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={file.previewUrl}
+                  src={thumb}
                   alt=""
                   className="h-full w-full object-cover"
                 />
@@ -105,34 +149,36 @@ export function ReviewReferencesGrid({
                 </div>
               )}
 
-              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-foreground/50 opacity-0 transition-opacity group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={() => triggerReplace(index)}
-                  className="cursor-pointer rounded-lg bg-surface p-2 text-foreground shadow-sm hover:bg-sidebar-active"
-                  aria-label="Replace file"
-                >
-                  <HugeiconsIcon
-                    icon={Upload04Icon}
-                    size={16}
-                    color="currentColor"
-                    strokeWidth={1.75}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remove(file.id)}
-                  className="cursor-pointer rounded-lg bg-surface p-2 text-red-600 shadow-sm hover:bg-red-50"
-                  aria-label="Remove file"
-                >
-                  <HugeiconsIcon
-                    icon={Delete02Icon}
-                    size={16}
-                    color="currentColor"
-                    strokeWidth={1.75}
-                  />
-                </button>
-              </div>
+              {!file.uploading ? (
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-foreground/50 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => triggerReplace(file.id)}
+                    className="cursor-pointer rounded-lg bg-surface p-2 text-foreground shadow-sm hover:bg-sidebar-active"
+                    aria-label="Replace file"
+                  >
+                    <HugeiconsIcon
+                      icon={Upload04Icon}
+                      size={16}
+                      color="currentColor"
+                      strokeWidth={1.75}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(file.id)}
+                    className="cursor-pointer rounded-lg bg-surface p-2 text-red-600 shadow-sm hover:bg-red-50"
+                    aria-label="Remove file"
+                  >
+                    <HugeiconsIcon
+                      icon={Delete02Icon}
+                      size={16}
+                      color="currentColor"
+                      strokeWidth={1.75}
+                    />
+                  </button>
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -140,5 +186,3 @@ export function ReviewReferencesGrid({
     </>
   );
 }
-
-export { ATTACHMENT_MAX_FILES };

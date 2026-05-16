@@ -32,10 +32,12 @@ function readStoredTokens(): number {
 }
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const [availableTokens, setAvailableTokens] = useState(() =>
-    typeof window === "undefined" ? mockCredits : readStoredTokens(),
-  );
+  const [availableTokens, setAvailableTokens] = useState(mockCredits);
   const [buyTokensOpen, setBuyTokensOpen] = useState(false);
+
+  useEffect(() => {
+    setAvailableTokens(readStoredTokens());
+  }, []);
 
   useEffect(() => {
     sessionStorage.setItem(CREDITS_STORAGE_KEY, String(availableTokens));

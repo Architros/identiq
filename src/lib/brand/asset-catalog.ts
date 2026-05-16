@@ -15,28 +15,20 @@ export type AssetCatalogItem = {
   maxQuantity: number;
 };
 
+const LEGACY_LOGO_IDS = ["primary-logo", "logo-icon"] as const;
+
 const LOGO_ITEMS: AssetCatalogItem[] = [
   {
-    id: "primary-logo",
-    title: "Primary logo",
-    description: "Main logo mark for headers, apps, and brand lockups.",
+    id: "brand-logo",
+    title: "Brand logo",
+    description:
+      "Primary logo mark for headers, apps, favicons, and brand lockups.",
     category: "logo",
     kind: "logo",
     aspectRatio: "1:1",
     prompt:
-      "Minimal primary logo mark for the brand. Flat vector-style, clear silhouette, works on light and dark backgrounds. No mockup frame.",
-    maxQuantity: 5,
-  },
-  {
-    id: "logo-icon",
-    title: "Logo icon",
-    description: "Compact icon for favicons, avatars, and small placements.",
-    category: "logo",
-    kind: "logo",
-    aspectRatio: "1:1",
-    prompt:
-      "Compact icon mark derived from the primary logo. Simple, recognizable at small sizes. Centered on subtle brand-colored background.",
-    maxQuantity: 5,
+      "Single cohesive brand logo mark. Flat vector-style, clear silhouette, works on light and dark backgrounds. Recognizable at small sizes. No mockup frame, no duplicate variants.",
+    maxQuantity: 1,
   },
 ];
 
@@ -62,12 +54,26 @@ export type ExpandedAssetJob = {
   jobKey: string;
   item: AssetCatalogItem;
   instance: number;
+  aspectRatio: AspectRatio;
 };
 
 export function getDefaultAssetSelections(): Record<string, number> {
   return Object.fromEntries(
-    ASSET_CATALOG.map((item) => [item.id, item.kind === "logo" ? 1 : 0]),
+    ASSET_CATALOG.map((item) => [
+      item.id,
+      item.id === "brand-logo" ? 1 : 0,
+    ]),
   );
+}
+
+function migrateLegacyLogoSelection(
+  selections: Record<string, number>,
+): number {
+  let total = selections["brand-logo"] ?? 0;
+  for (const legacyId of LEGACY_LOGO_IDS) {
+    total += selections[legacyId] ?? 0;
+  }
+  return Math.min(1, total);
 }
 
 export function normalizeAssetSelections(
@@ -75,7 +81,14 @@ export function normalizeAssetSelections(
 ): Record<string, number> {
   const base = getDefaultAssetSelections();
   if (!selections) return base;
+
+  const logoQty = migrateLegacyLogoSelection(selections);
+  if (logoQty > 0) {
+    base["brand-logo"] = logoQty;
+  }
+
   for (const item of ASSET_CATALOG) {
+    if (item.id === "brand-logo") continue;
     const raw = selections[item.id];
     if (typeof raw === "number" && raw >= 0) {
       base[item.id] = Math.min(Math.floor(raw), item.maxQuantity);
@@ -93,17 +106,27 @@ export function getTotalSelectedAssets(
   );
 }
 
+export function resolveJobAspectRatio(
+  item: AssetCatalogItem,
+  overrides?: Record<string, AspectRatio>,
+): AspectRatio {
+  return overrides?.[item.id] ?? item.aspectRatio;
+}
+
 export function expandAssetSelections(
   selections: Record<string, number>,
+  aspectOverrides?: Record<string, AspectRatio>,
 ): ExpandedAssetJob[] {
   const jobs: ExpandedAssetJob[] = [];
   for (const item of ASSET_CATALOG) {
     const qty = selections[item.id] ?? 0;
+    const aspectRatio = resolveJobAspectRatio(item, aspectOverrides);
     for (let instance = 0; instance < qty; instance++) {
       jobs.push({
         jobKey: `${item.id}__${instance}`,
-        item,
+        item: { ...item, aspectRatio },
         instance,
+        aspectRatio,
       });
     }
   }
@@ -111,5 +134,13 @@ export function expandAssetSelections(
 }
 
 export function getCatalogItem(id: string): AssetCatalogItem | undefined {
-  return ASSET_CATALOG_BY_ID[id];
+  if (id === "brand-logo") return ASSET_CATALOG_BY_ID["brand-logo"];
+  const legacy = LEGACY_LOGO_IDS.includes(id as (typeof LEGACY_LOGO_IDS)[number])
+    ? "brand-logo"
+    : id;
+  return ASSET_CATALOG_BY_ID[legacy];
+}
+
+export function parseCatalogIdFromJobKey(jobKey: string): string {
+  return jobKey.split("__")[0] ?? jobKey;
 }

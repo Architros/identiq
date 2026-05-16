@@ -21,8 +21,7 @@ export type StarterPackItem = {
 export const STARTER_PACK_ITEMS: StarterPackItem[] = ASSET_CATALOG.filter(
   (item) =>
     [
-      "primary-logo",
-      "logo-icon",
+      "brand-logo",
       "instagram-post",
       "instagram-story",
       "linkedin-post",

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
+import { attachmentDisplayUrl } from "@/lib/storage/upload-client";
 
 type AttachmentPreviewModalProps = {
   attachment: BrandAttachment | null;
@@ -27,6 +28,7 @@ export function AttachmentPreviewModal({
 
   const isImage = attachment.type.startsWith("image/");
   const isPdf = attachment.type === "application/pdf";
+  const imageUrl = attachmentDisplayUrl(attachment);
 
   return (
     <div
@@ -61,10 +63,10 @@ export function AttachmentPreviewModal({
           </button>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-background p-4">
-          {isImage && attachment.previewUrl ? (
+          {isImage && imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={attachment.previewUrl}
+              src={imageUrl}
               alt={attachment.name}
               className="max-h-[70vh] max-w-full rounded-lg object-contain"
             />

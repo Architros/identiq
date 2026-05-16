@@ -7,6 +7,18 @@ export const ATTACHMENT_ACCEPT =
 
 export type AttachmentKind = "image" | "pdf" | "text" | "other";
 
+/** Human-readable file size (e.g. `1.2 MB`, `840 KB`). */
+export function formatAttachmentSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) {
+    return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
+  }
+  const mb = kb / 1024;
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+}
+
 export function getAttachmentKind(attachment: BrandAttachment): AttachmentKind {
   const type = attachment.type.toLowerCase();
   const name = attachment.name.toLowerCase();

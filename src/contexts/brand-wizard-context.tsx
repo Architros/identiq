@@ -40,6 +40,7 @@ type BrandWizardContextValue = {
   validateStep: (step: number, draftOverride?: BrandProjectDraft) => string | null;
   saveAndExit: () => void;
   startGenerating: () => void;
+  cancelGenerating: () => void;
   toOrchestrateInput: () => WizardOrchestrateInput;
   resetWizard: () => void;
 };
@@ -81,8 +82,13 @@ export function validateWizardStep(
       if (!draft.colors.primary) return "Primary color is required";
       return null;
     case 4:
-    case 5:
+    case 5: {
+      const uploading = draft.attachments.some((a) => a.uploading);
+      if (uploading) return "Wait for reference uploads to finish";
+      const failed = draft.attachments.some((a) => a.uploadError);
+      if (failed) return "Remove or re-upload failed reference files";
       return null;
+    }
     case 6: {
       const total = getTotalSelectedAssets(draft.assetSelections);
       if (total === 0) return "Select at least one asset to generate";
@@ -204,6 +210,9 @@ export function BrandWizardProvider({
       audience: draft.audience.trim() || undefined,
       styleNotes: draft.styleNotes.trim() || undefined,
       attachmentNames: draft.attachments.map((a) => a.name),
+      attachmentUrls: draft.attachments
+        .map((a) => a.url)
+        .filter((url): url is string => Boolean(url)),
       typography: draft.typography.hasCustomFont
         ? {
             hasCustomFont: true,
@@ -218,12 +227,18 @@ export function BrandWizardProvider({
           }
         : { hasCustomFont: false },
       assetSelections: draft.assetSelections,
+      assetAspectOverrides: draft.assetAspectOverrides,
     };
   }, [draft]);
 
   const startGenerating = useCallback(() => {
     updateDraft({ status: "generating", step: WIZARD_STEP_COUNT - 1 });
     setView("generating");
+  }, [updateDraft]);
+
+  const cancelGenerating = useCallback(() => {
+    updateDraft({ status: "draft", step: WIZARD_STEP_COUNT - 1 });
+    setView("steps");
   }, [updateDraft]);
 
   const resetWizard = useCallback(() => {
@@ -246,6 +261,7 @@ export function BrandWizardProvider({
       validateStep,
       saveAndExit,
       startGenerating,
+      cancelGenerating,
       toOrchestrateInput,
       resetWizard,
     }),
@@ -262,6 +278,7 @@ export function BrandWizardProvider({
       validateStep,
       saveAndExit,
       startGenerating,
+      cancelGenerating,
       toOrchestrateInput,
       resetWizard,
     ],

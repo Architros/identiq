@@ -34,3 +34,70 @@ body {
 .font-display {
   font-family: var(--font-display), Georgia, "Times New Roman", serif;
 }
+
+@keyframes attachment-fluid-fill {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scaleY(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes attachment-fluid-surface {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6%);
+  }
+}
+
+.attachment-fluid-fill {
+  animation: attachment-fluid-fill 1.8s ease-in-out infinite;
+}
+
+.attachment-fluid-surface {
+  animation: attachment-fluid-surface 1.35s ease-in-out infinite;
+}
+
+@keyframes generation-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.generation-shimmer {
+  animation: generation-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes generation-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.generation-spinner {
+  animation: generation-spinner 0.8s linear infinite;
+}
+
+@keyframes generation-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(196, 109, 253, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(196, 109, 253, 0.25);
+  }
+}
+
+.generation-panel-active {
+  animation: generation-glow 2s ease-in-out infinite;
+}

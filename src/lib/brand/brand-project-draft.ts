@@ -1,4 +1,5 @@
 import { getDefaultAssetSelections } from "@/lib/brand/asset-catalog";
+import type { AspectRatio } from "@/lib/generation/presets";
 
 export type BrandSector =
   | "technology"
@@ -27,7 +28,16 @@ export type BrandAttachment = {
   name: string;
   type: string;
   size: number;
+  /** Persistent public URL (Cloudflare R2) */
+  url?: string;
+  storageKey?: string;
+  /** Local blob URL for in-session preview before upload completes */
   previewUrl?: string;
+  /** True while uploading to R2 */
+  uploading?: boolean;
+  /** 0–100 upload progress */
+  uploadProgress?: number;
+  uploadError?: string;
 };
 
 export type BrandTypography = {
@@ -69,6 +79,8 @@ export type BrandProjectDraft = {
   attachments: BrandAttachment[];
   /** itemId → quantity (0 = skip) */
   assetSelections: Record<string, number>;
+  /** Optional per-catalog aspect ratio overrides */
+  assetAspectOverrides?: Record<string, AspectRatio>;
   status: "draft" | "generating" | "completed";
   updatedAt: string;
 };

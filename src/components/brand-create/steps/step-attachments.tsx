@@ -12,6 +12,7 @@ export function StepAttachments() {
         Add logos, inspiration images, or brand docs for context.
       </p>
       <AttachmentDropzone
+        draftId={draft.id}
         attachments={draft.attachments}
         onChange={(attachments) => updateDraft({ attachments })}
       />

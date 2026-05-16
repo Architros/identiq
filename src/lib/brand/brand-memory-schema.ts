@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const aspectRatioSchema = z.enum(["1:1", "9:16", "16:9", "4:5"]);
+
 export const brandMemorySchema = z.object({
   brand_style: z.string(),
   primary_color: z.string(),
@@ -17,6 +19,8 @@ export const wizardTypographySchema = z.object({
   fontNotes: z.string().optional(),
 });
 
+export type WizardTypography = z.infer<typeof wizardTypographySchema>;
+
 export const wizardOrchestrateInputSchema = z.object({
   name: z.string().min(1),
   domain: z.string().optional(),
@@ -32,8 +36,10 @@ export const wizardOrchestrateInputSchema = z.object({
   audience: z.string().optional(),
   styleNotes: z.string().optional(),
   attachmentNames: z.array(z.string()).optional(),
+  attachmentUrls: z.array(z.string().url()).optional(),
   typography: wizardTypographySchema.optional(),
   assetSelections: z.record(z.string(), z.number().int().min(0)).optional(),
+  assetAspectOverrides: z.record(z.string(), aspectRatioSchema).optional(),
 });
 
 export type WizardOrchestrateInput = z.infer<typeof wizardOrchestrateInputSchema>;

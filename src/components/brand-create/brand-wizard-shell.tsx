@@ -82,6 +82,7 @@ export function BrandWizardShell() {
   const displayError =
     errorAtStep === draft.step && stepError ? stepError : null;
   const isReview = draft.step === WIZARD_STEP_COUNT - 1;
+  const attachmentsUploading = draft.attachments.some((a) => a.uploading);
 
   const goToStep = (index: number) => {
     setErrorAtStep(null);
@@ -216,7 +217,9 @@ export function BrandWizardShell() {
                   variant="primary"
                   size="md"
                   onClick={handleFinish}
-                  disabled={!isReady || totalAssets === 0}
+                  disabled={
+                    !isReady || totalAssets === 0 || attachmentsUploading
+                  }
                 >
                   Finish & generate
                 </Button>
@@ -225,7 +228,7 @@ export function BrandWizardShell() {
                   variant="primary"
                   size="md"
                   onClick={handleNext}
-                  disabled={!isReady}
+                  disabled={!isReady || attachmentsUploading}
                 >
                   Next
                 </Button>

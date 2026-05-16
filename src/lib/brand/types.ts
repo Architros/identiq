@@ -1,3 +1,5 @@
+import type { AssetCatalogCategory } from "@/lib/brand/asset-catalog";
+
 export type BrandMemory = {
   brand_style: string;
   primary_color: string;
@@ -20,17 +22,32 @@ export type BrandAsset = {
   label: string;
 };
 
+export type BrandReferenceSource = "wizard" | "ideas";
+
+export type BrandReference = {
+  id: string;
+  brandId: string;
+  name: string;
+  type: string;
+  url: string;
+  source: BrandReferenceSource;
+  createdAt: string;
+};
+
 export type BrandKit = {
   id: string;
   domain: string;
   displayName: string;
   memory: BrandMemory;
   assets: BrandAsset[];
+  references?: BrandReference[];
   description?: string;
   tagline?: string;
   sector?: string;
   feelings?: string[];
 };
+
+export type GeneratedAssetSource = "starter-pack" | "ideas";
 
 export type GeneratedBrandAsset = {
   id: string;
@@ -46,4 +63,7 @@ export type GeneratedBrandAsset = {
   model: string;
   createdAt: string;
   status: "pending" | "saved" | "discarded";
+  source?: GeneratedAssetSource;
+  category?: AssetCatalogCategory;
+  catalogId?: string;
 };

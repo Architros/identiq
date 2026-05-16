@@ -10,6 +10,8 @@ import { streamOrchestratePrompt } from "@/lib/ai/llm/stream-orchestrate-prompt"
 import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
 import { mapGenerationSettings } from "@/lib/ai/image/map-generation-settings";
 import { getActiveImageModelId } from "@/lib/ai/providers";
+import { isR2Configured } from "@/lib/storage/r2-config";
+import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
 
 export const maxDuration = 120;
 
@@ -176,12 +178,33 @@ export async function POST(request: Request) {
 
         const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
 
+        const storedImages = await Promise.all(
+          images.map(async (img, index) => {
+            if (!isR2Configured()) {
+              return { base64: img.base64, mediaType: img.mediaType };
+            }
+            const id =
+              images.length > 1 ? `${jobId}_${index}` : jobId;
+            const uploaded = await uploadIdeasGeneratedImage({
+              brandId: gen.brandId,
+              jobId: id,
+              base64: img.base64,
+              mediaType: img.mediaType,
+            });
+            return {
+              mediaType: img.mediaType,
+              url: uploaded.url,
+              storageKey: uploaded.key,
+            };
+          }),
+        );
+
         writer.write({
           type: "data-image-result",
           id: jobId,
           data: {
             jobId,
-            images,
+            images: storedImages,
             model: modelId,
             composedPrompt: finalPrompt,
             userPrompt: gen.userPrompt,

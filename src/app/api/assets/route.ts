@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isR2Configured } from "@/lib/storage/r2-config";
 
 const saveAssetSchema = z.object({
   brandId: z.string().min(1),
@@ -10,10 +11,12 @@ const saveAssetSchema = z.object({
   mediaType: z.string(),
   aspectRatio: z.string(),
   model: z.string(),
+  url: z.string().url().optional(),
+  storageKey: z.string().optional(),
 });
 
 /**
- * Stub API for future R2 persistence. Client stores preview in localStorage for now.
+ * Records asset metadata after images are persisted to R2 during generation streams.
  */
 export async function POST(request: Request) {
   try {
@@ -23,7 +26,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: body.jobId,
       status: "saved",
-      message: "Asset recorded (local preview until storage is connected)",
+      storage: isR2Configured() ? "r2" : "local",
+      url: body.url,
+      storageKey: body.storageKey,
     });
   } catch {
     return NextResponse.json({ error: "Invalid asset payload" }, { status: 400 });

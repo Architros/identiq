@@ -14,6 +14,14 @@ export function referenceObjectKey(
   return `drafts/${draftId}/references/${attachmentId}-${sanitizeFilename(filename)}`;
 }
 
+export function brandReferenceObjectKey(
+  brandId: string,
+  referenceId: string,
+  filename: string,
+): string {
+  return `brands/${brandId}/references/${referenceId}-${sanitizeFilename(filename)}`;
+}
+
 export function brandGeneratedImageKey(
   brandId: string,
   jobKey: string,

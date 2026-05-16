@@ -108,6 +108,7 @@ export function StepReview({ showFinishError = false }: StepReviewProps) {
         onEdit={() => editFromReview(5)}
       >
         <ReviewReferencesGrid
+          draftId={draft.id}
           attachments={draft.attachments}
           onChange={(attachments) => updateDraft({ attachments })}
         />

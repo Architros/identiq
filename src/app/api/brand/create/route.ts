@@ -2,20 +2,38 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
-import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { orchestrateBrandMemoryFromWizard } from "@/lib/brand/orchestrate-from-wizard";
-import { buildStarterItemPrompt } from "@/lib/brand/build-starter-prompt";
 import {
   expandAssetSelections,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
-import { catalogItemToStarterItem } from "@/lib/brand/starter-pack";
 import { wizardOrchestrateInputSchema } from "@/lib/brand/brand-memory-schema";
 import type { BrandMemory } from "@/lib/brand/types";
-import type { AspectRatio } from "@/lib/generation/presets";
+import {
+  planStarterPackPrompts,
+  plannedJobsByKey,
+} from "@/lib/brand/plan-starter-pack-prompts";
+import { sortStarterPackJobs } from "@/lib/brand/sort-starter-pack-jobs";
+import {
+  runStarterPackJobsPool,
+  type LogoUrlRef,
+  type StarterPackStreamWriter,
+} from "@/lib/brand/run-starter-pack-job";
+import type { AssetProgressData } from "@/lib/brand/create-stream-types";
 
 export const maxDuration = 300;
+
+/** ~15 assets at 3 concurrent ≈ 5 waves; increase via background jobs if catalog grows. */
+const ASSET_GENERATION_CONCURRENCY = 3;
+
+function jobTitle(
+  job: { item: { title: string }; instance: number },
+): string {
+  return job.instance > 0
+    ? `${job.item.title} (${job.instance + 1})`
+    : job.item.title;
+}
 
 export async function POST(request: Request) {
   let json: unknown;
@@ -36,7 +54,12 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
   const selections = normalizeAssetSelections(input.assetSelections);
-  const jobs = expandAssetSelections(selections);
+  const jobs = sortStarterPackJobs(
+    expandAssetSelections(selections, input.assetAspectOverrides),
+  );
+  const attachmentNames = input.attachmentNames ?? [];
+  const attachmentUrls = input.attachmentUrls ?? [];
+  const logoUrlRef: LogoUrlRef = {};
 
   if (jobs.length === 0) {
     return new Response(
@@ -96,6 +119,43 @@ export async function POST(request: Request) {
       if (abortSignal.aborted) return;
 
       writer.write({
+        type: "data-brand-memory",
+        id: "brand-memory",
+        data: {
+          memory,
+          displayName: input.name,
+          colors: input.colors,
+          typography: input.typography,
+        },
+      });
+
+      writer.write({
+        type: "data-create-status",
+        id: statusId,
+        data: {
+          phase: "planning",
+          message: "Planning your asset pack…",
+        },
+      });
+
+      const plan = await planStarterPackPrompts(
+        input,
+        memory,
+        jobs,
+        abortSignal,
+      );
+      const plannedByKey = plannedJobsByKey(plan);
+
+      if (abortSignal.aborted) {
+        writer.write({
+          type: "data-create-status",
+          id: statusId,
+          data: { phase: "stopped" },
+        });
+        return;
+      }
+
+      writer.write({
         type: "data-create-status",
         id: statusId,
         data: {
@@ -105,90 +165,61 @@ export async function POST(request: Request) {
       });
 
       for (let index = 0; index < jobs.length; index++) {
-        if (abortSignal.aborted) {
-          writer.write({
-            type: "data-create-status",
-            id: statusId,
-            data: { phase: "stopped" },
-          });
-          return;
-        }
-
-        const job = jobs[index];
-        const starterItem = catalogItemToStarterItem(job.item);
-        const title =
-          job.instance > 0
-            ? `${job.item.title} (${job.instance + 1})`
-            : job.item.title;
-
+        const job = jobs[index]!;
+        const planned = plannedByKey.get(job.jobKey);
+        const progress: AssetProgressData = {
+          index,
+          itemId: job.jobKey,
+          catalogId: job.item.id,
+          title: jobTitle(job),
+          variantLabel: planned?.variantLabel,
+          aspectRatio: job.aspectRatio,
+          category: job.item.category,
+          status: "queued",
+        };
         writer.write({
           type: "data-asset-progress",
           id: `asset-${job.jobKey}`,
-          data: {
-            index,
-            itemId: job.jobKey,
-            title,
-            status: "generating",
-          },
+          data: progress,
         });
+      }
 
-        try {
-          const prompt = buildStarterItemPrompt(starterItem, memory, input);
-          const { images } = await generateBrandImage({
-            prompt,
-            settings: {
-              aspectRatio: job.item.aspectRatio as AspectRatio,
-              resolution: "1K",
-              quantity: 1,
-            },
-            abortSignal,
+      const streamWriter: StarterPackStreamWriter = {
+        writeProgress: (data) => {
+          writer.write({
+            type: "data-asset-progress",
+            id: `asset-${data.itemId}`,
+            data,
           });
-
-          const first = images[0];
-          if (!first) {
-            throw new Error("No image returned");
-          }
-
+        },
+        writeComplete: (data) => {
           writer.write({
             type: "data-asset-complete",
-            id: `asset-done-${job.jobKey}`,
-            data: {
-              index,
-              itemId: job.jobKey,
-              title,
-              base64: first.base64,
-              mediaType: first.mediaType,
-              aspectRatio: job.item.aspectRatio,
-            },
+            id: `asset-done-${data.itemId}`,
+            data,
           });
+        },
+      };
 
-          writer.write({
-            type: "data-asset-progress",
-            id: `asset-${job.jobKey}`,
-            data: {
-              index,
-              itemId: job.jobKey,
-              title,
-              status: "complete",
-            },
-          });
-        } catch (itemError) {
-          const message =
-            itemError instanceof Error
-              ? itemError.message
-              : "Generation failed";
-          writer.write({
-            type: "data-asset-progress",
-            id: `asset-${job.jobKey}`,
-            data: {
-              index,
-              itemId: job.jobKey,
-              title,
-              status: "error",
-              errorMessage: message,
-            },
-          });
-        }
+      await runStarterPackJobsPool({
+        jobs,
+        plannedByKey,
+        brandId,
+        writer: streamWriter,
+        abortSignal,
+        concurrency: ASSET_GENERATION_CONCURRENCY,
+        attachmentNames,
+        attachmentUrls,
+        logoUrlRef,
+      });
+
+      if (abortSignal.aborted) {
+        writer.write({
+          type: "data-create-status",
+          id: statusId,
+          data: { phase: "stopped" },
+        });
+        return;
       }
 
       writer.write({

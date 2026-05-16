@@ -274,3 +274,6 @@ Use this checklist when reviewing or supporting the feature:
 ## What This Document Does Not Cover
 
 This document intentionally excludes code structure, private service details, generation provider specifics, exact instruction text sent to the image system, storage internals, route-level details, database details, and operational secrets. It is a product and operations guide, not an engineering implementation reference.
+
+
+

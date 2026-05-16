@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useBrandWizard } from "@/contexts/brand-wizard-context";
 import {
   ASSET_CATALOG,
+  resolveJobAspectRatio,
   type AssetCatalogCategory,
 } from "@/lib/brand/asset-catalog";
 import {
@@ -12,13 +13,16 @@ import {
   calculateStarterPackTokenCost,
 } from "@/lib/brand/starter-pack";
 import { useCredits } from "@/contexts/credits-context";
+import type { AspectRatio } from "@/lib/generation/presets";
 import { cn } from "@/lib/utils";
+import { ASSET_CATEGORY_LABELS } from "@/lib/brand/asset-category-labels";
 
-const CATEGORY_LABELS: Record<AssetCatalogCategory, string> = {
-  logo: "Logo marks",
-  social: "Social media",
-  advertising: "Advertising",
-};
+const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
+  { value: "1:1", label: "1:1" },
+  { value: "4:5", label: "4:5" },
+  { value: "9:16", label: "9:16" },
+  { value: "16:9", label: "16:9" },
+];
 
 export function StepAssets() {
   const { draft, updateDraft } = useBrandWizard();
@@ -46,6 +50,15 @@ export function StepAssets() {
       assetSelections: {
         ...draft.assetSelections,
         [itemId]: qty,
+      },
+    });
+  };
+
+  const setAspectOverride = (itemId: string, aspectRatio: AspectRatio) => {
+    updateDraft({
+      assetAspectOverrides: {
+        ...draft.assetAspectOverrides,
+        [itemId]: aspectRatio,
       },
     });
   };
@@ -82,12 +95,16 @@ export function StepAssets() {
         return (
           <section key={category} className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">
-              {CATEGORY_LABELS[category]}
+              {ASSET_CATEGORY_LABELS[category]}
             </h3>
             <ul className="space-y-2">
               {items.map((item) => {
                 const qty = draft.assetSelections[item.id] ?? 0;
                 const lineCost = qty * STARTER_PACK_PER_ASSET_TOKEN_COST;
+                const effectiveAspect = resolveJobAspectRatio(
+                  item,
+                  draft.assetAspectOverrides,
+                );
                 return (
                   <li
                     key={item.id}
@@ -105,12 +122,35 @@ export function StepAssets() {
                         </p>
                         <p className="text-xs text-muted">{item.description}</p>
                         <p className="mt-1 text-[11px] text-muted">
-                          {item.aspectRatio} · {STARTER_PACK_PER_ASSET_TOKEN_COST}{" "}
-                          tokens each
+                          Default {item.aspectRatio} ·{" "}
+                          {STARTER_PACK_PER_ASSET_TOKEN_COST} tokens each
                           {qty > 0 ? ` · ${lineCost} tokens` : ""}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {qty > 0 ? (
+                          <label className="flex items-center gap-2 text-xs text-muted">
+                            <span className="sr-only">
+                              Aspect ratio for {item.title}
+                            </span>
+                            <select
+                              value={effectiveAspect}
+                              onChange={(e) =>
+                                setAspectOverride(
+                                  item.id,
+                                  e.target.value as AspectRatio,
+                                )
+                              }
+                              className="h-9 rounded-lg border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+                            >
+                              {ASPECT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
                         <button
                           type="button"
                           aria-label={`Decrease ${item.title}`}
