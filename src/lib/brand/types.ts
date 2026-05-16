@@ -26,6 +26,10 @@ export type BrandKit = {
   displayName: string;
   memory: BrandMemory;
   assets: BrandAsset[];
+  description?: string;
+  tagline?: string;
+  sector?: string;
+  feelings?: string[];
 };
 
 export type GeneratedBrandAsset = {

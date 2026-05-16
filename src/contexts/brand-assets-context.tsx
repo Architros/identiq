@@ -34,6 +34,10 @@ type BrandAssetsContextValue = {
   savedAssets: GeneratedBrandAsset[];
   pendingAssets: GeneratedBrandAsset[];
   registerPendingAsset: (asset: Omit<GeneratedBrandAsset, "status">) => void;
+  saveAssetsForBrand: (
+    brandId: string,
+    assets: Omit<GeneratedBrandAsset, "status">[],
+  ) => void;
   approveAsset: (id: string) => void;
   discardAsset: (id: string) => void;
 };
@@ -92,6 +96,28 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
     [updateBrand],
   );
 
+  const saveAssetsForBrand = useCallback(
+    (
+      brandId: string,
+      assets: Omit<GeneratedBrandAsset, "status">[],
+    ) => {
+      setAllByBrand((prev) => {
+        const current = prev[brandId] ?? [];
+        const saved = assets.map((a) => ({
+          ...a,
+          status: "saved" as const,
+        }));
+        const next = {
+          ...prev,
+          [brandId]: [...saved, ...current],
+        };
+        saveToStorage(next);
+        return next;
+      });
+    },
+    [],
+  );
+
   const approveAsset = useCallback(
     (id: string) => {
       updateBrand((prev) =>
@@ -113,6 +139,7 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
       savedAssets,
       pendingAssets,
       registerPendingAsset,
+      saveAssetsForBrand,
       approveAsset,
       discardAsset,
     }),
@@ -120,6 +147,7 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
       savedAssets,
       pendingAssets,
       registerPendingAsset,
+      saveAssetsForBrand,
       approveAsset,
       discardAsset,
     ],

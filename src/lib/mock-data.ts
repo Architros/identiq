@@ -10,4 +10,5 @@ export const mockBrand = {
   logoLetter: "B",
 };
 
-export const mockCredits = 6;
+/** High balance for local testing of multi-asset brand creation */
+export const mockCredits = 500;

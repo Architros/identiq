@@ -1,3 +1,6 @@
+"use client";
+
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserAdd01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { BrandSelector } from "@/components/layout/brand-selector";
@@ -22,7 +25,10 @@ export function AppTopbar() {
           Invite Team
         </Button>
 
-        <Button variant="primary" size="sm">
+        <Link
+          href="/new-brand"
+          className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-button)] bg-foreground px-3 text-sm font-medium text-surface hover:bg-foreground/90"
+        >
           <HugeiconsIcon
             icon={Add01Icon}
             size={16}
@@ -30,7 +36,7 @@ export function AppTopbar() {
             strokeWidth={1.75}
           />
           New Brand
-        </Button>
+        </Link>
       </div>
     </header>
   );

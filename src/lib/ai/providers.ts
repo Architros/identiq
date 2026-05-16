@@ -1,3 +1,4 @@
+import "server-only";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { env } from "@/lib/env";
 

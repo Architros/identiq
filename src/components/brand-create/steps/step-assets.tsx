@@ -1,0 +1,165 @@
+"use client";
+
+import { useMemo } from "react";
+import { useBrandWizard } from "@/contexts/brand-wizard-context";
+import {
+  ASSET_CATALOG,
+  type AssetCatalogCategory,
+} from "@/lib/brand/asset-catalog";
+import {
+  ORCHESTRATION_TOKEN_COST,
+  STARTER_PACK_PER_ASSET_TOKEN_COST,
+  calculateStarterPackTokenCost,
+} from "@/lib/brand/starter-pack";
+import { useCredits } from "@/contexts/credits-context";
+import { cn } from "@/lib/utils";
+
+const CATEGORY_LABELS: Record<AssetCatalogCategory, string> = {
+  logo: "Logo marks",
+  social: "Social media",
+  advertising: "Advertising",
+};
+
+export function StepAssets() {
+  const { draft, updateDraft } = useBrandWizard();
+  const { availableTokens } = useCredits();
+
+  const totalCost = useMemo(
+    () => calculateStarterPackTokenCost(draft.assetSelections),
+    [draft.assetSelections],
+  );
+
+  const totalAssets = useMemo(
+    () =>
+      Object.values(draft.assetSelections).reduce(
+        (n, q) => n + (q > 0 ? q : 0),
+        0,
+      ),
+    [draft.assetSelections],
+  );
+
+  const setQuantity = (itemId: string, quantity: number) => {
+    const item = ASSET_CATALOG.find((a) => a.id === itemId);
+    if (!item) return;
+    const qty = Math.max(0, Math.min(item.maxQuantity, Math.floor(quantity)));
+    updateDraft({
+      assetSelections: {
+        ...draft.assetSelections,
+        [itemId]: qty,
+      },
+    });
+  };
+
+  const byCategory = useMemo(() => {
+    const groups: Record<AssetCatalogCategory, typeof ASSET_CATALOG> = {
+      logo: [],
+      social: [],
+      advertising: [],
+    };
+    for (const item of ASSET_CATALOG) {
+      groups[item.category].push(item);
+    }
+    return groups;
+  }, []);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="text-sm text-muted">
+          Choose what to generate and how many of each. You pay per image from
+          your token balance — mix and match freely.
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          {availableTokens} tokens available · {totalAssets} asset
+          {totalAssets === 1 ? "" : "s"} selected · {totalCost} tokens to be
+          consumed
+        </p>
+      </div>
+
+      {(Object.keys(byCategory) as AssetCatalogCategory[]).map((category) => {
+        const items = byCategory[category];
+        if (items.length === 0) return null;
+        return (
+          <section key={category} className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">
+              {CATEGORY_LABELS[category]}
+            </h3>
+            <ul className="space-y-2">
+              {items.map((item) => {
+                const qty = draft.assetSelections[item.id] ?? 0;
+                const lineCost = qty * STARTER_PACK_PER_ASSET_TOKEN_COST;
+                return (
+                  <li
+                    key={item.id}
+                    className={cn(
+                      "rounded-2xl border p-4 transition-colors",
+                      qty > 0
+                        ? "border-accent/30 bg-accent/[0.04]"
+                        : "border-border bg-surface",
+                    )}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-muted">{item.description}</p>
+                        <p className="mt-1 text-[11px] text-muted">
+                          {item.aspectRatio} · {STARTER_PACK_PER_ASSET_TOKEN_COST}{" "}
+                          tokens each
+                          {qty > 0 ? ` · ${lineCost} tokens` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Decrease ${item.title}`}
+                          disabled={qty <= 0}
+                          onClick={() => setQuantity(item.id, qty - 1)}
+                          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-background text-lg font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.maxQuantity}
+                          value={qty}
+                          onChange={(e) =>
+                            setQuantity(
+                              item.id,
+                              parseInt(e.target.value, 10) || 0,
+                            )
+                          }
+                          className="h-9 w-14 rounded-lg border border-border bg-background text-center text-sm tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Increase ${item.title}`}
+                          disabled={qty >= item.maxQuantity}
+                          onClick={() => setQuantity(item.id, qty + 1)}
+                          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-background text-lg font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
+
+      <div className="rounded-2xl border border-border bg-sidebar-active/40 p-4 text-sm text-muted">
+        <p>
+          <span className="font-medium text-foreground">Estimate: </span>
+          {ORCHESTRATION_TOKEN_COST} tokens (brand system) + {totalAssets} ×{" "}
+          {STARTER_PACK_PER_ASSET_TOKEN_COST} tokens (assets) ={" "}
+          <span className="font-medium text-foreground">{totalCost} total</span>
+        </p>
+      </div>
+    </div>
+  );
+}

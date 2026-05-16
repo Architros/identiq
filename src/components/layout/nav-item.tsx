@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { NavItem as NavItemConfig } from "@/lib/navigation";
+import { useBrand } from "@/components/providers/brand-provider";
 
 type NavItemProps = {
   item: NavItemConfig;
@@ -13,7 +14,15 @@ type NavItemProps = {
 
 export function NavItem({ item }: NavItemProps) {
   const pathname = usePathname();
-  const isActive = !item.disabled && pathname === item.href;
+  const { activeBrandId } = useBrand();
+  const href =
+    item.href === "/brands/current"
+      ? `/brands/${activeBrandId}`
+      : item.href;
+  const isActive =
+    !item.disabled &&
+    (pathname === href ||
+      (href.startsWith("/brands/") && pathname.startsWith("/brands/")));
 
   const content = (
     <>
@@ -45,7 +54,7 @@ export function NavItem({ item }: NavItemProps) {
 
   return (
     <Link
-      href={item.href}
+      href={href}
       className={className}
       aria-current={isActive ? "page" : undefined}
     >

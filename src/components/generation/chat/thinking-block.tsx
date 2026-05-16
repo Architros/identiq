@@ -34,7 +34,7 @@ export function ThinkingBlock({
         startRef.current = Date.now();
       }
       wasStreamingRef.current = true;
-      setExpanded(true);
+      requestAnimationFrame(() => setExpanded(true));
 
       const tick = window.setInterval(() => {
         if (startRef.current !== null) {
@@ -54,7 +54,7 @@ export function ThinkingBlock({
       );
       setElapsedSec(finalSec);
       startRef.current = null;
-      setExpanded(false);
+      requestAnimationFrame(() => setExpanded(false));
     }
   }, [isStreaming]);
 

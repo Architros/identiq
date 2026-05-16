@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -16,6 +17,7 @@ type BrandSwitcherPanelProps = {
 };
 
 export function BrandSwitcherPanel({ onClose }: BrandSwitcherPanelProps) {
+  const router = useRouter();
   const { brands, activeBrandId, setActiveBrand } = useBrand();
   const [query, setQuery] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
@@ -73,7 +75,10 @@ export function BrandSwitcherPanel({ onClose }: BrandSwitcherPanelProps) {
           <p className="px-2 py-1.5 text-xs font-medium text-muted">Actions</p>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              onClose();
+              router.push("/new-brand");
+            }}
             className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-sidebar-active"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-active text-muted">

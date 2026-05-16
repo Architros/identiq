@@ -25,7 +25,12 @@ export const primaryNav: NavItem[] = [
 
 export const secondaryNav: NavItem[] = [
   { label: "Uploads", href: "#", icon: Upload01Icon, disabled: true },
-  { label: "Brand Details", href: "#", icon: PaintBoardIcon, disabled: true },
+  {
+    label: "Brand Details",
+    href: "/brands/current",
+    icon: PaintBoardIcon,
+    disabled: false,
+  },
 ];
 
 export const bottomNav: NavItem[] = [

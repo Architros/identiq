@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -30,9 +31,8 @@ function loadEnv() {
   });
 
   if (!parsed.success) {
-    throw new Error(
-      `Invalid environment variables: ${parsed.error.flatten().fieldErrors}`,
-    );
+    const details = JSON.stringify(parsed.error.flatten().fieldErrors);
+    throw new Error(`Invalid environment variables: ${details}`);
   }
 
   const data = parsed.data;
