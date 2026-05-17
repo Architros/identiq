@@ -6,6 +6,8 @@ export const aspectRatioClass: Record<AspectRatio, string> = {
   "9:16": "aspect-[9/16] max-w-[220px]",
   "16:9": "aspect-video max-w-xl",
   "4:5": "aspect-[4/5] max-w-[280px]",
+  "2:3": "aspect-[2/3] max-w-[240px]",
+  "21:9": "aspect-[21/9] max-w-full",
 };
 
 /** Aspect ratio box for brand generation panels (fills grid cell up to max width). */
@@ -14,6 +16,8 @@ export const aspectRatioPanelBoxClass: Record<AspectRatio, string> = {
   "9:16": "aspect-[9/16] w-full max-w-[min(100%,168px)]",
   "16:9": "aspect-video w-full max-w-full",
   "4:5": "aspect-[4/5] w-full max-w-[min(100%,220px)]",
+  "2:3": "aspect-[2/3] w-full max-w-[min(100%,200px)]",
+  "21:9": "aspect-[21/9] w-full max-w-full",
 };
 
 /** Larger tiles for live generation view (borderless). */
@@ -22,6 +26,8 @@ export const aspectRatioGenerationClass: Record<AspectRatio, string> = {
   "9:16": "aspect-[9/16] w-full max-w-[min(100%,220px)]",
   "16:9": "aspect-video w-full max-w-full",
   "4:5": "aspect-[4/5] w-full max-w-[min(100%,280px)]",
+  "2:3": "aspect-[2/3] w-full max-w-[min(100%,260px)]",
+  "21:9": "aspect-[21/9] w-full max-w-full",
 };
 
 /** Max width per ratio on the Images library (height follows aspect-ratio). */
@@ -30,6 +36,8 @@ export const aspectRatioGalleryMaxWidthClass: Record<AspectRatio, string> = {
   "9:16": "w-full max-w-[min(100%,240px)]",
   "16:9": "w-full max-w-full",
   "4:5": "w-full max-w-[min(100%,300px)]",
+  "2:3": "w-full max-w-[min(100%,280px)]",
+  "21:9": "w-full max-w-full",
 };
 
 /** @deprecated Use aspectRatioPanelBoxClass */
@@ -41,6 +49,8 @@ export const aspectRatioGalleryClass: Record<AspectRatio, string> = {
   "9:16": "aspect-[9/16] w-full",
   "16:9": "aspect-video w-full",
   "4:5": "aspect-[4/5] w-full",
+  "2:3": "aspect-[2/3] w-full",
+  "21:9": "aspect-[21/9] w-full",
 };
 
 export function parseAspectRatio(value: string): AspectRatio {
@@ -57,6 +67,8 @@ export function aspectRatioCSSValue(ratio: AspectRatio): string {
     "9:16": "9 / 16",
     "16:9": "16 / 9",
     "4:5": "4 / 5",
+    "2:3": "2 / 3",
+    "21:9": "21 / 9",
   };
   return map[ratio];
 }
@@ -79,6 +91,8 @@ export function galleryImageDimensions(ratio: AspectRatio): {
     "9:16": 220,
     "16:9": 960,
     "4:5": 300,
+    "2:3": 280,
+    "21:9": 960,
   };
   const width = widthByRatio[ratio];
   const [w, h] = ratio.split(":").map(Number) as [number, number];
@@ -98,7 +112,7 @@ export function subgroupGridClass(
   items: { aspectRatio: string }[],
 ): string {
   const ratios = items.map((i) => parseAspectRatio(i.aspectRatio));
-  if (ratios.some((r) => r === "16:9")) {
+  if (ratios.some((r) => r === "16:9" || r === "21:9")) {
     return "grid grid-cols-1 gap-6";
   }
   if (ratios.some((r) => r === "9:16")) {

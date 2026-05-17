@@ -139,18 +139,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           const first = data.images[0];
           if (!first) return;
 
-          const preset = data.presetTitles[0]
-            ? selectedPresets.find((p) => p.title === data.presetTitles[0])
-            : undefined;
+          const preset = data.presetId
+            ? getPresetById(data.presetId)
+            : data.presetTitles[0]
+              ? selectedPresets.find((p) => p.title === data.presetTitles[0])
+              : undefined;
           registerPendingAsset({
             id: data.jobId,
             brandId: brandKit.id,
             jobId: data.jobId,
             source: "ideas",
             category: preset?.category === "social" ? "social" : "advertising",
-            catalogId: preset?.id,
-            presetId: preset?.id,
-            presetTitle: data.presetTitles[0],
+            catalogId: preset?.id ?? data.presetId,
+            presetId: preset?.id ?? data.presetId,
+            presetTitle: data.presetTitle ?? data.presetTitles[0],
             prompt: data.userPrompt,
             composedPrompt: data.composedPrompt,
             previewUrl:

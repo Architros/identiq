@@ -1,5 +1,9 @@
 import type { BrandMemory, BrandReference } from "@/lib/brand/types";
 import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
+import {
+  buildVisualInspirationSection,
+  resolveFeelingLabels,
+} from "@/lib/brand/visual-inspiration";
 
 /** Shared brand context for planners and image models. */
 export type BrandPromptContext = {
@@ -141,7 +145,7 @@ export function buildBrandIdentitySection(brand: BrandPromptContext): string {
     brand.tagline ? `Tagline: ${brand.tagline}` : "",
     brand.sector ? `Sector / industry: ${brand.sector}` : "",
     brand.feelings?.length
-      ? `Brand personality: ${brand.feelings.join(", ")}`
+      ? `Brand personality: ${resolveFeelingLabels(brand.feelings).join(", ")}`
       : "",
     brand.description ? `What they do: ${brand.description}` : "",
     brand.audience ? `Target audience: ${brand.audience}` : "",
@@ -247,6 +251,13 @@ export function assembleImageGenerationPrompt(
     sections.push(buildUploadedLogoBrief(input.logoUrl));
   } else if (input.references?.urls.length) {
     sections.push(buildReferenceGuidanceSection(input.references));
+  } else {
+    const visualInspiration = buildVisualInspirationSection({
+      feelingIds: input.brand.feelings ?? [],
+      sector: input.brand.sector,
+      hasReferenceImages: false,
+    });
+    if (visualInspiration) sections.push(visualInspiration);
   }
 
   if (input.logoUrl && !input.isLogoAsset && !input.useUploadedLogoAsSource) {
@@ -305,6 +316,13 @@ export function assembleIdeasGenerationPrompt(input: {
         names: input.referenceImageUrls.map((_, i) => `Reference ${i + 1}`),
       }),
     );
+  } else {
+    const visualInspiration = buildVisualInspirationSection({
+      feelingIds: input.brand.feelings ?? [],
+      sector: input.brand.sector,
+      hasReferenceImages: false,
+    });
+    if (visualInspiration) sections.push(visualInspiration);
   }
 
   sections.push(buildOutputConstraintsSection({ brand: input.brand, creativeBrief: "", assetTitle: "Image" }));

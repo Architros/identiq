@@ -13,15 +13,35 @@ import { generationRequestSchema } from "@/lib/generation/generate-request-schem
 import { buildComposedPrompt } from "@/lib/generation/build-prompt";
 import { streamOrchestratePrompt } from "@/lib/ai/llm/stream-orchestrate-prompt";
 import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
-import { mapGenerationSettings } from "@/lib/ai/image/map-generation-settings";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { isR2Configured } from "@/lib/storage/r2-config";
 import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
 import { getBrandForUser } from "@/lib/db/repositories/brands";
 import { listReferencesForBrand } from "@/lib/db/repositories/assets";
 import { collectBrandReferenceImageUrls } from "@/lib/brand/prompt-structure";
+import type { AspectRatio } from "@/lib/generation/presets";
 
 export const maxDuration = 120;
+
+type PresetGenerationRun = {
+  presetId?: string;
+  presetTitle?: string;
+  aspectRatio: AspectRatio;
+};
+
+function buildGenerationRuns(
+  presets: { id: string; title: string; aspectRatio: string }[],
+  fallbackAspectRatio: AspectRatio,
+): PresetGenerationRun[] {
+  if (presets.length === 0) {
+    return [{ aspectRatio: fallbackAspectRatio }];
+  }
+  return presets.map((p) => ({
+    presetId: p.id,
+    presetTitle: p.title,
+    aspectRatio: p.aspectRatio as AspectRatio,
+  }));
+}
 
 export async function POST(request: Request) {
   const auth = await requireApiUserResponse("brand:generate");
@@ -91,9 +111,13 @@ export async function POST(request: Request) {
   const messages = body.messages ?? [];
   const abortSignal = request.signal;
   const generationId = generateId();
+  const runs = buildGenerationRuns(
+    gen.presets,
+    gen.settings.aspectRatio as AspectRatio,
+  );
 
   const tokenCost = calculateGenerationTokenCost({
-    presetCount: gen.presets.length,
+    presetCount: runs.length,
     hasPrompt: Boolean(gen.userPrompt.trim()),
     quantity: gen.settings.quantity,
     resolution: gen.settings.resolution,
@@ -133,6 +157,7 @@ export async function POST(request: Request) {
         referenceImageUrls,
         description: kit?.description,
         sector: kit?.sector,
+        feelings: kit?.feelings,
       });
 
       let finalPrompt = basePrompt;
@@ -196,26 +221,95 @@ export async function POST(request: Request) {
         return;
       }
 
-      const mapped = mapGenerationSettings(gen.settings);
-
-      writer.write({
-        type: "data-generation-status",
-        id: statusId,
-        data: {
-          phase: "generating-image",
-          aspectRatio: mapped.aspectRatio,
-          quantity: mapped.quantity,
-          imageModel: getActiveImageModelId(),
-        },
-      });
-
       try {
-        const { images, modelId } = await generateBrandImage({
-          prompt: finalPrompt,
-          settings: gen.settings,
-          referenceImageUrls,
-          abortSignal,
-        });
+        for (const run of runs) {
+          if (abortSignal.aborted) break;
+
+          writer.write({
+            type: "data-generation-status",
+            id: statusId,
+            data: {
+              phase: "generating-image",
+              aspectRatio: run.aspectRatio,
+              quantity: gen.settings.quantity,
+              imageModel: getActiveImageModelId(),
+              presetId: run.presetId,
+              presetTitle: run.presetTitle,
+            },
+          });
+
+          const { images, modelId, output } = await generateBrandImage({
+            prompt: finalPrompt,
+            settings: {
+              aspectRatio: run.aspectRatio,
+              resolution: gen.settings.resolution,
+              quantity: gen.settings.quantity,
+              presetId: run.presetId,
+            },
+            referenceImageUrls,
+            abortSignal,
+          });
+
+          if (abortSignal.aborted) break;
+
+          const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
+
+          const storedImages = await Promise.all(
+            images.map(async (img, index) => {
+              if (!isR2Configured()) {
+                return { base64: img.base64, mediaType: img.mediaType };
+              }
+              const id =
+                images.length > 1 ? `${jobId}_${index}` : jobId;
+              const uploaded = await uploadIdeasGeneratedImage({
+                brandId: gen.brandId,
+                jobId: id,
+                base64: img.base64,
+                mediaType: img.mediaType,
+              });
+              return {
+                mediaType: img.mediaType,
+                url: uploaded.url,
+                storageKey: uploaded.key,
+              };
+            }),
+          );
+
+          writer.write({
+            type: "data-generation-status",
+            id: statusId,
+            data: {
+              phase: "generating-image",
+              aspectRatio: output.aspectRatio,
+              quantity: gen.settings.quantity,
+              imageModel: modelId,
+              presetId: run.presetId,
+              presetTitle: run.presetTitle,
+              displayDimensions: output.displayDimensions,
+              size: output.size,
+            },
+          });
+
+          writer.write({
+            type: "data-image-result",
+            id: jobId,
+            data: {
+              jobId,
+              images: storedImages,
+              model: modelId,
+              composedPrompt: finalPrompt,
+              userPrompt: gen.userPrompt,
+              aspectRatio: output.aspectRatio,
+              presetId: run.presetId,
+              presetTitle: run.presetTitle,
+              presetTitles: run.presetTitle
+                ? [run.presetTitle]
+                : gen.presets.map((p) => p.title),
+              displayDimensions: output.displayDimensions,
+              size: output.size,
+            },
+          });
+        }
 
         if (abortSignal.aborted) {
           writer.write({
@@ -225,43 +319,6 @@ export async function POST(request: Request) {
           });
           return;
         }
-
-        const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
-
-        const storedImages = await Promise.all(
-          images.map(async (img, index) => {
-            if (!isR2Configured()) {
-              return { base64: img.base64, mediaType: img.mediaType };
-            }
-            const id =
-              images.length > 1 ? `${jobId}_${index}` : jobId;
-            const uploaded = await uploadIdeasGeneratedImage({
-              brandId: gen.brandId,
-              jobId: id,
-              base64: img.base64,
-              mediaType: img.mediaType,
-            });
-            return {
-              mediaType: img.mediaType,
-              url: uploaded.url,
-              storageKey: uploaded.key,
-            };
-          }),
-        );
-
-        writer.write({
-          type: "data-image-result",
-          id: jobId,
-          data: {
-            jobId,
-            images: storedImages,
-            model: modelId,
-            composedPrompt: finalPrompt,
-            userPrompt: gen.userPrompt,
-            aspectRatio: gen.settings.aspectRatio,
-            presetTitles: gen.presets.map((p) => p.title),
-          },
-        });
 
         writer.write({
           type: "data-generation-status",

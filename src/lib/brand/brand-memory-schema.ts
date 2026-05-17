@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-const aspectRatioSchema = z.enum(["1:1", "9:16", "16:9", "4:5"]);
+const aspectRatioSchema = z.enum([
+  "1:1",
+  "9:16",
+  "16:9",
+  "4:5",
+  "2:3",
+  "21:9",
+]);
 
 export const brandMemorySchema = z.object({
   brand_style: z.string(),

@@ -1,22 +1,26 @@
 import type { AspectRatio, Resolution } from "@/lib/generation/presets";
-import { isAiDevMode } from "@/lib/ai/providers";
+import { isAiDevMode, getActiveImageModelId } from "@/lib/ai/providers";
+import {
+  resolveImageOutput,
+  type ResolvedImageOutput,
+} from "@/lib/ai/image/resolve-image-output";
 
 export type GenerationSettingsInput = {
   aspectRatio: AspectRatio;
   resolution: Resolution;
   quantity: number;
+  presetId?: string;
 };
 
-export type MappedImageSettings = {
-  aspectRatio: AspectRatio;
+export type MappedImageSettings = ResolvedImageOutput & {
   quantity: number;
-  effectiveResolution: Resolution;
 };
 
 export function mapGenerationSettings(
   settings: GenerationSettingsInput,
 ): MappedImageSettings {
   const isDev = isAiDevMode();
+  const modelId = getActiveImageModelId();
 
   let effectiveResolution = settings.resolution;
   let quantity = settings.quantity;
@@ -28,9 +32,15 @@ export function mapGenerationSettings(
     }
   }
 
-  return {
+  const resolved = resolveImageOutput({
     aspectRatio: settings.aspectRatio,
+    resolution: effectiveResolution,
+    presetId: settings.presetId,
+    modelId,
+  });
+
+  return {
+    ...resolved,
     quantity,
-    effectiveResolution,
   };
 }

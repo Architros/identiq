@@ -11,6 +11,9 @@ import {
 import { useGeneration } from "@/contexts/generation-context";
 import { DockSettingsRow } from "@/components/generation/dock-settings-row";
 import { DockCreateButton } from "@/components/generation/dock-create-button";
+import { DockInspirationTags } from "@/components/generation/dock-inspiration-tags";
+import { DockPlatformHint } from "@/components/generation/dock-platform-hint";
+
 export function DockPromptArea() {
   const inputRef = useRef<HTMLInputElement>(null);
   const {
@@ -24,7 +27,10 @@ export function DockPromptArea() {
   } = useGeneration();
 
   return (
-    <div className="space-y-3 px-4 pb-4 pt-3">
+    <div className="space-y-3 pb-4 pt-3">
+      <DockInspirationTags />
+      <DockPlatformHint />
+      <div className="space-y-3 px-4">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           {referenceImages.map((img) => (
@@ -129,6 +135,7 @@ export function DockPromptArea() {
           <DockSettingsRow />
           <DockCreateButton />
         </div>
+      </div>
       </div>
     </div>
   );

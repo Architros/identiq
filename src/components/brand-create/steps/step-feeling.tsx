@@ -11,7 +11,9 @@ export function StepFeeling() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Pick up to 3 feelings that describe your brand personality.
+        Pick up to 3 feelings that describe your brand personality. If you
+        skip reference images later, these tags become the main visual
+        inspiration for generated assets.
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         {BRAND_FEELINGS.map((feeling) => {

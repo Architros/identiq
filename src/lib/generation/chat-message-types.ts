@@ -12,6 +12,10 @@ export type GenerationStatusData = {
   aspectRatio?: string;
   quantity?: number;
   imageModel?: string;
+  presetId?: string;
+  presetTitle?: string;
+  displayDimensions?: string;
+  size?: string;
   errorMessage?: string;
 };
 
@@ -29,7 +33,11 @@ export type ImageResultData = {
   composedPrompt: string;
   userPrompt: string;
   aspectRatio: string;
+  presetId?: string;
+  presetTitle?: string;
   presetTitles: string[];
+  displayDimensions?: string;
+  size?: string;
 };
 
 export type IdentiqMessageMetadata = {

@@ -21,6 +21,7 @@ export type BuildPromptInput = {
   referenceImageUrls?: string[];
   sector?: string;
   description?: string;
+  feelings?: string[];
 };
 
 export function buildComposedPrompt(input: BuildPromptInput): string {
@@ -29,6 +30,7 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     memory: input.brandMemory,
     description: input.description,
     sector: input.sector,
+    feelings: input.feelings,
   };
 
   const presetLines =

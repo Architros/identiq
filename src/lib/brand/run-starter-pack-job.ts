@@ -92,12 +92,16 @@ export async function runStarterPackJob(params: {
       refUrls.push(logoUrl);
     }
 
+    const presetId =
+      job.item.kind === "preset" ? job.item.presetId ?? job.item.id : undefined;
+
     const { images } = await generateBrandImage({
       prompt,
       settings: {
         aspectRatio: job.aspectRatio as AspectRatio,
         resolution: "1K",
         quantity: 1,
+        presetId,
       },
       abortSignal,
       referenceImageUrls: refUrls,

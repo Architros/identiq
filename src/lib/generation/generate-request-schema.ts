@@ -36,7 +36,7 @@ export const generationRequestSchema = z.object({
   imageAssist: z.boolean(),
   referenceImageCount: z.number().int().min(0),
   settings: z.object({
-    aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5"]),
+    aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "2:3", "21:9"]),
     resolution: z.enum(["1K", "2K"]),
     quantity: z.number().int().min(1).max(4),
   }),

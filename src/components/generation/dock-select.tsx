@@ -17,6 +17,7 @@ type DockSelectProps<T extends string | number> = {
   options: DockSelectOption<T>[];
   onChange: (value: T) => void;
   className?: string;
+  disabled?: boolean;
 };
 
 export function DockSelect<T extends string | number>({
@@ -25,6 +26,7 @@ export function DockSelect<T extends string | number>({
   options,
   onChange,
   className,
+  disabled = false,
 }: DockSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -58,12 +60,15 @@ export function DockSelect<T extends string | number>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        onClick={() => setOpen((prev) => !prev)}
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((prev) => !prev)}
         className={cn(
-          "flex h-8 cursor-pointer items-center gap-1 rounded-lg border px-2.5 text-xs font-medium transition-all",
+          "flex h-8 items-center gap-1 rounded-lg border px-2.5 text-xs font-medium transition-all",
           "border-border/50 bg-white/90 text-foreground shadow-sm backdrop-blur-sm",
-          "hover:border-border hover:bg-sidebar-active/80",
-          open && "border-accent/30 bg-accent/[0.04] ring-2 ring-accent/15",
+          disabled
+            ? "cursor-not-allowed opacity-60"
+            : "cursor-pointer hover:border-border hover:bg-sidebar-active/80",
+          open && !disabled && "border-accent/30 bg-accent/[0.04] ring-2 ring-accent/15",
         )}
       >
         <span className="truncate">{selected?.label ?? "—"}</span>
