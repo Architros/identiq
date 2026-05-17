@@ -17,6 +17,9 @@ import { mapGenerationSettings } from "@/lib/ai/image/map-generation-settings";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { isR2Configured } from "@/lib/storage/r2-config";
 import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
+import { getBrandForUser } from "@/lib/db/repositories/brands";
+import { listReferencesForBrand } from "@/lib/db/repositories/assets";
+import { collectBrandReferenceImageUrls } from "@/lib/brand/prompt-structure";
 
 export const maxDuration = 120;
 
@@ -49,6 +52,7 @@ export async function POST(request: Request) {
 
   const parsed = generationRequestSchema.safeParse({
     brandId: body.brandId,
+    brandDisplayName: (body as { brandDisplayName?: string }).brandDisplayName,
     brandMemory: body.brandMemory,
     brandAssets: body.brandAssets,
     presets: body.presets,
@@ -66,6 +70,16 @@ export async function POST(request: Request) {
   }
 
   const gen = parsed.data;
+
+  const kit = await getBrandForUser(user.id, gen.brandId);
+  const brandDisplayName = gen.brandDisplayName ?? kit?.displayName ?? "Brand";
+
+  const refs = await listReferencesForBrand(user.id, gen.brandId);
+  const logoUrl = kit?.assets.find((a) => a.type.startsWith("logo_"))?.url;
+  const referenceImageUrls = collectBrandReferenceImageUrls({
+    references: refs,
+    logoUrl,
+  });
 
   if (gen.presets.length === 0 && !gen.userPrompt.trim()) {
     return new Response(
@@ -110,11 +124,15 @@ export async function POST(request: Request) {
       });
 
       const basePrompt = buildComposedPrompt({
+        brandDisplayName,
         brandMemory: gen.brandMemory,
         brandAssets: gen.brandAssets,
         presets: gen.presets,
         userPrompt: gen.userPrompt,
         imageAssist: gen.imageAssist,
+        referenceImageUrls,
+        description: kit?.description,
+        sector: kit?.sector,
       });
 
       let finalPrompt = basePrompt;
@@ -127,6 +145,7 @@ export async function POST(request: Request) {
           presets: gen.presets,
           userPrompt: gen.userPrompt,
           imageAssist: gen.imageAssist,
+          referenceImageUrls,
           abortSignal,
         });
 
@@ -194,6 +213,7 @@ export async function POST(request: Request) {
         const { images, modelId } = await generateBrandImage({
           prompt: finalPrompt,
           settings: gen.settings,
+          referenceImageUrls,
           abortSignal,
         });
 

@@ -1,4 +1,5 @@
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
+import { WIZARD_STEP_COUNT } from "@/lib/brand/brand-project-draft";
 import {
   COLOR_PRESETS,
   buildFontFamilyString,
@@ -61,8 +62,28 @@ export function normalizeBrandDraft(draft: BrandProjectDraft): BrandProjectDraft
   const primary = draft.colors?.primary ?? "#C46DFD";
   const secondary = draft.colors?.secondary ?? "#111827";
 
+  const logo =
+    draft.logo && typeof draft.logo === "object"
+      ? {
+          ...draft.logo,
+          previewUrl: draft.logo.url ?? draft.logo.previewUrl,
+        }
+      : null;
+
+  const status =
+    draft.status === "generating"
+      ? "draft"
+      : draft.status;
+  const step =
+    draft.status === "generating"
+      ? Math.min(draft.step, WIZARD_STEP_COUNT - 1)
+      : draft.step;
+
   return {
     ...draft,
+    status,
+    step,
+    logo,
     typography: normalizeTypography(draft.typography),
     assetSelections: normalizeAssetSelections(
       draft.assetSelections ?? getDefaultAssetSelections(),

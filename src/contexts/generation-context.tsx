@@ -87,6 +87,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const buildGenerationBody = useCallback((): GenerationRequestBody => {
     return {
       brandId: brandKit.id,
+      brandDisplayName: brandKit.displayName,
       brandMemory,
       brandAssets: brandKit.assets,
       presets: selectedPresets.map((p) => ({

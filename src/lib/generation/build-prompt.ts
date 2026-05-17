@@ -1,4 +1,8 @@
 import type { BrandAsset, BrandMemory } from "@/lib/brand/types";
+import {
+  assembleIdeasGenerationPrompt,
+  type BrandPromptContext,
+} from "@/lib/brand/prompt-structure";
 
 export type PresetPromptInput = {
   id: string;
@@ -9,40 +13,45 @@ export type PresetPromptInput = {
 
 export type BuildPromptInput = {
   brandMemory: BrandMemory;
+  brandDisplayName: string;
   brandAssets: BrandAsset[];
   presets: PresetPromptInput[];
   userPrompt: string;
   imageAssist: boolean;
+  referenceImageUrls?: string[];
+  sector?: string;
+  description?: string;
 };
 
 export function buildComposedPrompt(input: BuildPromptInput): string {
-  const parts: string[] = [];
+  const brand: BrandPromptContext = {
+    brandName: input.brandDisplayName,
+    memory: input.brandMemory,
+    description: input.description,
+    sector: input.sector,
+  };
 
-  parts.push(
-    `Brand style: ${input.brandMemory.brand_style}.`,
-    `Primary color: ${input.brandMemory.primary_color}. Secondary: ${input.brandMemory.secondary_color}.`,
-    `Typography: ${input.brandMemory.font_pairing}.`,
-    `Visual language: ${input.brandMemory.visual_language}.`,
-    `Tone: ${input.brandMemory.tone}.`,
-  );
+  const presetLines =
+    input.presets.length > 0
+      ? input.presets.map(
+          (p) => `[${p.title} ${p.aspectRatio}] ${p.defaultPrompt}`,
+        )
+      : undefined;
 
-  if (input.imageAssist && input.brandAssets.length > 0) {
-    const assetRefs = input.brandAssets
-      .map((a) => `${a.label} (${a.type}): ${a.url}`)
-      .join("; ");
-    parts.push(`Use existing brand assets for consistency: ${assetRefs}.`);
-  }
+  const brandAssetRefs =
+    input.imageAssist && input.brandAssets.length > 0
+      ? input.brandAssets.map((a) => ({
+          label: a.label,
+          type: a.type,
+          url: a.url,
+        }))
+      : undefined;
 
-  if (input.presets.length > 0) {
-    const presetLines = input.presets
-      .map((p) => `[${p.title} ${p.aspectRatio}] ${p.defaultPrompt}`)
-      .join(" ");
-    parts.push(`Asset presets: ${presetLines}`);
-  }
-
-  if (input.userPrompt.trim()) {
-    parts.push(`User direction: ${input.userPrompt.trim()}`);
-  }
-
-  return parts.join("\n\n");
+  return assembleIdeasGenerationPrompt({
+    brand,
+    userDirection: input.userPrompt,
+    presetLines,
+    brandAssetRefs,
+    referenceImageUrls: input.referenceImageUrls,
+  });
 }

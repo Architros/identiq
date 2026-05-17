@@ -1,5 +1,6 @@
 import { generateImage } from "ai";
 import { getActiveImageModelId, getImageModel } from "@/lib/ai/providers";
+import { loadReferenceImagesFromUrls } from "@/lib/ai/image/load-reference-images";
 import type { AspectRatio } from "@/lib/generation/presets";
 import {
   mapGenerationSettings,
@@ -20,14 +21,27 @@ export async function generateBrandImage(input: {
   prompt: string;
   settings: GenerationSettingsInput;
   abortSignal?: AbortSignal;
+  referenceImageUrls?: string[];
 }): Promise<GenerateBrandImageResult> {
   const mapped = mapGenerationSettings(input.settings);
   const model = getImageModel();
   const modelId = getActiveImageModelId();
 
+  const referenceBuffers = await loadReferenceImagesFromUrls(
+    input.referenceImageUrls ?? [],
+  );
+
+  const promptPayload =
+    referenceBuffers.length > 0
+      ? ({
+          text: input.prompt,
+          images: referenceBuffers,
+        } as const)
+      : input.prompt;
+
   const { images } = await generateImage({
     model,
-    prompt: input.prompt,
+    prompt: promptPayload,
     aspectRatio: mapped.aspectRatio as AspectRatio,
     n: mapped.quantity,
     abortSignal: input.abortSignal,

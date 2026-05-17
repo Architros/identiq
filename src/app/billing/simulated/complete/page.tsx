@@ -2,12 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCredits } from "@/contexts/credits-context";
 
 function CompleteCheckout() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { refreshBalance } = useCredits();
   const sessionId = searchParams.get("session");
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +32,7 @@ function CompleteCheckout() {
           if (!cancelled) setError(data.error ?? "Checkout failed");
           return;
         }
-        await refreshBalance(data.balance);
+        // Home loads CreditsProvider and refetches balance after redirect.
         if (!cancelled) router.replace("/");
       } catch (e) {
         if (!cancelled) {
@@ -46,7 +44,7 @@ function CompleteCheckout() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, router, refreshBalance]);
+  }, [sessionId, router]);
 
   if (error) {
     return (

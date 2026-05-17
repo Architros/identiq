@@ -11,6 +11,7 @@ export type StreamOrchestratePromptInput = {
   presets: PresetPromptInput[];
   userPrompt: string;
   imageAssist: boolean;
+  referenceImageUrls?: string[];
   abortSignal?: AbortSignal;
 };
 
@@ -18,6 +19,11 @@ export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
   const assetNote =
     input.imageAssist && input.brandAssets.length > 0
       ? `Brand assets to align with: ${input.brandAssets.map((a) => a.label).join(", ")}.`
+      : "";
+
+  const referenceNote =
+    input.referenceImageUrls && input.referenceImageUrls.length > 0
+      ? `${input.referenceImageUrls.length} reference image(s) will be attached at generation. Your final prompt must explicitly require matching their palette, lighting, and composition — this is the highest priority visual constraint.`
       : "";
 
   return streamText({
@@ -28,6 +34,7 @@ export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
     prompt: [
       "Brand brief and request:",
       input.basePrompt,
+      referenceNote,
       assetNote,
       input.userPrompt.trim()
         ? `Additional user direction: ${input.userPrompt.trim()}`

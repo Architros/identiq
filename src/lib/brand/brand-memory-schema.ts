@@ -37,6 +37,7 @@ export const wizardOrchestrateInputSchema = z.object({
   styleNotes: z.string().optional(),
   attachmentNames: z.array(z.string()).optional(),
   attachmentUrls: z.array(z.string().url()).optional(),
+  logoUrl: z.string().url().optional(),
   typography: wizardTypographySchema.optional(),
   assetSelections: z.record(z.string(), z.number().int().min(0)).optional(),
   assetAspectOverrides: z.record(z.string(), aspectRatioSchema).optional(),

@@ -5,6 +5,42 @@ import {
   type WizardOrchestrateInput,
 } from "@/lib/brand/brand-memory-schema";
 import type { BrandMemory } from "@/lib/brand/types";
+import {
+  buildBrandIdentitySection,
+  brandContextFromWizard,
+  buildReferenceGuidanceSection,
+  referenceBundleFromWizard,
+} from "@/lib/brand/prompt-structure";
+
+function buildOrchestratorInputContext(input: WizardOrchestrateInput): string {
+  const brand = brandContextFromWizard(input, {
+    brand_style: "—",
+    primary_color: input.colors.primary,
+    secondary_color: input.colors.secondary,
+    font_pairing:
+      input.typography?.hasCustomFont && input.typography.fontFamily
+        ? input.typography.fontFamily
+        : "—",
+    visual_language: "—",
+    tone: input.feelings?.join(", ") || "—",
+  });
+  const references = referenceBundleFromWizard(input);
+
+  return [
+    buildBrandIdentitySection(brand),
+    references
+      ? buildReferenceGuidanceSection(references, { forPlanner: true })
+      : "",
+    input.logoUrl
+      ? `Official logo URL (identity must align with this mark): ${input.logoUrl}`
+      : "",
+    input.colors.accent
+      ? `Accent color for visual_language: ${input.colors.accent}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 export async function orchestrateBrandMemoryFromWizard(
   input: WizardOrchestrateInput,
@@ -14,38 +50,21 @@ export async function orchestrateBrandMemoryFromWizard(
     model: llmModel,
     schema: brandMemorySchema,
     abortSignal,
-    system: `You are a brand strategist for identiq. Output a cohesive brand memory JSON.
+    system: `You are a brand strategist for Identiq. Define a cohesive brand memory JSON that will drive all image generation for this company.
+
+The visual_language and brand_style fields must be actionable for an image model: describe palette usage, photography/illustration style, layout tendencies, and mood — not vague marketing copy.
+
 Hard constraints:
 - primary_color MUST be exactly ${input.colors.primary}
 - secondary_color MUST be exactly ${input.colors.secondary}
-- Reflect sector, feelings, audience, and description faithfully.
 ${
   input.typography?.hasCustomFont && input.typography.fontFamily
     ? `- font_pairing MUST use the user's custom fonts: "${input.typography.fontFamily}"${input.typography.fontNotes ? ` (${input.typography.fontNotes})` : ""}.`
     : `- font_pairing: suggest a realistic Google-font-friendly pairing as "Display + Body".`
 }
-- Keep tone and visual_language aligned with selected feelings.`,
-    prompt: [
-      `Brand name: ${input.name}`,
-      input.domain ? `Domain: ${input.domain}` : "",
-      input.tagline ? `Tagline: ${input.tagline}` : "",
-      `Sector: ${input.sector}`,
-      `Feelings: ${input.feelings.join(", ") || "balanced"}`,
-      `Description: ${input.description}`,
-      input.audience ? `Target audience: ${input.audience}` : "",
-      input.styleNotes ? `Style notes: ${input.styleNotes}` : "",
-      input.attachmentNames?.length
-        ? `Reference files: ${input.attachmentNames.join(", ")}`
-        : "",
-      input.attachmentUrls?.length
-        ? `Reference image URLs (brand inspiration): ${input.attachmentUrls.join(", ")}`
-        : "",
-      input.colors.accent
-        ? `Accent color (use in visual_language guidance): ${input.colors.accent}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("\n"),
+- If reference images are provided, visual_language MUST reflect their palette, lighting, and composition — cite specific cues.
+- If a logo URL is provided, tone and visual_language must be compatible with that mark (do not describe a conflicting identity).`,
+    prompt: buildOrchestratorInputContext(input),
   });
 
   return object;

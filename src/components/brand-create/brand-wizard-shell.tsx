@@ -36,6 +36,8 @@ export function BrandWizardShell() {
     nextStep,
     prevStep,
     saveAndExit,
+    isSaving,
+    saveError,
     validateStep,
     editFromReview,
     startGenerating,
@@ -107,6 +109,15 @@ export function BrandWizardShell() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {saveError ? (
+        <p
+          className="shrink-0 border-b border-red-200 bg-red-50 px-6 py-2 text-center text-sm text-red-700"
+          role="alert"
+        >
+          {saveError}
+        </p>
+      ) : null}
+
       <header className="z-10 shrink-0 border-b border-border bg-surface px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
@@ -119,8 +130,13 @@ export function BrandWizardShell() {
           </div>
           <div className="flex items-center gap-3">
             <WizardTokenBar />
-            <Button variant="ghost" size="sm" onClick={saveAndExit}>
-              Save & exit
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isSaving}
+              onClick={() => void saveAndExit()}
+            >
+              {isSaving ? "Saving…" : "Save & exit"}
             </Button>
             <Link
               href="/"

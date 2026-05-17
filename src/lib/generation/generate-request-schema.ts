@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const generationRequestSchema = z.object({
   brandId: z.string().min(1),
+  brandDisplayName: z.string().optional(),
   brandMemory: z.object({
     brand_style: z.string(),
     primary_color: z.string(),

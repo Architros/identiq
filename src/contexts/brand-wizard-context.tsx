@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,10 +20,16 @@ import {
 } from "@/lib/brand/brand-project-draft";
 import {
   deleteDraft,
-  getDraftById,
-  getLatestIncompleteDraft,
+  getLatestIncompleteDraftMerged,
+  getDraftByIdMerged,
   saveDraft,
+  saveDraftAndWait,
 } from "@/lib/brand/brand-storage";
+import {
+  getDraftLogoUrl,
+  getDraftReferenceImageNames,
+  getDraftReferenceImageUrls,
+} from "@/lib/brand/draft-media";
 import { normalizeBrandDraft } from "@/lib/brand/normalize-draft";
 import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
 import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
@@ -38,7 +45,9 @@ type BrandWizardContextValue = {
   prevStep: () => void;
   canGoToStep: (step: number) => boolean;
   validateStep: (step: number, draftOverride?: BrandProjectDraft) => string | null;
-  saveAndExit: () => void;
+  saveAndExit: () => Promise<void>;
+  isSaving: boolean;
+  saveError: string | null;
   startGenerating: () => void;
   cancelGenerating: () => void;
   toOrchestrateInput: () => WizardOrchestrateInput;
@@ -51,16 +60,17 @@ function touchDraft(draft: BrandProjectDraft): BrandProjectDraft {
   return { ...draft, updatedAt: new Date().toISOString() };
 }
 
-function resolveInitialDraft(draftIdParam: string | null): BrandProjectDraft {
-  let draft = createEmptyDraft();
+async function resolveInitialDraft(
+  draftIdParam: string | null,
+): Promise<BrandProjectDraft> {
   if (draftIdParam) {
-    const existing = getDraftById(draftIdParam);
-    if (existing) draft = existing;
+    const existing = await getDraftByIdMerged(draftIdParam);
+    if (existing) return normalizeBrandDraft(existing);
   } else {
-    const latest = getLatestIncompleteDraft();
-    if (latest) draft = latest;
+    const latest = await getLatestIncompleteDraftMerged();
+    if (latest) return normalizeBrandDraft(latest);
   }
-  return normalizeBrandDraft(draft);
+  return createEmptyDraft();
 }
 
 export function validateWizardStep(
@@ -114,38 +124,16 @@ export function BrandWizardProvider({
   const [isReady, setIsReady] = useState(false);
   const [view, setView] = useState<"steps" | "generating">("steps");
   const [returnToReview, setReturnToReview] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const res = await fetch("/api/drafts");
-        if (res.ok) {
-          const data = (await res.json()) as {
-            drafts: BrandProjectDraft[];
-          };
-          if (!cancelled) {
-            if (draftIdParam) {
-              const found = data.drafts.find((d) => d.id === draftIdParam);
-              if (found) {
-                setDraft(normalizeBrandDraft(found));
-                setIsReady(true);
-                return;
-              }
-            }
-            const latest = data.drafts.find((d) => d.status === "draft");
-            if (latest) {
-              setDraft(normalizeBrandDraft(latest));
-              setIsReady(true);
-              return;
-            }
-          }
-        }
-      } catch {
-        // Fall back to local drafts.
-      }
+      const initial = await resolveInitialDraft(draftIdParam);
       if (!cancelled) {
-        setDraft(resolveInitialDraft(draftIdParam));
+        setDraft(initial);
         setIsReady(true);
       }
     })();
@@ -155,8 +143,14 @@ export function BrandWizardProvider({
   }, [draftIdParam]);
 
   useEffect(() => {
-    if (!isReady || draft.status !== "draft") return;
-    saveDraft(draft);
+    if (!isReady) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveDraft(draft);
+    }, 600);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [draft, isReady]);
 
   const updateDraft = useCallback((patch: Partial<BrandProjectDraft>) => {
@@ -220,12 +214,30 @@ export function BrandWizardProvider({
     }
   }, [draft.step, updateDraft]);
 
-  const saveAndExit = useCallback(() => {
-    saveDraft({ ...draft, status: "draft" });
+  const saveAndExit = useCallback(async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    const toSave: BrandProjectDraft = {
+      ...draft,
+      status: "draft",
+      step: view === "generating" ? WIZARD_STEP_COUNT - 1 : draft.step,
+    };
+    const result = await saveDraftAndWait(toSave);
+    setIsSaving(false);
+    if (!result.ok) {
+      setSaveError(result.error ?? "Could not save draft");
+      return;
+    }
+    if (view === "generating") {
+      setView("steps");
+    }
     router.push("/");
-  }, [draft, router]);
+  }, [draft, router, view]);
 
   const toOrchestrateInput = useCallback((): WizardOrchestrateInput => {
+    const refUrls = getDraftReferenceImageUrls(draft);
+    const refNames = getDraftReferenceImageNames(draft);
+
     return {
       name: draft.name.trim(),
       domain: draft.domain.trim() || undefined,
@@ -240,8 +252,9 @@ export function BrandWizardProvider({
       },
       audience: draft.audience.trim() || undefined,
       styleNotes: draft.styleNotes.trim() || undefined,
-      attachmentNames: draft.attachments.map((a) => a.name),
-      attachmentUrls: draft.attachments
+      logoUrl: getDraftLogoUrl(draft),
+      attachmentNames: refNames.length > 0 ? refNames : draft.attachments.map((a) => a.name),
+      attachmentUrls: refUrls.length > 0 ? refUrls : draft.attachments
         .map((a) => a.url)
         .filter((url): url is string => Boolean(url)),
       typography: draft.typography.hasCustomFont
@@ -268,9 +281,11 @@ export function BrandWizardProvider({
   }, [updateDraft]);
 
   const cancelGenerating = useCallback(() => {
-    updateDraft({ status: "draft", step: WIZARD_STEP_COUNT - 1 });
+    const next = { ...draft, status: "draft" as const, step: WIZARD_STEP_COUNT - 1 };
+    setDraft(touchDraft(next));
+    saveDraft(next);
     setView("steps");
-  }, [updateDraft]);
+  }, [draft]);
 
   const resetWizard = useCallback(() => {
     deleteDraft(draft.id);
@@ -291,6 +306,8 @@ export function BrandWizardProvider({
       canGoToStep,
       validateStep,
       saveAndExit,
+      isSaving,
+      saveError,
       startGenerating,
       cancelGenerating,
       toOrchestrateInput,
@@ -308,6 +325,8 @@ export function BrandWizardProvider({
       canGoToStep,
       validateStep,
       saveAndExit,
+      isSaving,
+      saveError,
       startGenerating,
       cancelGenerating,
       toOrchestrateInput,

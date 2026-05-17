@@ -1,6 +1,7 @@
 import { AdLibraryFeature } from "@/components/home/ad-library-feature";
 import { CreateImageCard } from "@/components/home/create-image-card";
 import { ActionCardsGrid } from "@/components/home/action-cards-grid";
+import { ContinueDraftBanner } from "@/components/home/continue-draft-banner";
 
 export function HomePage() {
   return (
@@ -13,6 +14,8 @@ export function HomePage() {
           Discover what you can create with your brand
         </p>
       </header>
+
+      <ContinueDraftBanner />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AdLibraryFeature />

@@ -15,6 +15,7 @@ import { ReviewReferencesGrid } from "@/components/brand-create/review/review-re
 import { ReviewBrandAssets } from "@/components/brand-create/review/review-brand-assets";
 import { ReviewTokenSummary } from "@/components/brand-create/review/review-token-summary";
 import { summarizeAttachments } from "@/lib/brand/attachment-utils";
+import { attachmentDisplayUrl } from "@/lib/storage/upload-client";
 
 type StepReviewProps = {
   showFinishError?: boolean;
@@ -99,6 +100,22 @@ export function StepReview({ showFinishError = false }: StepReviewProps) {
           onChange={(typography) => updateDraft({ typography })}
         />
       </ReviewSection>
+
+      {draft.logo?.url || draft.logo?.previewUrl ? (
+        <ReviewSection title="Logo" onEdit={() => editFromReview(5)}>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={attachmentDisplayUrl(draft.logo) ?? draft.logo.url}
+              alt=""
+              className="h-16 w-16 rounded-lg border border-border bg-white object-contain p-1"
+            />
+            <p className="text-sm text-foreground">
+              Your uploaded logo will be used across generations.
+            </p>
+          </div>
+        </ReviewSection>
+      ) : null}
 
       <ReviewSection
         title={WIZARD_STEP_LABELS[5]}

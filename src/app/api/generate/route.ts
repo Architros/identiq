@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     }
 
     const basePrompt = buildComposedPrompt({
+      brandDisplayName: body.brandDisplayName ?? "Brand",
       brandMemory: body.brandMemory,
       brandAssets: body.brandAssets,
       presets: body.presets,

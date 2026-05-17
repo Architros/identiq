@@ -1,6 +1,7 @@
 import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
 import type { ExpandedAssetJob } from "@/lib/brand/asset-catalog";
 import { buildJobImagePrompt } from "@/lib/brand/build-job-image-prompt";
+import type { BrandPromptContext } from "@/lib/brand/prompt-structure";
 import type {
   AssetCompleteData,
   AssetProgressData,
@@ -46,11 +47,13 @@ export async function runStarterPackJob(params: {
   index: number;
   planned: PlannedStarterPackJob;
   brandId: string;
+  brand: BrandPromptContext;
   writer: StarterPackStreamWriter;
   abortSignal: AbortSignal;
   attachmentNames?: string[];
   attachmentUrls?: string[];
   logoUrlRef?: LogoUrlRef;
+  referenceImageUrls?: string[];
   onAssetGenerated?: (jobKey: string) => void | Promise<void>;
 }): Promise<void> {
   const {
@@ -58,19 +61,25 @@ export async function runStarterPackJob(params: {
     index,
     planned,
     brandId,
+    brand,
     writer,
     abortSignal,
     attachmentNames,
     attachmentUrls,
     logoUrlRef,
+    referenceImageUrls,
     onAssetGenerated,
   } = params;
   const title = jobTitle(job);
+  const isLogoJob =
+    job.item.id === "brand-logo" || job.item.kind === "logo";
+  const logoUrl = logoUrlRef?.current;
 
   const prompt = buildJobImagePrompt(job, planned, {
+    brand,
     attachmentNames,
     attachmentUrls,
-    logoUrl: logoUrlRef?.current,
+    logoUrl,
   });
 
   writer.writeProgress(
@@ -78,6 +87,11 @@ export async function runStarterPackJob(params: {
   );
 
   try {
+    const refUrls = [...(referenceImageUrls ?? [])];
+    if (logoUrl && !isLogoJob && !refUrls.includes(logoUrl)) {
+      refUrls.push(logoUrl);
+    }
+
     const { images } = await generateBrandImage({
       prompt,
       settings: {
@@ -86,6 +100,7 @@ export async function runStarterPackJob(params: {
         quantity: 1,
       },
       abortSignal,
+      referenceImageUrls: refUrls,
     });
 
     const first = images[0];
@@ -151,24 +166,28 @@ export async function runStarterPackJobsPool(params: {
   jobs: ExpandedAssetJob[];
   plannedByKey: Map<string, PlannedStarterPackJob>;
   brandId: string;
+  brand: BrandPromptContext;
   writer: StarterPackStreamWriter;
   abortSignal: AbortSignal;
   concurrency?: number;
   attachmentNames?: string[];
   attachmentUrls?: string[];
   logoUrlRef?: LogoUrlRef;
+  referenceImageUrls?: string[];
   onAssetGenerated?: (jobKey: string) => void | Promise<void>;
 }): Promise<void> {
   const {
     jobs,
     plannedByKey,
     brandId,
+    brand,
     writer,
     abortSignal,
     concurrency = 3,
     attachmentNames,
     attachmentUrls,
     logoUrlRef,
+    referenceImageUrls,
     onAssetGenerated,
   } = params;
 
@@ -188,11 +207,13 @@ export async function runStarterPackJobsPool(params: {
         index,
         planned,
         brandId,
+        brand,
         writer,
         abortSignal,
         attachmentNames,
         attachmentUrls,
         logoUrlRef,
+        referenceImageUrls,
         onAssetGenerated,
       });
     }

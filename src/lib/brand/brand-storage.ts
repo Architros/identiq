@@ -1,6 +1,12 @@
 import type { BrandKit } from "@/lib/brand/types";
 import type { BrandSummary } from "@/lib/brand/brands";
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
+import { normalizeBrandDraft } from "@/lib/brand/normalize-draft";
+import {
+  deleteDraftOnServer,
+  fetchDraftsFromServer,
+  saveDraftToServer,
+} from "@/lib/brand/draft-persistence";
 
 const DRAFTS_KEY = "identiq_brand_drafts";
 const BRANDS_KEY = "identiq_user_brands";
@@ -22,27 +28,73 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function writeLocalDraft(draft: BrandProjectDraft) {
+  const next = normalizeBrandDraft(draft);
+  const drafts = loadDrafts().filter((d) => d.id !== next.id);
+  writeJson(DRAFTS_KEY, [next, ...drafts]);
+}
+
 export function loadDrafts(): BrandProjectDraft[] {
   return readJson<BrandProjectDraft[]>(DRAFTS_KEY, []);
 }
 
+export async function loadDraftsMerged(): Promise<BrandProjectDraft[]> {
+  const local = loadDrafts();
+  const remote = await fetchDraftsFromServer();
+  const byId = new Map<string, BrandProjectDraft>();
+
+  for (const d of local) {
+    byId.set(d.id, normalizeBrandDraft(d));
+  }
+  for (const d of remote) {
+    const existing = byId.get(d.id);
+    if (!existing) {
+      byId.set(d.id, d);
+      continue;
+    }
+    const existingTime = Date.parse(existing.updatedAt) || 0;
+    const remoteTime = Date.parse(d.updatedAt) || 0;
+    byId.set(d.id, remoteTime >= existingTime ? d : existing);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
+  );
+}
+
 export function saveDraft(draft: BrandProjectDraft) {
-  const next = { ...draft, updatedAt: new Date().toISOString() };
-  const drafts = loadDrafts().filter((d) => d.id !== draft.id);
-  writeJson(DRAFTS_KEY, [next, ...drafts]);
-  void fetch("/api/drafts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ draft: next }),
-  }).catch(() => undefined);
+  writeLocalDraft(draft);
+  void saveDraftToServer(draft);
+}
+
+export async function saveDraftAndWait(
+  draft: BrandProjectDraft,
+): Promise<{ ok: boolean; error?: string }> {
+  const next = normalizeBrandDraft({ ...draft, status: "draft" });
+  writeLocalDraft(next);
+  return saveDraftToServer(next);
 }
 
 export function getDraftById(id: string): BrandProjectDraft | undefined {
   return loadDrafts().find((d) => d.id === id);
 }
 
+export async function getDraftByIdMerged(
+  id: string,
+): Promise<BrandProjectDraft | undefined> {
+  const drafts = await loadDraftsMerged();
+  return drafts.find((d) => d.id === id);
+}
+
 export function getLatestIncompleteDraft(): BrandProjectDraft | undefined {
   return loadDrafts().find((d) => d.status === "draft");
+}
+
+export async function getLatestIncompleteDraftMerged(): Promise<
+  BrandProjectDraft | undefined
+> {
+  const drafts = await loadDraftsMerged();
+  return drafts.find((d) => d.status === "draft");
 }
 
 export function deleteDraft(id: string) {
@@ -50,11 +102,7 @@ export function deleteDraft(id: string) {
     DRAFTS_KEY,
     loadDrafts().filter((d) => d.id !== id),
   );
-  void fetch("/api/drafts", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ draftId: id }),
-  }).catch(() => undefined);
+  void deleteDraftOnServer(id);
 }
 
 export function loadUserBrandKits(): Record<string, BrandKit> {

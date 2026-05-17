@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
-import Link from "next/link";
 import { useBrandWizard } from "@/contexts/brand-wizard-context";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
@@ -36,6 +35,7 @@ import {
 } from "@/lib/brand/starter-pack";
 import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
 import { deleteDraft } from "@/lib/brand/brand-storage";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { generatedImagePreviewUrl } from "@/lib/storage/upload-client";
 import type { BrandAsset, BrandKit } from "@/lib/brand/types";
@@ -44,8 +44,14 @@ import { Button } from "@/components/ui/button";
 
 export function StepGenerating() {
   const router = useRouter();
-  const { draft, toOrchestrateInput, updateDraft, cancelGenerating } =
-    useBrandWizard();
+  const {
+    draft,
+    toOrchestrateInput,
+    updateDraft,
+    cancelGenerating,
+    saveAndExit,
+    isSaving,
+  } = useBrandWizard();
   const { createBrand } = useBrand();
   const { availableTokens, deductTokens, refreshBalance } = useCredits();
   const { saveAssetsForBrand, saveReferencesForBrand } = useBrandAssets();
@@ -93,6 +99,28 @@ export function StepGenerating() {
           source: "wizard" as const,
           createdAt: now,
         }));
+
+      const uploadedLogoUrl =
+        getDraftLogoUrl(draft) ?? complete.uploadedLogoUrl;
+      if (uploadedLogoUrl) {
+        kitAssets.push({
+          type: "logo_primary",
+          url: uploadedLogoUrl,
+          label: "Brand logo",
+        });
+        logoSaved = true;
+        if (draft.logo?.url && !references.some((r) => r.id === draft.logo!.id)) {
+          references.unshift({
+            id: draft.logo.id,
+            brandId: complete.brandId,
+            name: draft.logo.name,
+            type: draft.logo.type,
+            url: draft.logo.url,
+            source: "wizard",
+            createdAt: now,
+          });
+        }
+      }
 
       for (const [jobKey, result] of assetResultsRef.current) {
         const catalogId = parseCatalogIdFromJobKey(jobKey);
@@ -316,11 +344,16 @@ export function StepGenerating() {
             Cancel
           </Button>
         ) : (
-          <Link href="/">
-            <Button variant="ghost" size="sm">
-              Close
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isSaving}
+              onClick={() => void saveAndExit()}
+            >
+              {isSaving ? "Saving…" : "Save & exit"}
             </Button>
-          </Link>
+          </div>
         )}
       </header>
 

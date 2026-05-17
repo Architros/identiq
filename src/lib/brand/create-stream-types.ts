@@ -65,6 +65,7 @@ export type CreateCompleteData = {
   displayName: string;
   memory: BrandMemory;
   imageModel: string;
+  uploadedLogoUrl?: string;
 };
 
 export type IdentiqCreateUIDataTypes = {

@@ -77,6 +77,8 @@ export type BrandProjectDraft = {
   audience: string;
   styleNotes: string;
   attachments: BrandAttachment[];
+  /** User-provided logo; used instead of generating brand-logo when set */
+  logo?: BrandAttachment | null;
   /** itemId → quantity (0 = skip) */
   assetSelections: Record<string, number>;
   /** Optional per-catalog aspect ratio overrides */
@@ -202,6 +204,7 @@ export function createEmptyDraft(): BrandProjectDraft {
     audience: "",
     styleNotes: "",
     attachments: [],
+    logo: null,
     assetSelections: getDefaultAssetSelections(),
     status: "draft",
     updatedAt: new Date().toISOString(),

@@ -1,34 +1,25 @@
 import type { ExpandedAssetJob } from "@/lib/brand/asset-catalog";
 import type { PlannedStarterPackJob } from "@/lib/brand/plan-starter-pack-prompts";
+import {
+  assembleImageGenerationPrompt,
+  type BrandPromptContext,
+  type ReferencePromptBundle,
+} from "@/lib/brand/prompt-structure";
 
 export type JobImagePromptContext = {
+  brand: BrandPromptContext;
   attachmentNames?: string[];
   attachmentUrls?: string[];
   logoUrl?: string;
 };
 
-function referenceBlock(ctx: JobImagePromptContext): string {
-  const names = ctx.attachmentNames ?? [];
+function referencesFromContext(ctx: JobImagePromptContext): ReferencePromptBundle | undefined {
   const urls = ctx.attachmentUrls ?? [];
-  if (urls.length === 0) return "";
-
-  const lines = urls.map((url, i) => {
-    const name = names[i] ?? `Reference ${i + 1}`;
-    return `- ${name}: ${url}`;
-  });
-
-  return [
-    "",
-    "Brand reference images (match mood, palette, and visual cues where relevant):",
-    ...lines,
-  ].join("\n");
-}
-
-function logoBlock(logoUrl: string): string {
-  return [
-    "",
-    `Brand logo reference (incorporate or echo this mark in layout/composition where appropriate): ${logoUrl}`,
-  ].join("\n");
+  if (urls.length === 0) return undefined;
+  return {
+    urls,
+    names: ctx.attachmentNames ?? urls.map((_, i) => `Reference ${i + 1}`),
+  };
 }
 
 /** Assemble the final image model prompt from planner output + runtime references. */
@@ -37,18 +28,22 @@ export function buildJobImagePrompt(
   planned: PlannedStarterPackJob,
   ctx: JobImagePromptContext,
 ): string {
-  const parts = [planned.prompt.trim()];
-
-  const refs = referenceBlock(ctx);
-  if (refs) parts.push(refs);
-
   const isLogo =
-    job.item.id === "brand-logo" ||
-    job.item.kind === "logo";
+    job.item.id === "brand-logo" || job.item.kind === "logo";
 
-  if (!isLogo && ctx.logoUrl) {
-    parts.push(logoBlock(ctx.logoUrl));
-  }
-
-  return parts.join("\n");
+  return assembleImageGenerationPrompt({
+    brand: ctx.brand,
+    creativeBrief: planned.prompt.trim(),
+    assetTitle: planned.variantLabel
+      ? `${job.item.title} — ${planned.variantLabel}`
+      : job.item.title,
+    catalogId: job.item.id,
+    category: job.item.category,
+    aspectRatio: job.aspectRatio,
+    variantLabel: planned.variantLabel,
+    references: referencesFromContext(ctx),
+    logoUrl: ctx.logoUrl,
+    isLogoAsset: isLogo,
+    useUploadedLogoAsSource: isLogo && Boolean(ctx.logoUrl),
+  });
 }

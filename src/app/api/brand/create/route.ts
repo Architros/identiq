@@ -30,6 +30,7 @@ import {
   STARTER_PACK_PER_ASSET_TOKEN_COST,
 } from "@/lib/brand/starter-pack";
 import { deductTokens } from "@/lib/db/repositories/credits";
+import { brandContextFromWizard } from "@/lib/brand/prompt-structure";
 
 export const maxDuration = 300;
 
@@ -72,9 +73,18 @@ export async function POST(request: Request) {
   );
   const attachmentNames = input.attachmentNames ?? [];
   const attachmentUrls = input.attachmentUrls ?? [];
+  const referenceImageUrls = attachmentUrls;
   const logoUrlRef: LogoUrlRef = {};
 
-  if (jobs.length === 0) {
+  if (input.logoUrl) {
+    logoUrlRef.current = input.logoUrl;
+  }
+
+  const jobsToRun = input.logoUrl
+    ? jobs.filter((j) => j.item.id !== "brand-logo")
+    : jobs;
+
+  if (jobsToRun.length === 0 && !input.logoUrl) {
     return new Response(
       JSON.stringify({ error: "Select at least one asset to generate" }),
       { status: 400 },
@@ -163,10 +173,11 @@ export async function POST(request: Request) {
       const plan = await planStarterPackPrompts(
         input,
         memory,
-        jobs,
+        jobsToRun,
         abortSignal,
       );
       const plannedByKey = plannedJobsByKey(plan);
+      const brandContext = brandContextFromWizard(input, memory);
 
       if (abortSignal.aborted) {
         writer.write({
@@ -182,12 +193,12 @@ export async function POST(request: Request) {
         id: statusId,
         data: {
           phase: "generating",
-          message: `Generating ${jobs.length} asset${jobs.length === 1 ? "" : "s"}…`,
+          message: `Generating ${jobsToRun.length} asset${jobsToRun.length === 1 ? "" : "s"}…`,
         },
       });
 
-      for (let index = 0; index < jobs.length; index++) {
-        const job = jobs[index]!;
+      for (let index = 0; index < jobsToRun.length; index++) {
+        const job = jobsToRun[index]!;
         const planned = plannedByKey.get(job.jobKey);
         const progress: AssetProgressData = {
           index,
@@ -224,15 +235,17 @@ export async function POST(request: Request) {
       };
 
       await runStarterPackJobsPool({
-        jobs,
+        jobs: jobsToRun,
         plannedByKey,
         brandId,
+        brand: brandContext,
         writer: streamWriter,
         abortSignal,
         concurrency: ASSET_GENERATION_CONCURRENCY,
         attachmentNames,
         attachmentUrls,
         logoUrlRef,
+        referenceImageUrls,
         onAssetGenerated: async (jobKey) => {
           await deductTokens({
             userId: user.id,
@@ -262,6 +275,7 @@ export async function POST(request: Request) {
           displayName: input.name,
           memory,
           imageModel: getActiveImageModelId(),
+          uploadedLogoUrl: input.logoUrl,
         },
       });
 
