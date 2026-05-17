@@ -51,6 +51,7 @@ export async function runStarterPackJob(params: {
   attachmentNames?: string[];
   attachmentUrls?: string[];
   logoUrlRef?: LogoUrlRef;
+  onAssetGenerated?: (jobKey: string) => void | Promise<void>;
 }): Promise<void> {
   const {
     job,
@@ -62,6 +63,7 @@ export async function runStarterPackJob(params: {
     attachmentNames,
     attachmentUrls,
     logoUrlRef,
+    onAssetGenerated,
   } = params;
   const title = jobTitle(job);
 
@@ -133,6 +135,7 @@ export async function runStarterPackJob(params: {
     });
 
     writer.writeProgress(baseProgress(job, index, planned, "saved"));
+    await onAssetGenerated?.(job.jobKey);
   } catch (itemError) {
     const message =
       itemError instanceof Error ? itemError.message : "Generation failed";
@@ -154,6 +157,7 @@ export async function runStarterPackJobsPool(params: {
   attachmentNames?: string[];
   attachmentUrls?: string[];
   logoUrlRef?: LogoUrlRef;
+  onAssetGenerated?: (jobKey: string) => void | Promise<void>;
 }): Promise<void> {
   const {
     jobs,
@@ -165,6 +169,7 @@ export async function runStarterPackJobsPool(params: {
     attachmentNames,
     attachmentUrls,
     logoUrlRef,
+    onAssetGenerated,
   } = params;
 
   let nextIndex = 0;
@@ -188,6 +193,7 @@ export async function runStarterPackJobsPool(params: {
         attachmentNames,
         attachmentUrls,
         logoUrlRef,
+        onAssetGenerated,
       });
     }
   };

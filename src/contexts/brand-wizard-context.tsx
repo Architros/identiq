@@ -116,11 +116,42 @@ export function BrandWizardProvider({
   const [returnToReview, setReturnToReview] = useState(false);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setDraft(resolveInitialDraft(draftIdParam));
-      setIsReady(true);
-    });
-    return () => cancelAnimationFrame(frame);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/drafts");
+        if (res.ok) {
+          const data = (await res.json()) as {
+            drafts: BrandProjectDraft[];
+          };
+          if (!cancelled) {
+            if (draftIdParam) {
+              const found = data.drafts.find((d) => d.id === draftIdParam);
+              if (found) {
+                setDraft(normalizeBrandDraft(found));
+                setIsReady(true);
+                return;
+              }
+            }
+            const latest = data.drafts.find((d) => d.status === "draft");
+            if (latest) {
+              setDraft(normalizeBrandDraft(latest));
+              setIsReady(true);
+              return;
+            }
+          }
+        }
+      } catch {
+        // Fall back to local drafts.
+      }
+      if (!cancelled) {
+        setDraft(resolveInitialDraft(draftIdParam));
+        setIsReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [draftIdParam]);
 
   useEffect(() => {

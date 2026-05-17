@@ -5,11 +5,7 @@ import { BrandProvider } from "@/components/providers/brand-provider";
 import { CreditsProvider } from "@/contexts/credits-context";
 import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
 
-export default function DashboardLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <BrandProvider>
       <CreditsProvider>

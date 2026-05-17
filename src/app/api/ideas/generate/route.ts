@@ -3,7 +3,12 @@ import {
   createUIMessageStreamResponse,
   generateId,
 } from "ai";
+import {
+  deductTokensOrResponse,
+  requireApiUserResponse,
+} from "@/lib/auth/guard-api";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import { generationRequestSchema } from "@/lib/generation/generate-request-schema";
 import { buildComposedPrompt } from "@/lib/generation/build-prompt";
 import { streamOrchestratePrompt } from "@/lib/ai/llm/stream-orchestrate-prompt";
@@ -16,6 +21,10 @@ import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
+  const auth = await requireApiUserResponse("brand:generate");
+  if ("response" in auth) return auth.response;
+  const user = auth.user;
+
   let json: unknown;
   try {
     json = await request.json();
@@ -67,6 +76,27 @@ export async function POST(request: Request) {
 
   const messages = body.messages ?? [];
   const abortSignal = request.signal;
+  const generationId = generateId();
+
+  const tokenCost = calculateGenerationTokenCost({
+    presetCount: gen.presets.length,
+    hasPrompt: Boolean(gen.userPrompt.trim()),
+    quantity: gen.settings.quantity,
+    resolution: gen.settings.resolution,
+    imageAssistEnabled: gen.imageAssist,
+    referenceImageCount: gen.referenceImageCount,
+  });
+
+  if (tokenCost > 0) {
+    const deduct = await deductTokensOrResponse({
+      userId: user.id,
+      amount: tokenCost,
+      referenceType: "ideas_generate",
+      referenceId: generationId,
+      idempotencyKey: `ideas_${generationId}`,
+    });
+    if (deduct) return deduct;
+  }
 
   const stream = createUIMessageStream<IdentiqUIMessage>({
     originalMessages: messages,

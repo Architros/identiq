@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireApiUserResponse } from "@/lib/auth/guard-api";
+import { userOwnsBrand } from "@/lib/db/repositories/brands";
 import { isR2Configured } from "@/lib/storage/r2-config";
 import {
   brandReferenceObjectKey,
@@ -26,6 +28,9 @@ function isAllowedFile(file: File): boolean {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiUserResponse("brand:create");
+  if ("response" in auth) return auth.response;
+
   if (!isR2Configured()) {
     return NextResponse.json(
       {
@@ -59,6 +64,13 @@ export async function POST(request: Request) {
       { error: "Missing draftId or brandId" },
       { status: 400 },
     );
+  }
+
+  if (brandId) {
+    const owns = await userOwnsBrand(auth.user.id, brandId);
+    if (!owns) {
+      return NextResponse.json({ error: "Brand not found" }, { status: 404 });
+    }
   }
 
   if (!isAllowedFile(file)) {

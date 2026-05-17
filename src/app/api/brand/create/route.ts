@@ -2,6 +2,10 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
+import {
+  deductTokensOrResponse,
+  requireApiUserResponse,
+} from "@/lib/auth/guard-api";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { orchestrateBrandMemoryFromWizard } from "@/lib/brand/orchestrate-from-wizard";
 import {
@@ -21,6 +25,11 @@ import {
   type StarterPackStreamWriter,
 } from "@/lib/brand/run-starter-pack-job";
 import type { AssetProgressData } from "@/lib/brand/create-stream-types";
+import {
+  ORCHESTRATION_TOKEN_COST,
+  STARTER_PACK_PER_ASSET_TOKEN_COST,
+} from "@/lib/brand/starter-pack";
+import { deductTokens } from "@/lib/db/repositories/credits";
 
 export const maxDuration = 300;
 
@@ -36,6 +45,10 @@ function jobTitle(
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiUserResponse("brand:create");
+  if ("response" in auth) return auth.response;
+  const user = auth.user;
+
   let json: unknown;
   try {
     json = await request.json();
@@ -73,6 +86,15 @@ export async function POST(request: Request) {
   const domain =
     input.domain?.trim() ||
     `${input.name.toLowerCase().replace(/\s+/g, "")}.com`;
+
+  const orchDeduct = await deductTokensOrResponse({
+    userId: user.id,
+    amount: ORCHESTRATION_TOKEN_COST,
+    referenceType: "brand_orchestration",
+    referenceId: brandId,
+    idempotencyKey: `orch_${brandId}`,
+  });
+  if (orchDeduct) return orchDeduct;
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -211,6 +233,15 @@ export async function POST(request: Request) {
         attachmentNames,
         attachmentUrls,
         logoUrlRef,
+        onAssetGenerated: async (jobKey) => {
+          await deductTokens({
+            userId: user.id,
+            amount: STARTER_PACK_PER_ASSET_TOKEN_COST,
+            referenceType: "brand_asset",
+            referenceId: `${brandId}_${jobKey}`,
+            idempotencyKey: `asset_${brandId}_${jobKey}`,
+          });
+        },
       });
 
       if (abortSignal.aborted) {

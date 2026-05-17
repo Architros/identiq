@@ -12,8 +12,10 @@ import { mockCredits } from "@/lib/mock-data";
 
 type CreditsContextValue = {
   availableTokens: number;
+  isLoading: boolean;
+  refreshBalance: (balance?: number) => Promise<void>;
+  /** @deprecated Server deducts tokens; triggers balance refresh. */
   deductTokens: (amount: number) => boolean;
-  addTokens: (amount: number) => void;
   buyTokensOpen: boolean;
   openBuyTokens: () => void;
   closeBuyTokens: () => void;
@@ -21,60 +23,61 @@ type CreditsContextValue = {
 
 const CreditsContext = createContext<CreditsContextValue | null>(null);
 
-const CREDITS_STORAGE_KEY = "identiq_available_tokens";
-
-function readStoredTokens(): number {
-  if (typeof window === "undefined") return mockCredits;
-  const raw = sessionStorage.getItem(CREDITS_STORAGE_KEY);
-  if (!raw) return mockCredits;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) ? n : mockCredits;
-}
-
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
   const [availableTokens, setAvailableTokens] = useState(mockCredits);
+  const [isLoading, setIsLoading] = useState(true);
   const [buyTokensOpen, setBuyTokensOpen] = useState(false);
 
-  useEffect(() => {
-    setAvailableTokens(readStoredTokens());
+  const refreshBalance = useCallback(async (balance?: number) => {
+    if (typeof balance === "number") {
+      setAvailableTokens(balance);
+      return;
+    }
+    try {
+      const res = await fetch("/api/credits");
+      if (res.ok) {
+        const data = (await res.json()) as { balance: number };
+        setAvailableTokens(data.balance);
+      }
+    } catch {
+      // Keep current balance when API is unavailable.
+    }
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem(CREDITS_STORAGE_KEY, String(availableTokens));
-  }, [availableTokens]);
+    void (async () => {
+      setIsLoading(true);
+      await refreshBalance();
+      setIsLoading(false);
+    })();
+  }, [refreshBalance]);
 
-  const addTokens = useCallback((amount: number) => {
-    if (amount <= 0) return;
-    setAvailableTokens((current) => current + amount);
-  }, []);
+  const deductTokens = useCallback(
+    (_amount: number) => {
+      void refreshBalance();
+      return true;
+    },
+    [refreshBalance],
+  );
 
   const openBuyTokens = useCallback(() => setBuyTokensOpen(true), []);
   const closeBuyTokens = useCallback(() => setBuyTokensOpen(false), []);
 
-  const deductTokens = useCallback((amount: number) => {
-    if (amount <= 0) return true;
-    let success = false;
-    setAvailableTokens((current) => {
-      if (current < amount) return current;
-      success = true;
-      return current - amount;
-    });
-    return success;
-  }, []);
-
   const value = useMemo(
     () => ({
       availableTokens,
+      isLoading,
+      refreshBalance,
       deductTokens,
-      addTokens,
       buyTokensOpen,
       openBuyTokens,
       closeBuyTokens,
     }),
     [
       availableTokens,
+      isLoading,
+      refreshBalance,
       deductTokens,
-      addTokens,
       buyTokensOpen,
       openBuyTokens,
       closeBuyTokens,

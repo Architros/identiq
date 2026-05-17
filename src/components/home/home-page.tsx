@@ -2,7 +2,7 @@ import { AdLibraryFeature } from "@/components/home/ad-library-feature";
 import { CreateImageCard } from "@/components/home/create-image-card";
 import { ActionCardsGrid } from "@/components/home/action-cards-grid";
 
-export default function HomePage() {
+export function HomePage() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6 pb-24 lg:p-8">
       <header className="space-y-1">

@@ -47,7 +47,7 @@ export function StepGenerating() {
   const { draft, toOrchestrateInput, updateDraft, cancelGenerating } =
     useBrandWizard();
   const { createBrand } = useBrand();
-  const { availableTokens, deductTokens } = useCredits();
+  const { availableTokens, deductTokens, refreshBalance } = useCredits();
   const { saveAssetsForBrand, saveReferencesForBrand } = useBrandAssets();
 
   const [items, setItems] = useState<AssetProgressData[]>(() =>
@@ -75,7 +75,7 @@ export function StepGenerating() {
   );
 
   const finalizeBrand = useCallback(
-    (complete: CreateCompleteData & { imageModel?: string }) => {
+    async (complete: CreateCompleteData & { imageModel?: string }) => {
       const imageModel = complete.imageModel ?? "openai/gpt-5.4-image-2";
       const kitAssets: BrandAsset[] = [];
       let logoSaved = false;
@@ -157,7 +157,7 @@ export function StepGenerating() {
         updatedAt: formatDisplayDate(new Date()),
       };
 
-      createBrand(kit, summary);
+      await createBrand(kit, summary);
       if (generated.length > 0) {
         saveAssetsForBrand(complete.brandId, generated);
       }
@@ -166,6 +166,7 @@ export function StepGenerating() {
       }
       deleteDraft(draft.id);
       updateDraft({ status: "completed" });
+      await refreshBalance();
       router.push("/");
     },
     [
@@ -180,6 +181,7 @@ export function StepGenerating() {
       saveAssetsForBrand,
       saveReferencesForBrand,
       updateDraft,
+      refreshBalance,
     ],
   );
 
@@ -221,7 +223,13 @@ export function StepGenerating() {
       }
       if (dataPart.type === "data-create-complete" && !completedRef.current) {
         completedRef.current = true;
-        finalizeBrand(dataPart.data as CreateCompleteData);
+        void finalizeBrand(dataPart.data as CreateCompleteData);
+      }
+      if (
+        dataPart.type === "data-create-status" ||
+        dataPart.type === "data-asset-complete"
+      ) {
+        void refreshBalance();
       }
     },
     onError: () => {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConditionalAppShell } from "@/components/layout/conditional-app-shell";
 import { geistSans, instrumentSerif } from "@/lib/fonts";
 import "./globals.css";
 
@@ -17,7 +18,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        <ConditionalAppShell>{children}</ConditionalAppShell>
+      </body>
     </html>
   );
 }

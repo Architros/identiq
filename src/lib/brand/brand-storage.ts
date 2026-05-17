@@ -27,11 +27,14 @@ export function loadDrafts(): BrandProjectDraft[] {
 }
 
 export function saveDraft(draft: BrandProjectDraft) {
+  const next = { ...draft, updatedAt: new Date().toISOString() };
   const drafts = loadDrafts().filter((d) => d.id !== draft.id);
-  writeJson(DRAFTS_KEY, [
-    { ...draft, updatedAt: new Date().toISOString() },
-    ...drafts,
-  ]);
+  writeJson(DRAFTS_KEY, [next, ...drafts]);
+  void fetch("/api/drafts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ draft: next }),
+  }).catch(() => undefined);
 }
 
 export function getDraftById(id: string): BrandProjectDraft | undefined {
@@ -47,6 +50,11 @@ export function deleteDraft(id: string) {
     DRAFTS_KEY,
     loadDrafts().filter((d) => d.id !== id),
   );
+  void fetch("/api/drafts", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ draftId: id }),
+  }).catch(() => undefined);
 }
 
 export function loadUserBrandKits(): Record<string, BrandKit> {

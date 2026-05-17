@@ -67,7 +67,7 @@ const GenerationContext = createContext<GenerationContextValue | null>(null);
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const { brandKit, brandMemory } = useBrand();
-  const { availableTokens, deductTokens } = useCredits();
+  const { availableTokens, refreshBalance } = useCredits();
   const { registerPendingAsset, addBrandReference } = useBrandAssets();
 
   const [view, setView] = useState<IdeasView>("grid");
@@ -125,7 +125,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       transport,
       onFinish: ({ isAbort, isError }) => {
         if (!isAbort && !isError && pendingTokenCostRef.current > 0) {
-          deductTokens(pendingTokenCostRef.current);
+          void refreshBalance();
           pendingTokenCostRef.current = 0;
         }
       },

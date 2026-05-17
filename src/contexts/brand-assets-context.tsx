@@ -81,6 +81,32 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
     setReferencesByBrand(loadReferencesFromStorage());
   }, []);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`/api/brands/${brandKit.id}/assets`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          assets: GeneratedBrandAsset[];
+          references: BrandReference[];
+        };
+        setAllByBrand((prev) => ({
+          ...prev,
+          [brandKit.id]: data.assets.map((a) => ({
+            ...a,
+            status: a.status ?? "saved",
+          })),
+        }));
+        setReferencesByBrand((prev) => ({
+          ...prev,
+          [brandKit.id]: data.references,
+        }));
+      } catch {
+        // Keep local cache.
+      }
+    })();
+  }, [brandKit.id]);
+
   const brandAssets = useMemo(
     () => allByBrand[brandKit.id] ?? [],
     [allByBrand, brandKit.id],
@@ -159,6 +185,11 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
         saveToStorage(next);
         return next;
       });
+      void fetch(`/api/brands/${brandId}/assets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assets }),
+      });
     },
     [],
   );
@@ -186,6 +217,11 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
         saveReferencesToStorage(next);
         return next;
       });
+      void fetch(`/api/brands/${reference.brandId}/references`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      }).catch(() => undefined);
     },
     [],
   );
