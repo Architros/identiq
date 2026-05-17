@@ -20,7 +20,6 @@ import {
 } from "@/lib/brand/brand-project-draft";
 import {
   deleteDraft,
-  getLatestIncompleteDraftMerged,
   getDraftByIdMerged,
   saveDraft,
   saveDraftAndWait,
@@ -66,9 +65,6 @@ async function resolveInitialDraft(
   if (draftIdParam) {
     const existing = await getDraftByIdMerged(draftIdParam);
     if (existing) return normalizeBrandDraft(existing);
-  } else {
-    const latest = await getLatestIncompleteDraftMerged();
-    if (latest) return normalizeBrandDraft(latest);
   }
   return createEmptyDraft();
 }
@@ -225,8 +221,10 @@ export function BrandWizardProvider({
     const result = await saveDraftAndWait(toSave);
     setIsSaving(false);
     if (!result.ok) {
-      setSaveError(result.error ?? "Could not save draft");
-      return;
+      setSaveError(
+        result.error ??
+          "Saved on this device, but cloud sync failed. Try again when online.",
+      );
     }
     if (view === "generating") {
       setView("steps");

@@ -8,12 +8,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  mockBrands,
-  getBrandKitById,
-  type BrandSummary,
-} from "@/lib/brand/brands";
+import type { BrandSummary } from "@/lib/brand/brands";
 import type { BrandKit, BrandMemory } from "@/lib/brand/types";
+import {
+  emptyBrandKit,
+  emptyBrandSummary,
+  NO_BRAND_ID,
+} from "@/lib/brand/empty-brand";
 import {
   loadUserBrandKits,
   loadUserBrandSummaries,
@@ -22,6 +23,7 @@ import {
 
 type BrandContextValue = {
   brands: BrandSummary[];
+  hasBrands: boolean;
   activeBrandId: string;
   activeBrand: BrandSummary;
   brandKit: BrandKit;
@@ -30,80 +32,80 @@ type BrandContextValue = {
   setActiveBrand: (id: string) => void;
   getBrandKit: (id: string) => BrandKit | undefined;
   createBrand: (kit: BrandKit, summary: BrandSummary) => Promise<void>;
+  refreshBrands: () => Promise<void>;
 };
 
 const BrandContext = createContext<BrandContextValue | null>(null);
 
-const DEFAULT_BRAND_ID = "brand_bkreative";
-
 export function BrandProvider({ children }: { children: React.ReactNode }) {
-  const [activeBrandId, setActiveBrandId] = useState(DEFAULT_BRAND_ID);
+  const [activeBrandId, setActiveBrandId] = useState(NO_BRAND_ID);
   const [userKits, setUserKits] = useState<Record<string, BrandKit>>({});
   const [userSummaries, setUserSummaries] = useState<BrandSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/brands");
-        if (res.ok) {
-          const data = (await res.json()) as {
-            kits: BrandKit[];
-            summaries: BrandSummary[];
-          };
-          const kits: Record<string, BrandKit> = {};
-          for (const kit of data.kits) kits[kit.id] = kit;
-          setUserKits(kits);
-          setUserSummaries(data.summaries);
-          if (data.summaries[0]) setActiveBrandId(data.summaries[0].id);
-          setIsLoading(false);
-          return;
-        }
-      } catch {
-        // Fall back to local storage.
+  const refreshBrands = useCallback(async () => {
+    try {
+      const res = await fetch("/api/brands", { credentials: "same-origin" });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          kits: BrandKit[];
+          summaries: BrandSummary[];
+        };
+        const kits: Record<string, BrandKit> = {};
+        for (const kit of data.kits) kits[kit.id] = kit;
+        setUserKits(kits);
+        setUserSummaries(data.summaries);
+        setActiveBrandId((current) => {
+          if (data.summaries.some((s) => s.id === current)) return current;
+          return data.summaries[0]?.id ?? NO_BRAND_ID;
+        });
+        return;
       }
-      setUserKits(loadUserBrandKits());
-      setUserSummaries(loadUserBrandSummaries());
-      setIsLoading(false);
-    })();
+    } catch {
+      // Fall back to local storage.
+    }
+    const localKits = loadUserBrandKits();
+    const localSummaries = loadUserBrandSummaries();
+    setUserKits(localKits);
+    setUserSummaries(localSummaries);
+    setActiveBrandId((current) => {
+      if (localSummaries.some((s) => s.id === current)) return current;
+      return localSummaries[0]?.id ?? NO_BRAND_ID;
+    });
   }, []);
 
-  const resolveKit = useCallback(
-    (id: string): BrandKit | undefined => {
-      return userKits[id] ?? getBrandKitById(id);
-    },
-    [userKits],
-  );
+  useEffect(() => {
+    void (async () => {
+      await refreshBrands();
+      setIsLoading(false);
+    })();
+  }, [refreshBrands]);
 
-  const brands = useMemo(() => {
-    if (userSummaries.length > 0) return userSummaries;
-    if (process.env.NODE_ENV === "development") return mockBrands;
-    return userSummaries;
-  }, [userSummaries]);
+  const brands = userSummaries;
+  const hasBrands = brands.length > 0;
 
   const activeBrand = useMemo(
-    () =>
-      brands.find((b) => b.id === activeBrandId) ??
-      brands[0] ??
-      mockBrands[0]!,
+    () => brands.find((b) => b.id === activeBrandId) ?? emptyBrandSummary,
     [brands, activeBrandId],
   );
 
   const brandKit = useMemo(() => {
-    return (
-      resolveKit(activeBrandId) ??
-      resolveKit(DEFAULT_BRAND_ID) ??
-      getBrandKitById(DEFAULT_BRAND_ID)!
-    );
-  }, [activeBrandId, resolveKit]);
+    if (!hasBrands) return emptyBrandKit;
+    return userKits[activeBrandId] ?? emptyBrandKit;
+  }, [hasBrands, activeBrandId, userKits]);
 
   const setActiveBrand = useCallback(
     (id: string) => {
-      if (resolveKit(id)) {
+      if (id && userKits[id]) {
         setActiveBrandId(id);
       }
     },
-    [resolveKit],
+    [userKits],
+  );
+
+  const getBrandKit = useCallback(
+    (id: string) => userKits[id],
+    [userKits],
   );
 
   const createBrand = useCallback(
@@ -112,6 +114,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch("/api/brands", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify({ kit, summary }),
         });
         if (!res.ok) throw new Error("Failed to save brand");
@@ -131,24 +134,28 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       brands,
+      hasBrands,
       activeBrandId,
       activeBrand,
       brandKit,
       brandMemory: brandKit.memory,
       isLoading,
       setActiveBrand,
-      getBrandKit: resolveKit,
+      getBrandKit,
       createBrand,
+      refreshBrands,
     }),
     [
       brands,
+      hasBrands,
       activeBrandId,
       activeBrand,
       brandKit,
       isLoading,
       setActiveBrand,
-      resolveKit,
+      getBrandKit,
       createBrand,
+      refreshBrands,
     ],
   );
 

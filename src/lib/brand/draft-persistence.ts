@@ -8,10 +8,38 @@ export async function fetchDraftsFromServer(): Promise<BrandProjectDraft[]> {
   return (data.drafts ?? []).map(normalizeBrandDraft);
 }
 
+/** Strip blob previews and in-flight upload fields before JSON POST. */
+export function sanitizeDraftForServer(
+  draft: BrandProjectDraft,
+): BrandProjectDraft {
+  return {
+    ...draft,
+    logo: draft.logo
+      ? {
+          ...draft.logo,
+          previewUrl: draft.logo.url ?? undefined,
+          uploading: undefined,
+          uploadProgress: undefined,
+          uploadError: undefined,
+        }
+      : null,
+    attachments: draft.attachments.map((a) => ({
+      ...a,
+      previewUrl: a.url ?? undefined,
+      uploading: undefined,
+      uploadProgress: undefined,
+      uploadError: undefined,
+    })),
+  };
+}
+
 export async function saveDraftToServer(
   draft: BrandProjectDraft,
 ): Promise<{ ok: boolean; error?: string }> {
-  const next = { ...draft, updatedAt: new Date().toISOString() };
+  const next = sanitizeDraftForServer({
+    ...draft,
+    updatedAt: new Date().toISOString(),
+  });
   try {
     const res = await fetch("/api/drafts", {
       method: "POST",

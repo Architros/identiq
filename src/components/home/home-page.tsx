@@ -1,7 +1,7 @@
 import { AdLibraryFeature } from "@/components/home/ad-library-feature";
 import { CreateImageCard } from "@/components/home/create-image-card";
 import { ActionCardsGrid } from "@/components/home/action-cards-grid";
-import { ContinueDraftBanner } from "@/components/home/continue-draft-banner";
+import { DraftsSection } from "@/components/home/drafts-section";
 
 export function HomePage() {
   return (
@@ -15,7 +15,7 @@ export function HomePage() {
         </p>
       </header>
 
-      <ContinueDraftBanner />
+      <DraftsSection />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AdLibraryFeature />

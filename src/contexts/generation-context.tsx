@@ -66,7 +66,7 @@ type GenerationContextValue = {
 const GenerationContext = createContext<GenerationContextValue | null>(null);
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
-  const { brandKit, brandMemory } = useBrand();
+  const { brandKit, brandMemory, hasBrands } = useBrand();
   const { availableTokens, refreshBalance } = useCredits();
   const { registerPendingAsset, addBrandReference } = useBrandAssets();
 
@@ -275,6 +275,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const submitGeneration = useCallback(async () => {
+    if (!hasBrands) {
+      setErrorMessage("Create a brand first to generate images.");
+      return;
+    }
     if (selectedPresets.length === 0 && !prompt.trim()) return;
 
     const tokenCost = calculateGenerationTokenCost({
@@ -320,6 +324,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     availableTokens,
     buildGenerationBody,
     sendMessage,
+    hasBrands,
   ]);
 
   const stopGeneration = useCallback(() => {

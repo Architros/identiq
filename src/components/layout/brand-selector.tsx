@@ -8,7 +8,7 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { cn } from "@/lib/utils";
 
 export function BrandSelector() {
-  const { activeBrand } = useBrand();
+  const { activeBrand, hasBrands } = useBrand();
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,7 +25,7 @@ export function BrandSelector() {
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        {activeBrand.domain}
+        {hasBrands ? activeBrand.domain || activeBrand.displayName : "Add a brand"}
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={16}

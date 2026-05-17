@@ -24,7 +24,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  return withAuth("brand:create", async (user) => {
+  return withAuth(null, async (user) => {
     let json: unknown;
     try {
       json = await request.json();
