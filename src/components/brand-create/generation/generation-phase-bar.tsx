@@ -1,7 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { CreateStreamPhase } from "@/lib/brand/create-stream-types";
+import type {
+  AssetProgressData,
+  CreateStreamPhase,
+} from "@/lib/brand/create-stream-types";
+import { generationActivityDetail } from "@/lib/brand/generation-status-labels";
 import { cn } from "@/lib/utils";
 
 const PHASES: { id: CreateStreamPhase | "idle"; label: string }[] = [
@@ -21,6 +25,9 @@ type GenerationPhaseBarProps = {
   savedCount: number;
   totalCount: number;
   isActive: boolean;
+  elapsed?: string | null;
+  items?: AssetProgressData[];
+  statusMessage?: string;
 };
 
 export function GenerationPhaseBar({
@@ -28,16 +35,27 @@ export function GenerationPhaseBar({
   savedCount,
   totalCount,
   isActive,
+  elapsed,
+  items = [],
+  statusMessage,
 }: GenerationPhaseBarProps) {
   const current = phaseIndex(phase);
   const progressPercent =
     totalCount > 0 ? Math.round((savedCount / totalCount) * 100) : 0;
+  const activityDetail =
+    phase === "generating" ? generationActivityDetail(items) : null;
+  const secondaryLine = activityDetail ?? statusMessage;
 
   return (
     <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
-      <div className="flex items-center justify-between gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <span className="font-medium text-foreground">
           {isActive ? "Generation in progress" : "Generation"}
+          {isActive && elapsed ? (
+            <span className="ml-2 font-normal tabular-nums text-muted">
+              · {elapsed}
+            </span>
+          ) : null}
         </span>
         {totalCount > 0 ? (
           <span className="text-xs text-muted tabular-nums">
@@ -45,6 +63,10 @@ export function GenerationPhaseBar({
           </span>
         ) : null}
       </div>
+
+      {secondaryLine ? (
+        <p className="text-xs text-muted">{secondaryLine}</p>
+      ) : null}
 
       <div className="h-1.5 overflow-hidden rounded-full bg-sidebar-active">
         <motion.div

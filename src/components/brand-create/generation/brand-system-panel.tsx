@@ -32,7 +32,9 @@ function MemoryField({
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-snug text-foreground">{value}</p>
+      <p className="mt-1 max-h-32 overflow-y-auto text-sm leading-snug text-foreground line-clamp-4">
+        {value}
+      </p>
     </motion.div>
   );
 }
@@ -74,8 +76,8 @@ export function BrandSystemPanel({ data, className }: BrandSystemPanelProps) {
         compact
       />
 
+      <MemoryField label="Brand style" value={memory.brand_style} />
       <div className="grid gap-2 sm:grid-cols-2">
-        <MemoryField label="Brand style" value={memory.brand_style} />
         <MemoryField label="Tone" value={memory.tone} />
         <MemoryField label="Typography" value={memory.font_pairing} />
         {customFont ? (

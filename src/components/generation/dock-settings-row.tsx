@@ -5,8 +5,9 @@ import { DockSelect } from "@/components/generation/dock-select";
 import { useGeneration } from "@/contexts/generation-context";
 import { getResolutionOptionLabels } from "@/lib/ai/image/resolve-image-output";
 import { ASPECT_RATIO_OPTIONS, type AspectRatio } from "@/lib/generation/presets";
+import { cn } from "@/lib/utils";
 
-export function DockSettingsRow() {
+export function DockSettingsRow({ compact = false }: { compact?: boolean }) {
   const {
     aspectRatio,
     resolution,
@@ -36,7 +37,7 @@ export function DockSettingsRow() {
   }));
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={cn("flex items-center", compact ? "gap-1" : "gap-1.5")}>
       <DockSelect
         label="Aspect ratio"
         value={aspectRatio}

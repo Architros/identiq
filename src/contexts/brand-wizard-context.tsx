@@ -36,6 +36,7 @@ import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
 type BrandWizardContextValue = {
   draft: BrandProjectDraft;
   isReady: boolean;
+  isDirty: boolean;
   view: "steps" | "generating";
   updateDraft: (patch: Partial<BrandProjectDraft>) => void;
   setStep: (step: number) => void;
@@ -45,6 +46,7 @@ type BrandWizardContextValue = {
   canGoToStep: (step: number) => boolean;
   validateStep: (step: number, draftOverride?: BrandProjectDraft) => string | null;
   saveAndExit: () => Promise<void>;
+  exitWithoutSaving: () => void;
   isSaving: boolean;
   saveError: string | null;
   startGenerating: () => void;
@@ -52,6 +54,10 @@ type BrandWizardContextValue = {
   toOrchestrateInput: () => WizardOrchestrateInput;
   resetWizard: () => void;
 };
+
+function draftSnapshot(draft: BrandProjectDraft): string {
+  return JSON.stringify(draft);
+}
 
 const BrandWizardContext = createContext<BrandWizardContextValue | null>(null);
 
@@ -123,6 +129,7 @@ export function BrandWizardProvider({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSnapshotRef = useRef<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -130,6 +137,7 @@ export function BrandWizardProvider({
       const initial = await resolveInitialDraft(draftIdParam);
       if (!cancelled) {
         setDraft(initial);
+        lastSavedSnapshotRef.current = draftSnapshot(initial);
         setIsReady(true);
       }
     })();
@@ -137,6 +145,20 @@ export function BrandWizardProvider({
       cancelled = true;
     };
   }, [draftIdParam]);
+
+  const isDirty = useMemo(() => {
+    if (!isReady) return false;
+    return draftSnapshot(draft) !== lastSavedSnapshotRef.current;
+  }, [draft, isReady]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -226,11 +248,16 @@ export function BrandWizardProvider({
           "Saved on this device, but cloud sync failed. Try again when online.",
       );
     }
+    lastSavedSnapshotRef.current = draftSnapshot(toSave);
     if (view === "generating") {
       setView("steps");
     }
     router.push("/");
   }, [draft, router, view]);
+
+  const exitWithoutSaving = useCallback(() => {
+    router.push("/");
+  }, [router]);
 
   const toOrchestrateInput = useCallback((): WizardOrchestrateInput => {
     const refUrls = getDraftReferenceImageUrls(draft);
@@ -295,6 +322,7 @@ export function BrandWizardProvider({
     () => ({
       draft,
       isReady,
+      isDirty,
       view,
       updateDraft,
       setStep,
@@ -304,6 +332,7 @@ export function BrandWizardProvider({
       canGoToStep,
       validateStep,
       saveAndExit,
+      exitWithoutSaving,
       isSaving,
       saveError,
       startGenerating,
@@ -314,6 +343,7 @@ export function BrandWizardProvider({
     [
       draft,
       isReady,
+      isDirty,
       view,
       updateDraft,
       setStep,
@@ -323,6 +353,7 @@ export function BrandWizardProvider({
       canGoToStep,
       validateStep,
       saveAndExit,
+      exitWithoutSaving,
       isSaving,
       saveError,
       startGenerating,

@@ -34,7 +34,9 @@ export async function deductTokensOrResponse(params: {
   if (!result.success) {
     return NextResponse.json(
       {
-        error: "Insufficient tokens",
+        error: "insufficient_tokens",
+        message:
+          "You do not have enough tokens for this generation. Buy more tokens or reduce presets and quantity.",
         balance: result.balance,
       },
       { status: 402 },

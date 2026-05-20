@@ -38,6 +38,7 @@ export type ImageResultData = {
   presetTitles: string[];
   displayDimensions?: string;
   size?: string;
+  completedAt?: string;
 };
 
 export type IdentiqMessageMetadata = {

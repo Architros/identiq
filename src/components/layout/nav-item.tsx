@@ -14,12 +14,14 @@ type NavItemProps = {
 
 export function NavItem({ item }: NavItemProps) {
   const pathname = usePathname();
-  const { activeBrandId, hasBrands } = useBrand();
+  const { activeBrandId, hasActiveBrand, isLoading } = useBrand();
   const href =
     item.href === "/brands/current"
-      ? hasBrands
-        ? `/brands/${activeBrandId}`
-        : "/new-brand"
+      ? isLoading
+        ? "/new-brand"
+        : hasActiveBrand
+          ? `/brands/${activeBrandId}`
+          : "/new-brand"
       : item.href;
   const isActive =
     !item.disabled &&

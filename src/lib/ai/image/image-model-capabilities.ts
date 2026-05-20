@@ -18,8 +18,7 @@ export function getImageModelFamily(modelId: string): ImageModelFamily {
   return "unknown";
 }
 
-/** Models we treat with OpenAI-style size + quality parameters. */
-export function usesGptImageSizeParams(modelId: string): boolean {
-  const family = getImageModelFamily(modelId);
-  return family === "gpt_image" || family === "unknown";
+/** OpenRouter image API uses aspectRatio + image_config only (not `size`). */
+export function usesGptImageSizeParams(_modelId: string): boolean {
+  return false;
 }

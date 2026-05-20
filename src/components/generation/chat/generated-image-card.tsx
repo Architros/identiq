@@ -4,9 +4,9 @@ import { useState } from "react";
 import Image from "next/image";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
-import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/generation/format-elapsed";
 import {
-  aspectRatioClass,
+  aspectRatioGenerationWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
 
@@ -28,27 +28,37 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
   if (!previewUrl) return null;
   const ratio = parseAspectRatio(data.aspectRatio);
   const isSaved = savedAssets.some((a) => a.jobId === data.jobId);
+  const completedLabel = data.completedAt
+    ? formatRelativeTime(data.completedAt)
+    : null;
 
   return (
     <div className="space-y-3">
-      <div
-        className={cn(
-          "relative w-full overflow-hidden rounded-xl border border-border/80 bg-surface shadow-sm",
-          aspectRatioClass[ratio],
-        )}
-      >
+      <div className={aspectRatioGenerationWrapperClass(ratio)}>
         <Image
           src={previewUrl}
           alt="Generated brand asset"
           fill
-          className="object-cover"
+          className="object-contain"
           unoptimized
         />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <span>Job {data.jobId}</span>
+        {data.displayDimensions ? (
+          <>
+            <span>·</span>
+            <span>{data.displayDimensions}</span>
+          </>
+        ) : null}
         <span>·</span>
         <span>{data.model}</span>
+        {completedLabel ? (
+          <>
+            <span>·</span>
+            <span>{completedLabel}</span>
+          </>
+        ) : null}
         {data.presetTitles.length > 0 ? (
           <>
             <span>·</span>
@@ -63,7 +73,7 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
             onClick={() => approveAsset(data.jobId)}
             className="cursor-pointer rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
           >
-            Save to Images
+            Save to Brand assets
           </button>
           <button
             type="button"
@@ -77,9 +87,8 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
           </button>
         </div>
       ) : (
-        <p className="text-sm font-medium text-accent">Saved to Images</p>
+        <p className="text-sm font-medium text-accent">Saved to Brand assets</p>
       )}
     </div>
   );
 }
-

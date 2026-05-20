@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useCredits } from "@/contexts/credits-context";
 import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
 import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
-import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useBrandWizard } from "@/contexts/brand-wizard-context";
@@ -25,6 +24,7 @@ import { StepReview } from "@/components/brand-create/steps/step-review";
 import { StepGenerating } from "@/components/brand-create/steps/step-generating";
 import { WizardTokenBar } from "@/components/brand-create/wizard-token-bar";
 import { BuyTokensModal } from "@/components/brand-create/buy-tokens-modal";
+import { WizardExitDialog } from "@/components/brand-create/wizard-exit-dialog";
 
 export function BrandWizardShell() {
   const {
@@ -36,6 +36,7 @@ export function BrandWizardShell() {
     nextStep,
     prevStep,
     saveAndExit,
+    exitWithoutSaving,
     isSaving,
     saveError,
     validateStep,
@@ -46,6 +47,7 @@ export function BrandWizardShell() {
 
   const [errorAtStep, setErrorAtStep] = useState<number | null>(null);
   const [reviewFinishError, setReviewFinishError] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
 
   const totalAssets = useMemo(
     () => getTotalSelectedAssets(draft.assetSelections),
@@ -138,10 +140,11 @@ export function BrandWizardShell() {
             >
               {isSaving ? "Saving…" : "Save & exit"}
             </Button>
-            <Link
-              href="/"
+            <button
+              type="button"
               className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-button)] text-muted hover:bg-sidebar-active hover:text-foreground"
               aria-label="Close"
+              onClick={() => setExitDialogOpen(true)}
             >
               <HugeiconsIcon
                 icon={Cancel01Icon}
@@ -149,12 +152,24 @@ export function BrandWizardShell() {
                 color="currentColor"
                 strokeWidth={1.75}
               />
-            </Link>
+            </button>
           </div>
         </div>
       </header>
 
       <BuyTokensModal />
+      <WizardExitDialog
+        open={exitDialogOpen}
+        isSaving={isSaving}
+        onCancel={() => setExitDialogOpen(false)}
+        onExitWithoutSaving={() => {
+          setExitDialogOpen(false);
+          exitWithoutSaving();
+        }}
+        onSaveAndExit={() => {
+          void saveAndExit().then(() => setExitDialogOpen(false));
+        }}
+      />
 
       <nav
         className="z-10 shrink-0 border-b border-border bg-surface px-6 py-4"

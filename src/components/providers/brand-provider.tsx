@@ -20,10 +20,18 @@ import {
   loadUserBrandSummaries,
   saveUserBrand,
 } from "@/lib/brand/brand-storage";
+import {
+  pickDefaultBrandId,
+  readLastActiveBrandId,
+  writeLastActiveBrandId,
+} from "@/lib/brand/active-brand-storage";
+import { useConnectivityOptional } from "@/contexts/connectivity-context";
+import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
 
 type BrandContextValue = {
   brands: BrandSummary[];
   hasBrands: boolean;
+  hasActiveBrand: boolean;
   activeBrandId: string;
   activeBrand: BrandSummary;
   brandKit: BrandKit;
@@ -37,16 +45,28 @@ type BrandContextValue = {
 
 const BrandContext = createContext<BrandContextValue | null>(null);
 
+function applyBrandSelection(
+  summaries: BrandSummary[],
+  kits: Record<string, BrandKit>,
+  currentId: string,
+): string {
+  return pickDefaultBrandId(summaries, kits, readLastActiveBrandId() ?? currentId);
+}
+
 export function BrandProvider({ children }: { children: React.ReactNode }) {
   const [activeBrandId, setActiveBrandId] = useState(NO_BRAND_ID);
   const [userKits, setUserKits] = useState<Record<string, BrandKit>>({});
   const [userSummaries, setUserSummaries] = useState<BrandSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const connectivity = useConnectivityOptional();
 
   const refreshBrands = useCallback(async () => {
     try {
       const res = await fetch("/api/brands", { credentials: "same-origin" });
-      if (res.ok) {
+      if (isServiceUnavailableResponse(res)) {
+        connectivity?.reportServiceUnavailable();
+      } else if (res.ok) {
+        connectivity?.clearConnectivityIssue();
         const data = (await res.json()) as {
           kits: BrandKit[];
           summaries: BrandSummary[];
@@ -56,8 +76,9 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         setUserKits(kits);
         setUserSummaries(data.summaries);
         setActiveBrandId((current) => {
-          if (data.summaries.some((s) => s.id === current)) return current;
-          return data.summaries[0]?.id ?? NO_BRAND_ID;
+          const next = applyBrandSelection(data.summaries, kits, current);
+          if (next !== NO_BRAND_ID) writeLastActiveBrandId(next);
+          return next;
         });
         return;
       }
@@ -69,10 +90,11 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     setUserKits(localKits);
     setUserSummaries(localSummaries);
     setActiveBrandId((current) => {
-      if (localSummaries.some((s) => s.id === current)) return current;
-      return localSummaries[0]?.id ?? NO_BRAND_ID;
+      const next = applyBrandSelection(localSummaries, localKits, current);
+      if (next !== NO_BRAND_ID) writeLastActiveBrandId(next);
+      return next;
     });
-  }, []);
+  }, [connectivity]);
 
   useEffect(() => {
     void (async () => {
@@ -84,20 +106,27 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const brands = userSummaries;
   const hasBrands = brands.length > 0;
 
+  const hasActiveBrand = useMemo(
+    () =>
+      activeBrandId !== NO_BRAND_ID && Boolean(userKits[activeBrandId]),
+    [activeBrandId, userKits],
+  );
+
   const activeBrand = useMemo(
     () => brands.find((b) => b.id === activeBrandId) ?? emptyBrandSummary,
     [brands, activeBrandId],
   );
 
   const brandKit = useMemo(() => {
-    if (!hasBrands) return emptyBrandKit;
+    if (!hasActiveBrand) return emptyBrandKit;
     return userKits[activeBrandId] ?? emptyBrandKit;
-  }, [hasBrands, activeBrandId, userKits]);
+  }, [hasActiveBrand, activeBrandId, userKits]);
 
   const setActiveBrand = useCallback(
     (id: string) => {
       if (id && userKits[id]) {
         setActiveBrandId(id);
+        writeLastActiveBrandId(id);
       }
     },
     [userKits],
@@ -115,7 +144,17 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ kit, summary }),
+          body: JSON.stringify({
+            kit,
+            summary,
+            references: kit.references?.map((r) => ({
+              id: r.id,
+              name: r.name,
+              type: r.type,
+              url: r.url,
+              source: r.source,
+            })),
+          }),
         });
         if (!res.ok) throw new Error("Failed to save brand");
       } catch {
@@ -127,6 +166,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         ...prev.filter((s) => s.id !== kit.id),
       ]);
       setActiveBrandId(kit.id);
+      writeLastActiveBrandId(kit.id);
     },
     [],
   );
@@ -135,6 +175,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     () => ({
       brands,
       hasBrands,
+      hasActiveBrand,
       activeBrandId,
       activeBrand,
       brandKit,
@@ -148,6 +189,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     [
       brands,
       hasBrands,
+      hasActiveBrand,
       activeBrandId,
       activeBrand,
       brandKit,

@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/auth/roles";
 import { ROLES } from "@/lib/auth/roles";
 import type { AuthUser } from "@/lib/auth/permissions";
+import {
+  InfrastructureError,
+  isInfrastructureError,
+} from "@/lib/errors/user-facing";
 
 export type SessionProfile = {
   id: string;
@@ -21,41 +25,66 @@ export async function getSession() {
 }
 
 export async function getSessionProfile(): Promise<SessionProfile | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, role")
-    .eq("id", user.id)
-    .single();
+    if (authError) {
+      if (isInfrastructureError(authError)) {
+        throw new InfrastructureError("Auth service unreachable", {
+          cause: authError,
+        });
+      }
+      return null;
+    }
+    if (!user) return null;
 
-  if (!profile) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, avatar_url, role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError && isInfrastructureError(profileError)) {
+      throw new InfrastructureError("Profile service unreachable", {
+        cause: profileError,
+      });
+    }
+
+    if (!profile) {
+      return {
+        id: user.id,
+        email: user.email ?? null,
+        full_name:
+          (user.user_metadata?.full_name as string | undefined) ??
+          (user.user_metadata?.name as string | undefined) ??
+          null,
+        avatar_url:
+          (user.user_metadata?.avatar_url as string | undefined) ??
+          (user.user_metadata?.picture as string | undefined) ??
+          null,
+        role: ROLES.USER,
+      };
+    }
+
     return {
-      id: user.id,
-      email: user.email ?? null,
-      full_name:
-        (user.user_metadata?.full_name as string | undefined) ??
-        (user.user_metadata?.name as string | undefined) ??
-        null,
-      avatar_url:
-        (user.user_metadata?.avatar_url as string | undefined) ??
-        (user.user_metadata?.picture as string | undefined) ??
-        null,
-      role: ROLES.USER,
+      id: profile.id,
+      email: profile.email,
+      full_name: profile.full_name,
+      avatar_url: profile.avatar_url,
+      role: profile.role as AppRole,
     };
+  } catch (error) {
+    if (isInfrastructureError(error)) {
+      throw error instanceof InfrastructureError
+        ? error
+        : new InfrastructureError("Database unreachable", { cause: error });
+    }
+    throw error;
   }
-
-  return {
-    id: profile.id,
-    email: profile.email,
-    full_name: profile.full_name,
-    avatar_url: profile.avatar_url,
-    role: profile.role as AppRole,
-  };
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {
@@ -95,6 +124,16 @@ export class AuthError extends Error {
 export function authErrorResponse(error: unknown) {
   if (error instanceof AuthError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
+  }
+  if (isInfrastructureError(error)) {
+    return NextResponse.json(
+      {
+        error: "service_unavailable",
+        message:
+          "We could not reach the database. Check your network and Supabase project status, then try again.",
+      },
+      { status: 503 },
+    );
   }
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }

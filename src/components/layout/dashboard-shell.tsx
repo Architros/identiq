@@ -4,22 +4,27 @@ import { FloatingSupportWrapper } from "@/components/home/floating-support-wrapp
 import { BrandProvider } from "@/components/providers/brand-provider";
 import { CreditsProvider } from "@/contexts/credits-context";
 import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
+import { ConnectivityProvider } from "@/contexts/connectivity-context";
+import { ConnectivityBanner } from "@/components/shared/connectivity-banner";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
-    <BrandProvider>
-      <CreditsProvider>
-        <BrandAssetsProvider>
-          <div className="flex h-screen overflow-hidden bg-background">
-            <AppSidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <AppTopbar />
-              <main className="relative flex-1 overflow-y-auto">{children}</main>
-              <FloatingSupportWrapper />
+    <ConnectivityProvider>
+      <BrandProvider>
+        <CreditsProvider>
+          <BrandAssetsProvider>
+            <div className="flex h-screen overflow-hidden bg-background">
+              <AppSidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <ConnectivityBanner />
+                <AppTopbar />
+                <main className="relative flex-1 overflow-y-auto">{children}</main>
+                <FloatingSupportWrapper />
+              </div>
             </div>
-          </div>
-        </BrandAssetsProvider>
-      </CreditsProvider>
-    </BrandProvider>
+          </BrandAssetsProvider>
+        </CreditsProvider>
+      </BrandProvider>
+    </ConnectivityProvider>
   );
 }

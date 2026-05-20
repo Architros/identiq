@@ -1,8 +1,8 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import {
-  aspectRatioClass,
+  aspectRatioGenerationWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
 
@@ -17,29 +17,37 @@ type ImageSkeletonGridProps = {
   aspectRatio: string;
   quantity: number;
   imageModel?: string;
+  displayDimensions?: string;
+  elapsedStartedAt?: number | null;
 };
 
 export function ImageSkeletonGrid({
   aspectRatio,
   quantity,
   imageModel,
+  displayDimensions,
+  elapsedStartedAt = null,
 }: ImageSkeletonGridProps) {
   const ratio = parseAspectRatio(aspectRatio);
   const count = Math.max(1, Math.min(quantity, 4));
+  const elapsed = useGenerationElapsed(elapsedStartedAt);
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-foreground">
-        Creating image with {formatImageModelLabel(imageModel)}…
-      </p>
+      <div>
+        <p className="text-sm font-medium text-foreground">
+          Creating image with {formatImageModelLabel(imageModel)}…
+        </p>
+        <p className="text-xs text-muted">
+          {displayDimensions ? `${displayDimensions} · ` : null}
+          {elapsed ? `Generating · ${elapsed}` : "Generating…"}
+        </p>
+      </div>
       <div className="flex flex-wrap gap-3">
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className={cn(
-              "w-full animate-pulse overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active",
-              aspectRatioClass[ratio],
-            )}
+            className={`${aspectRatioGenerationWrapperClass(ratio)} animate-pulse overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active`}
           />
         ))}
       </div>

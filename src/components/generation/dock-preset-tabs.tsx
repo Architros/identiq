@@ -6,7 +6,12 @@ import { DockTokenBadge } from "@/components/generation/dock-token-badge";
 import { useGeneration } from "@/contexts/generation-context";
 import { cn } from "@/lib/utils";
 
-export function DockPresetTabs() {
+type DockPresetTabsProps = {
+  /** Page-embedded strip on Brand assets (no glass dock chrome). */
+  embedded?: boolean;
+};
+
+export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
   const {
     selectedPresets,
     activePresetId,
@@ -15,11 +20,20 @@ export function DockPresetTabs() {
   } = useGeneration();
 
   return (
-    <div className="flex w-full items-stretch gap-2 rounded-xl border border-white/60 bg-white/50 p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150">
+    <div
+      className={cn(
+        "flex w-full items-stretch gap-2 rounded-xl border p-2",
+        embedded
+          ? "border-border bg-surface shadow-sm"
+          : "border-white/60 bg-white/50 shadow-sm backdrop-blur-xl backdrop-saturate-150",
+      )}
+    >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         {selectedPresets.length === 0 && (
           <span className="px-2 py-1.5 text-xs text-muted">
-            Select a preset below to get started
+            {embedded
+              ? "Choose a format below"
+              : "Select a preset below to get started"}
           </span>
         )}
 

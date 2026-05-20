@@ -5,16 +5,22 @@ import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message"
 import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { GeneratedImageCard } from "@/components/generation/chat/generated-image-card";
+import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
+import { useGeneration } from "@/contexts/generation-context";
 
 type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
   isStreaming: boolean;
+  messageIndex: number;
 };
 
 export function ChatAssistantTurn({
   message,
   isStreaming,
+  messageIndex,
 }: ChatAssistantTurnProps) {
+  const { continueFromMessageIndex, isGenerating, generationStartedAt } =
+    useGeneration();
   const {
     textContent,
     reasoningContent,
@@ -32,12 +38,22 @@ export function ChatAssistantTurn({
   const showThinking = hasThought || isOrchestrating;
   const showSkeleton = phase === "generating-image" && !imageResult;
   const showStopped = phase === "stopped";
-  const showError =
-    phase === "error" || Boolean(errorText);
+  const showError = phase === "error" || Boolean(errorText);
 
   return (
-    <div className="flex justify-start">
+    <div className="group flex justify-start">
       <div className="max-w-2xl w-full space-y-3">
+        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => void continueFromMessageIndex(messageIndex)}
+            className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Continue from here
+          </button>
+        </div>
+
         {showThinking ? (
           <ThinkingBlock
             isStreaming={Boolean(isOrchestrating && isStreaming)}
@@ -51,6 +67,8 @@ export function ChatAssistantTurn({
             aspectRatio={generationStatus?.aspectRatio ?? "16:9"}
             quantity={generationStatus?.quantity ?? 1}
             imageModel={generationStatus?.imageModel}
+            displayDimensions={generationStatus?.displayDimensions}
+            elapsedStartedAt={generationStartedAt}
           />
         ) : null}
 
@@ -61,11 +79,13 @@ export function ChatAssistantTurn({
         ) : null}
 
         {showError ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {generationStatus?.errorMessage ??
+          <UserFacingErrorAlert
+            message={
+              generationStatus?.errorMessage ??
               errorText ??
-              "Generation failed"}
-          </p>
+              "Generation failed"
+            }
+          />
         ) : null}
 
         {!showThinking &&

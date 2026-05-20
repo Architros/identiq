@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const generationRequestSchema = z.object({
+  chatId: z.string().optional(),
   brandId: z.string().min(1),
   brandDisplayName: z.string().optional(),
   brandMemory: z.object({

@@ -7,7 +7,7 @@ import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import { cn } from "@/lib/utils";
 
 export function DockCreateButton() {
-  const { hasBrands } = useBrand();
+  const { hasActiveBrand, isLoading } = useBrand();
   const { availableTokens } = useCredits();
   const {
     selectedPresets,
@@ -33,7 +33,8 @@ export function DockCreateButton() {
   const insufficient = tokenCost > 0 && tokenCost > availableTokens;
 
   const canSubmit =
-    hasBrands &&
+    !isLoading &&
+    hasActiveBrand &&
     (selectedPresets.length > 0 || prompt.trim().length > 0) &&
     !isGenerating &&
     !insufficient;

@@ -14,7 +14,7 @@ export function ChatMessageList() {
   }, [messages, isGenerating]);
 
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto scroll-pb-36 px-6 py-6 pb-40">
       {messages.length === 0 ? (
         <p className="text-center text-sm text-muted">
           Your generation will appear here.
@@ -25,7 +25,9 @@ export function ChatMessageList() {
           const streaming = isGenerating && isLast && message.role === "assistant";
 
           if (message.role === "user") {
-            return <ChatUserBubble key={message.id} message={message} />;
+            return (
+              <ChatUserBubble key={message.id} message={message} messageIndex={index} />
+            );
           }
 
           return (
@@ -33,6 +35,7 @@ export function ChatMessageList() {
               key={message.id}
               message={message}
               isStreaming={streaming}
+              messageIndex={index}
             />
           );
         })

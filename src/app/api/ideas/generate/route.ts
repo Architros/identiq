@@ -20,6 +20,8 @@ import { getBrandForUser } from "@/lib/db/repositories/brands";
 import { listReferencesForBrand } from "@/lib/db/repositories/assets";
 import { collectBrandReferenceImageUrls } from "@/lib/brand/prompt-structure";
 import type { AspectRatio } from "@/lib/generation/presets";
+import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
+import { userOwnsIdeasChat } from "@/lib/db/repositories/ideas-chats";
 
 export const maxDuration = 120;
 
@@ -71,6 +73,7 @@ export async function POST(request: Request) {
   };
 
   const parsed = generationRequestSchema.safeParse({
+    chatId: (body as { chatId?: string }).chatId,
     brandId: body.brandId,
     brandDisplayName: (body as { brandDisplayName?: string }).brandDisplayName,
     brandMemory: body.brandMemory,
@@ -90,6 +93,16 @@ export async function POST(request: Request) {
   }
 
   const gen = parsed.data;
+
+  if (gen.chatId) {
+    const ownsChat = await userOwnsIdeasChat(user.id, gen.chatId);
+    if (!ownsChat) {
+      return new Response(JSON.stringify({ error: "Chat not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
 
   const kit = await getBrandForUser(user.id, gen.brandId);
   const brandDisplayName = gen.brandDisplayName ?? kit?.displayName ?? "Brand";
@@ -307,6 +320,7 @@ export async function POST(request: Request) {
                 : gen.presets.map((p) => p.title),
               displayDimensions: output.displayDimensions,
               size: output.size,
+              completedAt: new Date().toISOString(),
             },
           });
         }
@@ -335,18 +349,23 @@ export async function POST(request: Request) {
           return;
         }
 
-        const message =
+        const raw =
           imageError instanceof Error
             ? imageError.message
             : "Image generation failed";
+        const { title, message, supportHint } =
+          toUserFacingGenerationError(raw);
+        const userMessage = supportHint
+          ? `${message} ${supportHint}`
+          : message;
 
         writer.write({
           type: "data-generation-status",
           id: statusId,
-          data: { phase: "error", errorMessage: message },
+          data: { phase: "error", errorMessage: `${title}: ${userMessage}` },
         });
 
-        writer.write({ type: "error", errorText: message });
+        writer.write({ type: "error", errorText: userMessage });
       }
     },
     onError: (error) =>

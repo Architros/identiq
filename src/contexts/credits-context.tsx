@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import { mockCredits } from "@/lib/mock-data";
+import { useConnectivityOptional } from "@/contexts/connectivity-context";
+import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
 
 type CreditsContextValue = {
   availableTokens: number;
@@ -27,6 +29,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
   const [availableTokens, setAvailableTokens] = useState(mockCredits);
   const [isLoading, setIsLoading] = useState(true);
   const [buyTokensOpen, setBuyTokensOpen] = useState(false);
+  const connectivity = useConnectivityOptional();
 
   const refreshBalance = useCallback(async (balance?: number) => {
     if (typeof balance === "number") {
@@ -34,15 +37,20 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const res = await fetch("/api/credits");
+      const res = await fetch("/api/credits", { credentials: "same-origin" });
+      if (isServiceUnavailableResponse(res)) {
+        connectivity?.reportServiceUnavailable();
+        return;
+      }
       if (res.ok) {
+        connectivity?.clearConnectivityIssue();
         const data = (await res.json()) as { balance: number };
         setAvailableTokens(data.balance);
       }
     } catch {
       // Keep current balance when API is unavailable.
     }
-  }, []);
+  }, [connectivity]);
 
   useEffect(() => {
     void (async () => {

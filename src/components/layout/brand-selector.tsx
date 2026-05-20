@@ -8,29 +8,47 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { cn } from "@/lib/utils";
 
 export function BrandSelector() {
-  const { activeBrand, hasBrands } = useBrand();
+  const { activeBrand, hasBrands, hasActiveBrand, isLoading } = useBrand();
   const [open, setOpen] = useState(false);
+
+  const label = hasActiveBrand
+    ? activeBrand.domain || activeBrand.displayName
+    : hasBrands
+      ? "Select a brand"
+      : "Add a brand";
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => !isLoading && setOpen(true)}
+        disabled={isLoading}
         className={cn(
-          "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground",
-          "hover:bg-sidebar-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
-          open && "bg-sidebar-active",
+          "inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground",
+          !isLoading &&
+            "cursor-pointer hover:bg-sidebar-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+          open && !isLoading && "bg-sidebar-active",
+          isLoading && "cursor-default",
         )}
-        aria-label="Select brand"
+        aria-label={isLoading ? "Loading brand" : "Select brand"}
+        aria-busy={isLoading}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        {hasBrands ? activeBrand.domain || activeBrand.displayName : "Add a brand"}
+        {isLoading ? (
+          <span
+            className="h-4 w-28 animate-pulse rounded-md bg-gradient-to-r from-sidebar-active via-border/40 to-sidebar-active"
+            aria-hidden
+          />
+        ) : (
+          label
+        )}
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={16}
           color="currentColor"
           strokeWidth={1.75}
+          className={cn(isLoading && "text-muted/40")}
         />
       </button>
 

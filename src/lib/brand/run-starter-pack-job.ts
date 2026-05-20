@@ -18,6 +18,10 @@ export type StarterPackStreamWriter = {
 
 export type LogoUrlRef = { current?: string };
 
+export function isLogoStarterPackJob(job: ExpandedAssetJob): boolean {
+  return job.item.id === "brand-logo" || job.item.kind === "logo";
+}
+
 function jobTitle(job: ExpandedAssetJob): string {
   return job.instance > 0
     ? `${job.item.title} (${job.instance + 1})`
@@ -55,6 +59,7 @@ export async function runStarterPackJob(params: {
   logoUrlRef?: LogoUrlRef;
   referenceImageUrls?: string[];
   onAssetGenerated?: (jobKey: string) => void | Promise<void>;
+  onJobStatusMessage?: (message: string) => void;
 }): Promise<void> {
   const {
     job,
@@ -69,10 +74,10 @@ export async function runStarterPackJob(params: {
     logoUrlRef,
     referenceImageUrls,
     onAssetGenerated,
+    onJobStatusMessage,
   } = params;
   const title = jobTitle(job);
-  const isLogoJob =
-    job.item.id === "brand-logo" || job.item.kind === "logo";
+  const isLogoJob = isLogoStarterPackJob(job);
   const logoUrl = logoUrlRef?.current;
 
   const prompt = buildJobImagePrompt(job, planned, {
@@ -82,6 +87,7 @@ export async function runStarterPackJob(params: {
     logoUrl,
   });
 
+  onJobStatusMessage?.(`Generating ${title}…`);
   writer.writeProgress(
     baseProgress(job, index, planned, "generating"),
   );
@@ -179,6 +185,9 @@ export async function runStarterPackJobsPool(params: {
   logoUrlRef?: LogoUrlRef;
   referenceImageUrls?: string[];
   onAssetGenerated?: (jobKey: string) => void | Promise<void>;
+  onJobStatusMessage?: (message: string) => void;
+  /** Original indices when jobs are split across pools (key = jobKey). */
+  jobIndexByKey?: Map<string, number>;
 }): Promise<void> {
   const {
     jobs,
@@ -193,18 +202,22 @@ export async function runStarterPackJobsPool(params: {
     logoUrlRef,
     referenceImageUrls,
     onAssetGenerated,
+    onJobStatusMessage,
+    jobIndexByKey,
   } = params;
 
   let nextIndex = 0;
 
   const runWorker = async () => {
     while (!abortSignal.aborted) {
-      const index = nextIndex++;
-      if (index >= jobs.length) break;
+      const poolIndex = nextIndex++;
+      if (poolIndex >= jobs.length) break;
 
-      const job = jobs[index]!;
+      const job = jobs[poolIndex]!;
       const planned = plannedByKey.get(job.jobKey);
       if (!planned) continue;
+
+      const index = jobIndexByKey?.get(job.jobKey) ?? poolIndex;
 
       await runStarterPackJob({
         job,
@@ -219,6 +232,7 @@ export async function runStarterPackJobsPool(params: {
         logoUrlRef,
         referenceImageUrls,
         onAssetGenerated,
+        onJobStatusMessage,
       });
     }
   };
@@ -227,4 +241,42 @@ export async function runStarterPackJobsPool(params: {
   await Promise.all(
     Array.from({ length: workers }, () => runWorker()),
   );
+}
+
+type StarterPackPoolParams = Omit<
+  Parameters<typeof runStarterPackJobsPool>[0],
+  "jobs" | "concurrency"
+>;
+
+/** Run logo jobs first (concurrency 1), then remaining jobs in parallel. */
+export async function runStarterPackJobsLogoFirst(
+  params: StarterPackPoolParams & {
+    jobs: ExpandedAssetJob[];
+    otherConcurrency?: number;
+  },
+): Promise<void> {
+  const { jobs, otherConcurrency = 3, ...poolParams } = params;
+  const jobIndexByKey = new Map(
+    jobs.map((job, index) => [job.jobKey, index] as const),
+  );
+  const logoJobs = jobs.filter(isLogoStarterPackJob);
+  const otherJobs = jobs.filter((j) => !isLogoStarterPackJob(j));
+
+  if (logoJobs.length > 0) {
+    await runStarterPackJobsPool({
+      ...poolParams,
+      jobs: logoJobs,
+      concurrency: 1,
+      jobIndexByKey,
+    });
+  }
+
+  if (otherJobs.length > 0 && !poolParams.abortSignal.aborted) {
+    await runStarterPackJobsPool({
+      ...poolParams,
+      jobs: otherJobs,
+      concurrency: otherConcurrency,
+      jobIndexByKey,
+    });
+  }
 }

@@ -1,36 +1,38 @@
 "use client";
 
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import { useGeneration } from "@/contexts/generation-context";
 
 type ChatUserBubbleProps = {
   message: IdentiqUIMessage;
+  messageIndex: number;
 };
 
-export function ChatUserBubble({ message }: ChatUserBubbleProps) {
-  const text =
-    message.parts
-      ?.filter((p) => p.type === "text")
-      .map((p) => p.text)
-      .join("") ?? "";
+export function ChatUserBubble({ message, messageIndex }: ChatUserBubbleProps) {
+  const { continueFromMessageIndex, isGenerating } = useGeneration();
+  const text = message.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
 
-  const presetTitles = message.metadata?.presetTitles ?? [];
+  if (!text.trim()) return null;
 
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] space-y-2 rounded-2xl rounded-br-md bg-accent/10 px-4 py-3">
-        {presetTitles.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {presetTitles.map((title) => (
-              <span
-                key={title}
-                className="rounded-full border border-accent/30 bg-accent/5 px-2 py-0.5 text-xs font-medium text-accent"
-              >
-                {title}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <p className="text-sm leading-relaxed text-foreground">{text}</p>
+    <div className="group flex justify-end">
+      <div className="max-w-xl space-y-1">
+        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => void continueFromMessageIndex(messageIndex)}
+            className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Continue from here
+          </button>
+        </div>
+        <div className="rounded-2xl bg-accent px-4 py-2.5 text-sm text-white">
+          {text}
+        </div>
       </div>
     </div>
   );

@@ -10,8 +10,11 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import { BrandSystemPanel } from "@/components/brand-create/generation/brand-system-panel";
+import { GenerationActivityList } from "@/components/brand-create/generation/generation-activity-list";
 import { GenerationPhaseBar } from "@/components/brand-create/generation/generation-phase-bar";
 import { StarterPackGenerationView } from "@/components/brand-create/generation/starter-pack-generation-view";
+import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
 import {
   buildInitialAssetProgress,
@@ -35,12 +38,12 @@ import {
 } from "@/lib/brand/starter-pack";
 import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
 import { deleteDraft } from "@/lib/brand/brand-storage";
-import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { generatedImagePreviewUrl } from "@/lib/storage/upload-client";
 import type { BrandAsset, BrandKit } from "@/lib/brand/types";
 import type { BrandSummary } from "@/lib/brand/brands";
 import { Button } from "@/components/ui/button";
+import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 
 export function StepGenerating() {
   const router = useRouter();
@@ -74,6 +77,9 @@ export function StepGenerating() {
   const chargedAssetsRef = useRef<Set<string>>(new Set());
   const completedRef = useRef(false);
   const assetResultsRef = useRef<Map<string, AssetCompleteData>>(new Map());
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
+    null,
+  );
 
   const preflight = useMemo(
     () => validateGenerationPreflight(draft, availableTokens),
@@ -298,6 +304,18 @@ export function StepGenerating() {
   const activeCount = items.filter(
     (i) => i.status === "generating" || i.status === "uploading",
   ).length;
+  const hasLogoJob = items.some((i) => i.catalogId === "brand-logo");
+  const uploadedLogo = Boolean(getDraftLogoUrl(draft));
+  const elapsed = useGenerationElapsed(generationStartedAt);
+
+  useEffect(() => {
+    if (isStreaming && generationStartedAt === null) {
+      setGenerationStartedAt(Date.now());
+    }
+    if (!isStreaming && generationStartedAt !== null && phase === "done") {
+      setGenerationStartedAt(null);
+    }
+  }, [isStreaming, generationStartedAt, phase]);
 
   const handleBackToReview = () => {
     stop();
@@ -334,8 +352,11 @@ export function StepGenerating() {
             <p className="mt-1 text-xs text-muted">
               {savedCount} of {items.length} saved
               {activeCount > 0
-                ? ` · ${activeCount} generating (up to 3 at once)`
+                ? uploadedLogo || !hasLogoJob
+                  ? ` · ${activeCount} generating (up to 3 at once)`
+                  : ` · ${activeCount} generating (logo first, then up to 3 at once)`
                 : ""}
+              {elapsed ? ` · ${elapsed}` : ""}
             </p>
           ) : null}
         </div>
@@ -357,12 +378,15 @@ export function StepGenerating() {
         )}
       </header>
 
-      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 py-10 pb-16">
+      <main className="mx-auto min-h-0 w-full max-w-6xl flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 py-10 pb-16">
         <GenerationPhaseBar
           phase={phase}
           savedCount={savedCount}
           totalCount={items.length}
           isActive={isStreaming}
+          elapsed={elapsed}
+          items={items}
+          statusMessage={statusMessage}
         />
 
         {!brandMemory ? (
@@ -375,17 +399,15 @@ export function StepGenerating() {
 
         {brandMemory ? <BrandSystemPanel data={brandMemory} /> : null}
 
-        {isStreaming ? (
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <span className="generation-spinner h-3.5 w-3.5 rounded-full border-2 border-accent/30 border-t-accent" />
-            {statusMessage}
-          </p>
+        {isStreaming && phase === "generating" && brandMemory ? (
+          <GenerationActivityList items={items} />
         ) : null}
 
         {error || parsed?.errorText ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error?.message ?? parsed?.errorText}
-          </p>
+          <UserFacingErrorAlert
+            className="rounded-xl px-4 py-3"
+            message={error?.message ?? parsed?.errorText ?? "Generation failed"}
+          />
         ) : null}
 
         <StarterPackGenerationView items={items} results={results} />

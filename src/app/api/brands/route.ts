@@ -42,12 +42,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid brand payload" }, { status: 400 });
     }
 
-    await upsertBrand(
-      user.id,
-      parsed.data.kit,
-      parsed.data.summary,
-      parsed.data.references,
-    );
+    const references =
+      parsed.data.references ??
+      parsed.data.kit.references?.map((r) => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        url: r.url,
+        source: r.source,
+      }));
+
+    await upsertBrand(user.id, parsed.data.kit, parsed.data.summary, references);
 
     return NextResponse.json({ ok: true });
   });

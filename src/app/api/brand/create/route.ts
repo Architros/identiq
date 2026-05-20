@@ -20,7 +20,7 @@ import {
 } from "@/lib/brand/plan-starter-pack-prompts";
 import { sortStarterPackJobs } from "@/lib/brand/sort-starter-pack-jobs";
 import {
-  runStarterPackJobsPool,
+  runStarterPackJobsLogoFirst,
   type LogoUrlRef,
   type StarterPackStreamWriter,
 } from "@/lib/brand/run-starter-pack-job";
@@ -234,18 +234,25 @@ export async function POST(request: Request) {
         },
       };
 
-      await runStarterPackJobsPool({
+      await runStarterPackJobsLogoFirst({
         jobs: jobsToRun,
         plannedByKey,
         brandId,
         brand: brandContext,
         writer: streamWriter,
         abortSignal,
-        concurrency: ASSET_GENERATION_CONCURRENCY,
+        otherConcurrency: ASSET_GENERATION_CONCURRENCY,
         attachmentNames,
         attachmentUrls,
         logoUrlRef,
         referenceImageUrls,
+        onJobStatusMessage: (message) => {
+          writer.write({
+            type: "data-create-status",
+            id: statusId,
+            data: { phase: "generating", message },
+          });
+        },
         onAssetGenerated: async (jobKey) => {
           await deductTokens({
             userId: user.id,

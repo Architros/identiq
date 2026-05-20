@@ -40,6 +40,16 @@ export const aspectRatioGalleryMaxWidthClass: Record<AspectRatio, string> = {
   "21:9": "w-full max-w-full",
 };
 
+/** Library card tiles — larger than first compact pass, capped per ratio. */
+export const aspectRatioGalleryCardMaxWidthClass: Record<AspectRatio, string> = {
+  "1:1": "w-full max-w-[min(100%,260px)]",
+  "9:16": "w-full max-w-[min(100%,220px)]",
+  "16:9": "w-full max-w-full",
+  "4:5": "w-full max-w-[min(100%,240px)]",
+  "2:3": "w-full max-w-[min(100%,230px)]",
+  "21:9": "w-full max-w-full",
+};
+
 /** @deprecated Use aspectRatioPanelBoxClass */
 export const aspectRatioPanelClass = aspectRatioPanelBoxClass;
 
@@ -105,6 +115,19 @@ export function aspectRatioGalleryFrameClass(ratio: AspectRatio): string {
     "relative overflow-hidden rounded-lg",
     aspectRatioGalleryMaxWidthClass[ratio],
   );
+}
+
+/** Compact library card frame (smaller max widths). */
+export function aspectRatioGalleryCardFrameClass(ratio: AspectRatio): string {
+  return cn(
+    "relative w-full overflow-hidden rounded-lg",
+    aspectRatioGalleryCardMaxWidthClass[ratio],
+  );
+}
+
+/** Responsive library grid — cards grow with column width up to ratio max. */
+export function imagesLibraryCardGridClass(): string {
+  return "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 sm:gap-5 justify-items-stretch";
 }
 
 /** Grid layout tuned per dominant aspect ratio in a group. */

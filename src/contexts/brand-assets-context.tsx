@@ -10,6 +10,10 @@ import {
 } from "react";
 import { useBrand } from "@/components/providers/brand-provider";
 import type { BrandReference, GeneratedBrandAsset } from "@/lib/brand/types";
+import {
+  dedupeBrandReferencesByUrl,
+  normalizeReferenceUrl,
+} from "@/lib/brand/reference-url";
 
 const STORAGE_KEY = "identiq_generated_assets";
 const REFERENCES_KEY = "identiq_brand_references";
@@ -82,9 +86,26 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
+    if (!brandKit.id?.trim()) return;
+    setReferencesByBrand((prev) => {
+      const current = prev[brandKit.id];
+      if (!current?.length) return prev;
+      const deduped = dedupeBrandReferencesByUrl(current);
+      if (deduped.length === current.length) return prev;
+      const next = { ...prev, [brandKit.id]: deduped };
+      saveReferencesToStorage(next);
+      return next;
+    });
+  }, [brandKit.id]);
+
+  useEffect(() => {
+    if (!brandKit.id?.trim()) return;
+
     void (async () => {
       try {
-        const res = await fetch(`/api/brands/${brandKit.id}/assets`);
+        const res = await fetch(`/api/brands/${brandKit.id}/assets`, {
+          credentials: "same-origin",
+        });
         if (!res.ok) return;
         const data = (await res.json()) as {
           assets: GeneratedBrandAsset[];
@@ -97,10 +118,14 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
             status: a.status ?? "saved",
           })),
         }));
-        setReferencesByBrand((prev) => ({
-          ...prev,
-          [brandKit.id]: data.references,
-        }));
+        setReferencesByBrand((prev) => {
+          const next = {
+            ...prev,
+            [brandKit.id]: dedupeBrandReferencesByUrl(data.references),
+          };
+          saveReferencesToStorage(next);
+          return next;
+        });
       } catch {
         // Keep local cache.
       }
@@ -115,15 +140,7 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   const brandReferences = useMemo(() => {
     const stored = referencesByBrand[brandKit.id] ?? [];
     const fromKit = brandKit.references ?? [];
-    if (fromKit.length === 0) return stored;
-    const byId = new Map<string, BrandReference>();
-    for (const ref of [...stored, ...fromKit]) {
-      byId.set(ref.id, ref);
-    }
-    return [...byId.values()].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+    return dedupeBrandReferencesByUrl([...stored, ...fromKit]);
   }, [referencesByBrand, brandKit.id, brandKit.references]);
 
   const savedAssets = useMemo(
@@ -201,6 +218,20 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
         saveReferencesToStorage(next);
         return next;
       });
+      void (async () => {
+        for (const reference of references) {
+          try {
+            await fetch(`/api/brands/${brandId}/references`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ reference }),
+            });
+          } catch {
+            // Local cache remains; user can retry from Brand assets.
+          }
+        }
+      })();
     },
     [],
   );
@@ -209,10 +240,22 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
     (reference: BrandReference) => {
       setReferencesByBrand((prev) => {
         const current = prev[reference.brandId] ?? [];
-        if (current.some((r) => r.id === reference.id)) return prev;
+        const urlKey = normalizeReferenceUrl(reference.url);
+        if (
+          current.some(
+            (r) =>
+              r.id === reference.id ||
+              (urlKey && normalizeReferenceUrl(r.url) === urlKey),
+          )
+        ) {
+          return prev;
+        }
         const next = {
           ...prev,
-          [reference.brandId]: [reference, ...current],
+          [reference.brandId]: dedupeBrandReferencesByUrl([
+            reference,
+            ...current,
+          ]),
         };
         saveReferencesToStorage(next);
         return next;
