@@ -7,7 +7,7 @@ import { BrandSwitcherPanel } from "@/components/layout/brand-switcher-panel";
 import { useBrand } from "@/components/providers/brand-provider";
 import { cn } from "@/lib/utils";
 
-export function BrandSelector() {
+export function BrandSelector({ compact = false }: { compact?: boolean }) {
   const { activeBrand, hasBrands, hasActiveBrand, isLoading } = useBrand();
   const [open, setOpen] = useState(false);
 
@@ -24,7 +24,8 @@ export function BrandSelector() {
         onClick={() => !isLoading && setOpen(true)}
         disabled={isLoading}
         className={cn(
-          "inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground",
+          "inline-flex items-center gap-2 rounded-lg border border-border bg-surface font-medium text-foreground",
+          compact ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm",
           !isLoading &&
             "cursor-pointer hover:bg-sidebar-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
           open && !isLoading && "bg-sidebar-active",

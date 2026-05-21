@@ -11,8 +11,7 @@ import {
 import { createEmptyDraft } from "@/lib/brand/brand-project-draft";
 import { prepareAttachmentJobs } from "@/lib/brand/draft-attachment-uploads";
 import { placeholdersForJobs } from "@/lib/brand/queue-attachment-uploads";
-import { stashPendingDraftUploads } from "@/lib/brand/pending-draft-uploads";
-import { saveDraft } from "@/lib/brand/brand-storage";
+import { stashWizardSession } from "@/lib/brand/pending-wizard-session";
 import { cn } from "@/lib/utils";
 
 type HomeBrandUploadDropzoneProps = {
@@ -57,8 +56,7 @@ export function HomeBrandUploadDropzone({
         }
 
         const attachments = placeholdersForJobs(jobs, []);
-        saveDraft({ ...draft, attachments });
-        stashPendingDraftUploads(draft.id, jobs);
+        stashWizardSession({ ...draft, attachments }, jobs);
 
         router.push(`/new-brand?draftId=${encodeURIComponent(draft.id)}`);
       } catch (e) {

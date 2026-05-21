@@ -3,7 +3,7 @@ import {
   Home01Icon,
   Image01Icon,
   BulbIcon,
-  Megaphone01Icon,
+  LayoutGridIcon,
   PaintBoardIcon,
   Message01Icon,
   HelpCircleIcon,
@@ -24,7 +24,7 @@ export const primaryNav: NavItem[] = [
 ];
 
 export const secondaryNav: NavItem[] = [
-  { label: "Library", href: "/library", icon: Megaphone01Icon },
+  { label: "Library", href: "/library", icon: LayoutGridIcon },
   {
     label: "Brand Details",
     href: "/brands/current",

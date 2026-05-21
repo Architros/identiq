@@ -14,7 +14,6 @@ export function DockTokenBadge() {
     prompt,
     quantity,
     resolution,
-    imageAssistEnabled,
     referenceImages,
   } = useGeneration();
 
@@ -23,7 +22,6 @@ export function DockTokenBadge() {
     hasPrompt: prompt.trim().length > 0,
     quantity,
     resolution,
-    imageAssistEnabled,
     referenceImageCount: referenceImages.length,
   });
 

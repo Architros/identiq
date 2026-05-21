@@ -1,42 +1,63 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserAdd01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { BrandSelector } from "@/components/layout/brand-selector";
 import { CreditsBalance } from "@/components/layout/credits-balance";
 import { Button } from "@/components/ui/button";
+import {
+  getGenerationChromeCompact,
+  subscribeGenerationChrome,
+} from "@/lib/generation/chrome-store";
+import { cn } from "@/lib/utils";
 
 export function AppTopbar() {
+  const compact = useSyncExternalStore(
+    subscribeGenerationChrome,
+    getGenerationChromeCompact,
+    () => false,
+  );
+
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
-      <BrandSelector />
+    <header
+      className={cn(
+        "flex shrink-0 items-center justify-between border-b border-border bg-surface transition-[height,padding]",
+        compact ? "h-8 border-b border-border/60 px-3" : "h-14 px-6",
+      )}
+    >
+      <BrandSelector compact={compact} />
 
-      <div className="flex items-center gap-3">
-        <CreditsBalance />
+      <div className={cn("flex items-center", compact ? "gap-2" : "gap-3")}>
+        <CreditsBalance compact={compact} />
 
-        <Button variant="secondary" size="sm">
-          <HugeiconsIcon
-            icon={UserAdd01Icon}
-            size={16}
-            color="currentColor"
-            strokeWidth={1.75}
-          />
-          Invite Team
-        </Button>
+        {!compact ? (
+          <>
+            <Button variant="secondary" size="sm">
+              <HugeiconsIcon
+                icon={UserAdd01Icon}
+                size={16}
+                color="currentColor"
+                strokeWidth={1.75}
+              />
+              Invite Team
+            </Button>
 
-        <Link
-          href="/new-brand"
-          className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-button)] bg-foreground px-3 text-sm font-medium text-surface hover:bg-foreground/90"
-        >
-          <HugeiconsIcon
-            icon={Add01Icon}
-            size={16}
-            color="currentColor"
-            strokeWidth={1.75}
-          />
-          New Brand
-        </Link>
+            <Link
+              href="/new-brand"
+              className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-button)] bg-foreground px-3 text-sm font-medium text-surface hover:bg-foreground/90"
+            >
+              <HugeiconsIcon
+                icon={Add01Icon}
+                size={16}
+                color="currentColor"
+                strokeWidth={1.75}
+              />
+              New Brand
+            </Link>
+          </>
+        ) : null}
       </div>
     </header>
   );

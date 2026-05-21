@@ -18,7 +18,7 @@ import { isR2Configured } from "@/lib/storage/r2-config";
 import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
 import { getBrandForUser } from "@/lib/db/repositories/brands";
 import { listReferencesForBrand } from "@/lib/db/repositories/assets";
-import { collectBrandReferenceImageUrls } from "@/lib/brand/prompt-structure";
+import { mergeGenerationReferenceUrls } from "@/lib/generation/merge-reference-urls";
 import type { AspectRatio } from "@/lib/generation/presets";
 import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
 import { userOwnsIdeasChat } from "@/lib/db/repositories/ideas-chats";
@@ -82,6 +82,9 @@ export async function POST(request: Request) {
     userPrompt: body.userPrompt ?? "",
     imageAssist: body.imageAssist ?? true,
     referenceImageCount: body.referenceImageCount ?? 0,
+    composerReferenceImages: (body as { composerReferenceImages?: unknown })
+      .composerReferenceImages,
+    libraryTemplateId: (body as { libraryTemplateId?: string }).libraryTemplateId,
     settings: body.settings,
   });
 
@@ -109,12 +112,23 @@ export async function POST(request: Request) {
 
   const refs = await listReferencesForBrand(user.id, gen.brandId);
   const logoUrl = kit?.assets.find((a) => a.type.startsWith("logo_"))?.url;
-  const referenceImageUrls = collectBrandReferenceImageUrls({
-    references: refs,
+  const mergedRefs = mergeGenerationReferenceUrls({
+    composerReferenceImages: gen.composerReferenceImages,
+    libraryTemplateId: gen.libraryTemplateId,
+    dbReferences: refs,
     logoUrl,
   });
+  const referenceImageUrls = mergedRefs.urls;
+  const isLibraryRemix = mergedRefs.isLibraryRemix;
+  const hasLogoAttachment = Boolean(
+    logoUrl && referenceImageUrls.includes(logoUrl),
+  );
 
-  if (gen.presets.length === 0 && !gen.userPrompt.trim()) {
+  if (
+    gen.presets.length === 0 &&
+    !gen.userPrompt.trim() &&
+    !gen.libraryTemplateId
+  ) {
     return new Response(
       JSON.stringify({ error: "Select a preset or enter a prompt" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -132,9 +146,9 @@ export async function POST(request: Request) {
   const tokenCost = calculateGenerationTokenCost({
     presetCount: runs.length,
     hasPrompt: Boolean(gen.userPrompt.trim()),
+    isLibraryRemix,
     quantity: gen.settings.quantity,
     resolution: gen.settings.resolution,
-    imageAssistEnabled: gen.imageAssist,
     referenceImageCount: gen.referenceImageCount,
   });
 
@@ -157,7 +171,9 @@ export async function POST(request: Request) {
       writer.write({
         type: "data-generation-status",
         id: statusId,
-        data: { phase: "orchestrating" },
+        data: {
+          phase: isLibraryRemix ? "composing-prompt" : "orchestrating",
+        },
       });
 
       const basePrompt = buildComposedPrompt({
@@ -168,6 +184,9 @@ export async function POST(request: Request) {
         userPrompt: gen.userPrompt,
         imageAssist: gen.imageAssist,
         referenceImageUrls,
+        referenceImageNames: mergedRefs.names,
+        mode: isLibraryRemix ? "library-remix" : "default",
+        hasLogoAttachment,
         description: kit?.description,
         sector: kit?.sector,
         feelings: kit?.feelings,
@@ -175,54 +194,70 @@ export async function POST(request: Request) {
 
       let finalPrompt = basePrompt;
 
-      try {
-        const orchestration = streamOrchestratePrompt({
-          basePrompt,
-          brandMemory: gen.brandMemory,
-          brandAssets: gen.brandAssets,
-          presets: gen.presets,
-          userPrompt: gen.userPrompt,
-          imageAssist: gen.imageAssist,
-          referenceImageUrls,
-          abortSignal,
+      if (isLibraryRemix) {
+        writer.write({
+          type: "data-generation-status",
+          id: statusId,
+          data: { phase: "composing-prompt" },
         });
-
-        writer.merge(orchestration.toUIMessageStream());
-
-        const text = await orchestration.text;
-        const trimmed = text.trim();
-        if (trimmed) {
-          finalPrompt = trimmed;
-        }
-      } catch (orchestrateError) {
-        if (abortSignal.aborted) {
-          writer.write({
-            type: "data-generation-status",
-            id: statusId,
-            data: { phase: "stopped" },
-          });
-          return;
-        }
-
-        console.warn(
-          "[ideas/generate] orchestration failed, using base prompt:",
-          orchestrateError,
-        );
-
-        const fallbackId = generateId();
-        writer.write({ type: "text-start", id: fallbackId });
+        const promptId = generateId();
+        writer.write({ type: "text-start", id: promptId });
         writer.write({
           type: "text-delta",
-          id: fallbackId,
-          delta:
-            "Using your brand context directly (orchestration unavailable).\n\n",
-        });
-        writer.write({
-          type: "text-delta",
-          id: fallbackId,
+          id: promptId,
           delta: basePrompt,
         });
-        writer.write({ type: "text-end", id: fallbackId });
+        writer.write({ type: "text-end", id: promptId });
+      } else {
+        try {
+          const orchestration = streamOrchestratePrompt({
+            basePrompt,
+            brandMemory: gen.brandMemory,
+            brandAssets: gen.brandAssets,
+            presets: gen.presets,
+            userPrompt: gen.userPrompt,
+            imageAssist: gen.imageAssist,
+            referenceImageUrls,
+            abortSignal,
+          });
+
+          writer.merge(orchestration.toUIMessageStream());
+
+          const text = await orchestration.text;
+          const trimmed = text.trim();
+          if (trimmed) {
+            finalPrompt = trimmed;
+          }
+        } catch (orchestrateError) {
+          if (abortSignal.aborted) {
+            writer.write({
+              type: "data-generation-status",
+              id: statusId,
+              data: { phase: "stopped" },
+            });
+            return;
+          }
+
+          console.warn(
+            "[ideas/generate] orchestration failed, using base prompt:",
+            orchestrateError,
+          );
+
+          const fallbackId = generateId();
+          writer.write({ type: "text-start", id: fallbackId });
+          writer.write({
+            type: "text-delta",
+            id: fallbackId,
+            delta:
+              "Using your brand context directly (orchestration unavailable).\n\n",
+          });
+          writer.write({
+            type: "text-delta",
+            id: fallbackId,
+            delta: basePrompt,
+          });
+          writer.write({ type: "text-end", id: fallbackId });
+        }
       }
 
       if (abortSignal.aborted) {
@@ -353,6 +388,14 @@ export async function POST(request: Request) {
           imageError instanceof Error
             ? imageError.message
             : "Image generation failed";
+        console.error("[ideas/generate] image generation failed", {
+          message: raw,
+          modelId: getActiveImageModelId(),
+          referenceCount: referenceImageUrls.length,
+          libraryTemplateId: gen.libraryTemplateId,
+          isLibraryRemix,
+          promptLength: finalPrompt.length,
+        });
         const { title, message, supportHint } =
           toUserFacingGenerationError(raw);
         const userMessage = supportHint

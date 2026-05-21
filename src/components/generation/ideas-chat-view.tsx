@@ -11,7 +11,7 @@ export function IdeasChatView() {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-4rem)] min-h-0 flex-col">
+      <div className="grid h-[calc(100dvh-var(--dashboard-topbar-height,3.5rem))] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
         <ChatHeader />
         <ChatMessageList />
         <ChatComposer />

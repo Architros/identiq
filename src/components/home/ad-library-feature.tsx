@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Megaphone01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { LayoutGridIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HomeLibraryCollage } from "@/components/home/home-library-collage";
 import {
   HOME_BENTO_BODY_CLASS,
@@ -28,7 +28,7 @@ export function AdLibraryFeature() {
       >
         <span className="inline-flex items-center gap-2 text-sm font-medium text-muted">
           <HugeiconsIcon
-            icon={Megaphone01Icon}
+            icon={LayoutGridIcon}
             size={18}
             color="currentColor"
             strokeWidth={1.75}

@@ -7,6 +7,7 @@ import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-g
 import { GeneratedImageCard } from "@/components/generation/chat/generated-image-card";
 import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 import { useGeneration } from "@/contexts/generation-context";
+import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
 
 type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
@@ -19,8 +20,16 @@ export function ChatAssistantTurn({
   isStreaming,
   messageIndex,
 }: ChatAssistantTurnProps) {
-  const { continueFromMessageIndex, isGenerating, generationStartedAt } =
-    useGeneration();
+  const {
+    continueFromMessageIndex,
+    isGenerating,
+    generationStartedAt,
+    libraryTemplateId,
+    generationActivity,
+    aspectRatio: sessionAspectRatio,
+    quantity: sessionQuantity,
+  } = useGeneration();
+  const isLibraryRemix = Boolean(libraryTemplateId);
   const {
     textContent,
     reasoningContent,
@@ -34,15 +43,20 @@ export function ChatAssistantTurn({
     textContent.trim().length > 0 || reasoningContent.trim().length > 0;
   const isOrchestrating =
     phase === "orchestrating" ||
+    phase === "composing-prompt" ||
     (isStreaming && !imageResult && phase !== "generating-image");
   const showThinking = hasThought || isOrchestrating;
   const showSkeleton = phase === "generating-image" && !imageResult;
   const showStopped = phase === "stopped";
   const showError = phase === "error" || Boolean(errorText);
 
+  const skeletonAspectRatio =
+    generationStatus?.aspectRatio ?? sessionAspectRatio;
+  const skeletonQuantity = generationStatus?.quantity ?? sessionQuantity;
+
   return (
-    <div className="group flex justify-start">
-      <div className="max-w-2xl w-full space-y-3">
+    <div className="group flex w-full justify-start">
+      <div className="w-full space-y-3">
         <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
           <button
             type="button"
@@ -57,6 +71,13 @@ export function ChatAssistantTurn({
         {showThinking ? (
           <ThinkingBlock
             isStreaming={Boolean(isOrchestrating && isStreaming)}
+            phase={phase}
+            isLibraryRemix={isLibraryRemix}
+            activityLabel={
+              isOrchestrating && isStreaming
+                ? (generationActivity ?? undefined)
+                : undefined
+            }
             textContent={textContent}
             reasoningContent={reasoningContent}
           />
@@ -64,11 +85,16 @@ export function ChatAssistantTurn({
 
         {showSkeleton ? (
           <ImageSkeletonGrid
-            aspectRatio={generationStatus?.aspectRatio ?? "16:9"}
-            quantity={generationStatus?.quantity ?? 1}
+            aspectRatio={skeletonAspectRatio}
+            quantity={skeletonQuantity}
             imageModel={generationStatus?.imageModel}
             displayDimensions={generationStatus?.displayDimensions}
             elapsedStartedAt={generationStartedAt}
+            activityLabel={generationActivityLabel({
+              phase: "generating-image",
+              presetTitle: generationStatus?.presetTitle,
+              isLibraryRemix,
+            })}
           />
         ) : null}
 
@@ -94,7 +120,9 @@ export function ChatAssistantTurn({
         !showStopped &&
         !showError &&
         isStreaming ? (
-          <p className="text-sm text-muted">Working…</p>
+          <p className="text-sm text-muted">
+            {generationActivity ?? "Working…"}
+          </p>
         ) : null}
       </div>
     </div>

@@ -97,6 +97,32 @@ export function toUserFacingGenerationError(raw?: string | null): UserFacingErro
   }
 
   if (
+    lower.includes("invalid model") ||
+    lower.includes("model_not_found") ||
+    (lower.includes("does not exist") && lower.includes("model"))
+  ) {
+    return {
+      title: "Image model unavailable",
+      message:
+        "The configured image model is not available. Check your API settings or try again later.",
+      supportHint: supportContactLine(),
+    };
+  }
+
+  if (
+    lower.includes("content policy") ||
+    lower.includes("content_policy") ||
+    (lower.includes("safety") && lower.includes("violation")) ||
+    lower.includes("moderation")
+  ) {
+    return {
+      title: "Request blocked",
+      message:
+        "The image service declined this prompt. Try simpler wording or fewer reference images.",
+    };
+  }
+
+  if (
     lower.includes("rate limit") ||
     lower.includes("429") ||
     lower.includes("overloaded")

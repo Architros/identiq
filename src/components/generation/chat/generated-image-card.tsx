@@ -6,7 +6,7 @@ import { useBrandAssets } from "@/contexts/brand-assets-context";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
 import { formatRelativeTime } from "@/lib/generation/format-elapsed";
 import {
-  aspectRatioGenerationWrapperClass,
+  aspectRatioGenerationLeftWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
 
@@ -34,7 +34,7 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
 
   return (
     <div className="space-y-3">
-      <div className={aspectRatioGenerationWrapperClass(ratio)}>
+      <div className={aspectRatioGenerationLeftWrapperClass(ratio)}>
         <Image
           src={previewUrl}
           alt="Generated brand asset"

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   HashtagIcon,
-  Megaphone01Icon,
+  LayoutGridIcon,
   Image01Icon,
   BulbIcon,
 } from "@hugeicons/core-free-icons";
@@ -27,7 +27,7 @@ const quickLinks: {
   },
   {
     label: "Ad layouts",
-    icon: Megaphone01Icon,
+    icon: LayoutGridIcon,
     href: "/library",
     description: "Remix proven campaign designs",
   },

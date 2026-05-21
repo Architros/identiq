@@ -4,7 +4,7 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { LibraryFromUrl } from "@/components/library/library-from-url";
 import Link from "next/link";
 import { BrandAssetCard } from "@/components/images/brand-asset-card";
-import { GenerationDock } from "@/components/generation/generation-dock";
+import { GenerationComposer } from "@/components/generation/generation-composer";
 import { IdeasChatView } from "@/components/generation/ideas-chat-view";
 import { GenerationHistoryPanel } from "@/components/generation/generation-history-panel";
 import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
@@ -132,7 +132,14 @@ export function ImagesPageContent() {
   );
 
   if (view === "chat") {
-    return <IdeasChatView />;
+    return (
+      <>
+        <Suspense fallback={null}>
+          <LibraryFromUrl />
+        </Suspense>
+        <IdeasChatView />
+      </>
+    );
   }
 
   return (
@@ -315,22 +322,11 @@ export function ImagesPageContent() {
         <ImageLightboxModal image={lightbox} onClose={() => setLightbox(null)} />
         </div>
 
-        <div
-          id="images-generation-composer"
-          className="sticky bottom-0 z-30 -mx-2 shrink-0 isolate"
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 top-0 -z-10 bg-gradient-to-t from-background from-[18%] via-background/75 to-transparent"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 top-0 -z-10 backdrop-blur-xl backdrop-saturate-150 [mask-image:linear-gradient(to_top,black_0%,black_20%,rgba(0,0,0,0.55)_50%,transparent_100%)]"
-          />
-          <div className="relative mx-auto flex w-full max-w-2xl justify-center px-2 pb-4 pt-14">
-            <GenerationDock variant="images" />
-          </div>
-        </div>
+        <GenerationComposer
+          layout="sticky"
+          errorMessage={errorMessage}
+          onDismissError={clearError}
+        />
       </div>
 
       <GenerationHistoryPanel

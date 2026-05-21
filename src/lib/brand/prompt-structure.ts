@@ -269,6 +269,82 @@ export function assembleImageGenerationPrompt(
   return sections.join("\n\n");
 }
 
+/** Short brand spec for Ideas (avoids full identity wall of text). */
+export function buildCompactBrandSpec(brand: BrandPromptContext): string {
+  const { memory } = brand;
+  return [
+    `Brand: ${brand.brandName}`,
+    `Colors — primary ${memory.primary_color}, secondary ${memory.secondary_color}`,
+    `Style: ${memory.brand_style}. Visual language: ${memory.visual_language}. Tone: ${memory.tone}.`,
+  ].join("\n");
+}
+
+/** Library remix: adapt attached layout template to this brand. */
+export function assembleLibraryRemixPrompt(input: {
+  brand: BrandPromptContext;
+  userDirection: string;
+  referenceNames: string[];
+  referenceUrls: string[];
+  hasLogoAttachment: boolean;
+}): string {
+  const brand = input.brand;
+  const { memory } = brand;
+  const sections: string[] = [];
+
+  const direction = input.userDirection.trim();
+  if (direction) {
+    sections.push(
+      [
+        "## User direction (highest priority)",
+        direction,
+        "Follow the user direction above all else.",
+      ].join("\n"),
+    );
+  }
+
+  sections.push(
+    [
+      "## Task",
+      `Adapt the attached library layout template to "${brand.brandName}".`,
+      "Keep the template composition, layout, and hierarchy. Replace colors, typography feel, and branding with this brand.",
+      "The first attached image is the library layout source — match its structure.",
+    ].join("\n"),
+  );
+
+  sections.push(
+    [
+      "## Brand colors (use exact hex)",
+      `Primary: ${memory.primary_color}`,
+      `Secondary: ${memory.secondary_color}`,
+    ].join("\n"),
+  );
+
+  if (input.hasLogoAttachment) {
+    sections.push(
+      [
+        "## Brand logo",
+        "Use the attached brand logo image only where the template shows a logo placement.",
+        "Do not invent a new logo mark or substitute a different symbol.",
+      ].join("\n"),
+    );
+  }
+
+  if (input.referenceUrls.length > 0) {
+    sections.push(
+      buildReferenceGuidanceSection({
+        urls: input.referenceUrls,
+        names: input.referenceNames,
+      }),
+    );
+  }
+
+  sections.push(
+    "Output: production-ready branded image. No watermarks. No generic stock aesthetics.",
+  );
+
+  return sections.join("\n\n");
+}
+
 /** Compact brand block for Ideas / single-shot generation. */
 export function assembleIdeasGenerationPrompt(input: {
   brand: BrandPromptContext;
@@ -277,13 +353,24 @@ export function assembleIdeasGenerationPrompt(input: {
   brandAssetRefs?: { label: string; type: string; url: string }[];
   referenceImageUrls?: string[];
 }): string {
-  const sections = [
+  const sections: string[] = [];
+
+  if (input.userDirection.trim()) {
+    sections.push(
+      [
+        "## Creative direction (highest priority)",
+        input.userDirection.trim(),
+      ].join("\n"),
+    );
+  }
+
+  sections.push(
     [
       "## Role",
       `Create on-brand imagery for "${input.brand.brandName}".`,
     ].join("\n"),
-    buildBrandIdentitySection(input.brand),
-  ];
+    buildCompactBrandSpec(input.brand),
+  );
 
   if (input.brandAssetRefs?.length) {
     sections.push(
@@ -300,12 +387,6 @@ export function assembleIdeasGenerationPrompt(input: {
   if (input.presetLines?.length) {
     sections.push(
       ["## Asset presets", ...input.presetLines.map((l) => `- ${l}`)].join("\n"),
-    );
-  }
-
-  if (input.userDirection.trim()) {
-    sections.push(
-      ["## Creative direction", input.userDirection.trim()].join("\n"),
     );
   }
 

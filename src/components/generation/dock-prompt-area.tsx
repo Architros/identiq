@@ -16,35 +16,38 @@ import { DockPlatformHint } from "@/components/generation/dock-platform-hint";
 import { cn } from "@/lib/utils";
 
 type DockPromptAreaProps = {
-  variant?: "ideas-grid" | "images" | "chat";
+  variant?: "ideas-grid" | "images";
 };
 
 export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const isChat = variant === "chat";
   const isImages = variant === "images";
   const isIdeasGrid = variant === "ideas-grid";
   const {
     prompt,
     setPrompt,
-    imageAssistEnabled,
-    setImageAssistEnabled,
     referenceImages,
+    libraryTemplateId,
+    view,
     addReferenceImage,
     removeReferenceImage,
     setHistoryOpen,
+    submitGeneration,
+    isGenerating,
   } = useGeneration();
 
-  const refThumbSize = isChat ? "h-7 w-7" : isImages ? "h-24 w-24" : "h-9 w-9";
-  const chromeButtonSize = isChat ? "h-7 w-7" : isImages ? "h-10 w-10" : "h-9 w-9";
-  const refIconSize = isChat ? 16 : isImages ? 28 : 18;
-  const chromeIconSize = isChat ? 16 : isImages ? 20 : 18;
+  const isLibraryRemix = Boolean(libraryTemplateId);
+  const submitOnEnter = view === "chat";
+
+  const refThumbSize = isImages ? "h-24 w-24" : "h-9 w-9";
+  const chromeButtonSize = isImages ? "h-10 w-10" : "h-9 w-9";
+  const refIconSize = isImages ? 28 : 18;
+  const chromeIconSize = isImages ? 20 : 18;
   const removeIconSize = isImages ? 20 : 10;
 
   return (
     <div
       className={cn(
-        isChat && "space-y-3 pb-2 pt-2",
         isImages && "space-y-2 py-2",
         isIdeasGrid && "space-y-3 pb-4 pt-3",
       )}
@@ -82,7 +85,7 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
                 <button
                   type="button"
                   onClick={() => removeReferenceImage(img.id)}
-                  className="absolute inset-0 flex items-center justify-center bg-foreground/50 opacity-0 transition-opacity hover:opacity-100"
+                  className="absolute inset-0 flex cursor-pointer items-center justify-center bg-foreground/50 opacity-0 transition-opacity hover:opacity-100"
                   aria-label="Remove reference"
                 >
                   <HugeiconsIcon
@@ -129,22 +132,6 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
                 </button>
               </>
             ) : null}
-
-            {isIdeasGrid ? (
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
-                <span className="relative inline-flex h-5 w-9 shrink-0 items-center">
-                  <input
-                    type="checkbox"
-                    checked={imageAssistEnabled}
-                    onChange={(e) => setImageAssistEnabled(e.target.checked)}
-                    className="peer sr-only"
-                  />
-                  <span className="h-5 w-9 rounded-full bg-border transition-colors peer-checked:bg-accent" />
-                  <span className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
-                </span>
-                Image Assist
-              </label>
-            ) : null}
           </div>
 
           <button
@@ -166,56 +153,49 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
           </button>
         </div>
 
-        {isChat ? (
-          <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-2">
-            <DockSettingsRow />
-            <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted">
-              <input
-                type="checkbox"
-                checked={imageAssistEnabled}
-                onChange={(e) => setImageAssistEnabled(e.target.checked)}
-                className="rounded border-border"
-              />
-              Assist
-            </label>
-          </div>
-        ) : null}
-
         <div
           className={cn(
-            "rounded-xl border border-border/80 bg-background",
-            isChat && "px-3 py-2",
-            isImages && "px-3 py-2",
+            "rounded-xl border border-border/80 bg-background px-3 py-2",
             isIdeasGrid && "relative px-4 pb-12 pt-3",
           )}
         >
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe what to generate…"
-            rows={isChat ? 2 : isImages ? 1 : 3}
+            placeholder={
+              isLibraryRemix
+                ? "Optional: add direction for this remix…"
+                : "Describe what to generate…"
+            }
+            rows={isIdeasGrid ? 3 : 1}
             className={cn(
               "w-full resize-none bg-transparent text-foreground placeholder:text-muted focus-visible:outline-none",
               isImages
-                ? "min-h-[2.25rem] py-0.5 text-sm leading-snug"
+                ? "min-h-9 py-0.5 text-sm leading-snug"
                 : "text-sm leading-relaxed",
             )}
             onKeyDown={(e) => {
-              if (isChat && e.key === "Enter" && !e.shiftKey) {
+              if (
+                submitOnEnter &&
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !isGenerating
+              ) {
                 e.preventDefault();
-                const form = e.currentTarget.form;
-                if (form) form.requestSubmit();
+                void submitGeneration();
               }
             }}
           />
           <div
             className={cn(
               "flex flex-wrap items-center gap-1.5",
-              (isChat || isImages) && "mt-1.5 justify-end",
+              isImages && "mt-1.5 justify-end",
               isIdeasGrid && "absolute bottom-2 right-2",
             )}
           >
-            {!isChat ? <DockSettingsRow compact={isImages} /> : null}
+            {isImages || isIdeasGrid ? (
+              <DockSettingsRow compact={isImages} />
+            ) : null}
             <DockCreateButton />
           </div>
         </div>

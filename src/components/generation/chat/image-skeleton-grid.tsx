@@ -2,7 +2,8 @@
 
 import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import {
-  aspectRatioGenerationWrapperClass,
+  aspectRatioCSSValue,
+  aspectRatioGenerationLeftWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
 
@@ -19,6 +20,7 @@ type ImageSkeletonGridProps = {
   imageModel?: string;
   displayDimensions?: string;
   elapsedStartedAt?: number | null;
+  activityLabel?: string;
 };
 
 export function ImageSkeletonGrid({
@@ -27,6 +29,7 @@ export function ImageSkeletonGrid({
   imageModel,
   displayDimensions,
   elapsedStartedAt = null,
+  activityLabel,
 }: ImageSkeletonGridProps) {
   const ratio = parseAspectRatio(aspectRatio);
   const count = Math.max(1, Math.min(quantity, 4));
@@ -36,18 +39,21 @@ export function ImageSkeletonGrid({
     <div className="space-y-2">
       <div>
         <p className="text-sm font-medium text-foreground">
-          Creating image with {formatImageModelLabel(imageModel)}…
+          {activityLabel ??
+            `Creating image with ${formatImageModelLabel(imageModel)}…`}
         </p>
         <p className="text-xs text-muted">
           {displayDimensions ? `${displayDimensions} · ` : null}
-          {elapsed ? `Generating · ${elapsed}` : "Generating…"}
+          {formatImageModelLabel(imageModel)}
+          {elapsed ? ` · ${elapsed}` : null}
         </p>
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col items-start gap-3">
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className={`${aspectRatioGenerationWrapperClass(ratio)} animate-pulse overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active`}
+            className={`${aspectRatioGenerationLeftWrapperClass(ratio)} animate-pulse overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active`}
+            style={{ aspectRatio: aspectRatioCSSValue(ratio) }}
           />
         ))}
       </div>

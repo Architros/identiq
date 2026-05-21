@@ -37,7 +37,12 @@ export function DockSettingsRow({ compact = false }: { compact?: boolean }) {
   }));
 
   return (
-    <div className={cn("flex items-center", compact ? "gap-1" : "gap-1.5")}>
+    <div
+      className={cn(
+        "flex items-center",
+        compact ? "gap-1" : "gap-1.5",
+      )}
+    >
       <DockSelect
         label="Aspect ratio"
         value={aspectRatio}

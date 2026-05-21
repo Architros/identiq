@@ -14,25 +14,27 @@ export function ChatHeader() {
     isGenerating,
     chatTitle,
     generationStartedAt,
+    generationActivity,
+    libraryTemplateId,
     setHistoryOpen,
   } = useGeneration();
   const elapsed = useGenerationElapsed(
     isGenerating ? generationStartedAt : null,
   );
+  const displayTitle = libraryTemplateId ? "Library remix" : chatTitle;
+  const subtitle = isGenerating
+    ? [generationActivity, elapsed].filter(Boolean).join(" · ")
+    : libraryTemplateId
+      ? "Adapting the library layout to your brand"
+      : "Chat with your brand assistant";
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-b border-border/80 px-6 py-4">
+    <div className="flex shrink-0 items-center justify-between border-b border-border/80 px-4 py-2 sm:px-6">
       <div className="min-w-0 flex-1 pr-4">
-        <h1 className="truncate font-display text-2xl font-normal tracking-tight text-foreground">
-          {chatTitle}
+        <h1 className="truncate font-display text-xl font-normal tracking-tight text-foreground sm:text-2xl">
+          {displayTitle}
         </h1>
-        <p className="mt-0.5 text-sm text-muted">
-          {isGenerating && elapsed
-            ? `Generating · ${elapsed}`
-            : isGenerating
-              ? "Generating…"
-              : "Chat with your brand assistant"}
-        </p>
+        <p className="mt-0.5 truncate text-sm text-muted">{subtitle}</p>
       </div>
       <div className="flex items-center gap-2">
         <button

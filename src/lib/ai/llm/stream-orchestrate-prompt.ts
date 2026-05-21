@@ -32,13 +32,13 @@ export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
     system: ORCHESTRATE_SYSTEM_PROMPT,
     abortSignal: input.abortSignal,
     prompt: [
-      "Brand brief and request:",
+      input.userPrompt.trim()
+        ? `User direction (highest priority): ${input.userPrompt.trim()}`
+        : "",
+      "Brand brief:",
       input.basePrompt,
       referenceNote,
       assetNote,
-      input.userPrompt.trim()
-        ? `Additional user direction: ${input.userPrompt.trim()}`
-        : "",
       "Write the final image generation prompt:",
     ]
       .filter(Boolean)

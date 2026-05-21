@@ -14,19 +14,21 @@ export function DockCreateButton() {
     prompt,
     quantity,
     resolution,
-    imageAssistEnabled,
     referenceImages,
+    libraryTemplateId,
     isGenerating,
     submitGeneration,
     stopGeneration,
   } = useGeneration();
 
+  const isLibraryRemix = Boolean(libraryTemplateId);
+
   const tokenCost = calculateGenerationTokenCost({
     presetCount: selectedPresets.length,
     hasPrompt: prompt.trim().length > 0,
+    isLibraryRemix,
     quantity,
     resolution,
-    imageAssistEnabled,
     referenceImageCount: referenceImages.length,
   });
 
@@ -35,7 +37,7 @@ export function DockCreateButton() {
   const canSubmit =
     !isLoading &&
     hasActiveBrand &&
-    (selectedPresets.length > 0 || prompt.trim().length > 0) &&
+    (selectedPresets.length > 0 || prompt.trim().length > 0 || isLibraryRemix) &&
     !isGenerating &&
     !insufficient;
 
@@ -45,7 +47,7 @@ export function DockCreateButton() {
         type="button"
         onClick={() => stopGeneration()}
         className={cn(
-          "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold transition-colors",
+          "ml-2 h-9 shrink-0 cursor-pointer rounded-xl px-5 text-sm font-semibold transition-colors",
           "border border-border bg-surface text-foreground hover:bg-sidebar-active",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
         )}
@@ -62,7 +64,8 @@ export function DockCreateButton() {
       onClick={() => submitGeneration()}
       className={cn(
         "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold text-white transition-colors",
-        "bg-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50",
+        canSubmit ? "cursor-pointer" : "cursor-not-allowed",
+        "bg-accent hover:bg-accent/90 disabled:opacity-50",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
       )}
     >

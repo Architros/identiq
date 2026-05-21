@@ -91,6 +91,11 @@ export function aspectRatioGenerationWrapperClass(ratio: AspectRatio): string {
   return cn("relative mx-auto w-full", aspectRatioGenerationClass[ratio]);
 }
 
+/** Left-aligned generation skeleton / result (matches chat column). */
+export function aspectRatioGenerationLeftWrapperClass(ratio: AspectRatio): string {
+  return cn("relative w-full shrink-0", aspectRatioGenerationClass[ratio]);
+}
+
 /** Target display width for gallery thumbnails (height derived from ratio). */
 export function galleryImageDimensions(ratio: AspectRatio): {
   width: number;

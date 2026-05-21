@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 
 export type GenerationPhase =
+  | "composing-prompt"
   | "orchestrating"
   | "generating-image"
   | "done"

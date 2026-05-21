@@ -21,7 +21,6 @@ import {
 import {
   deleteDraft,
   getDraftByIdMerged,
-  saveDraft,
   saveDraftAndWait,
 } from "@/lib/brand/brand-storage";
 import {
@@ -33,7 +32,10 @@ import { normalizeBrandDraft } from "@/lib/brand/normalize-draft";
 import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
 import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
 import { runDraftAttachmentUploads } from "@/lib/brand/draft-attachment-uploads";
-import { takePendingDraftUploadJobs } from "@/lib/brand/pending-draft-uploads";
+import {
+  clearWizardSession,
+  getWizardSession,
+} from "@/lib/brand/pending-wizard-session";
 
 type BrandWizardContextValue = {
   draft: BrandProjectDraft;
@@ -69,12 +71,21 @@ function touchDraft(draft: BrandProjectDraft): BrandProjectDraft {
 
 async function resolveInitialDraft(
   draftIdParam: string | null,
-): Promise<BrandProjectDraft> {
+): Promise<{ draft: BrandProjectDraft; persisted: boolean }> {
   if (draftIdParam) {
+    const session = takeWizardSession(draftIdParam);
+    if (session) {
+      return {
+        draft: normalizeBrandDraft(session.draft),
+        persisted: false,
+      };
+    }
     const existing = await getDraftByIdMerged(draftIdParam);
-    if (existing) return normalizeBrandDraft(existing);
+    if (existing) {
+      return { draft: normalizeBrandDraft(existing), persisted: true };
+    }
   }
-  return createEmptyDraft();
+  return { draft: createEmptyDraft(), persisted: false };
 }
 
 export function validateWizardStep(
@@ -130,15 +141,17 @@ export function BrandWizardProvider({
   const [returnToReview, setReturnToReview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
   const pendingUploadStartedRef = useRef<string | null>(null);
+  const draftPersistedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const initial = await resolveInitialDraft(draftIdParam);
+      const { draft: initial, persisted } =
+        await resolveInitialDraft(draftIdParam);
       if (!cancelled) {
+        draftPersistedRef.current = persisted;
         setDraft(initial);
         lastSavedSnapshotRef.current = draftSnapshot(initial);
         setIsReady(true);
@@ -157,9 +170,11 @@ export function BrandWizardProvider({
     if (!isReady) return;
     if (pendingUploadStartedRef.current === draft.id) return;
 
-    const jobs = takePendingDraftUploadJobs(draft.id);
+    const session = getWizardSession(draft.id);
+    const jobs = session?.jobs;
     if (!jobs?.length) return;
 
+    clearWizardSession(draft.id);
     pendingUploadStartedRef.current = draft.id;
     const pendingFiles = new Map(jobs.map((j) => [j.id, j.file]));
 
@@ -187,17 +202,6 @@ export function BrandWizardProvider({
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
-
-  useEffect(() => {
-    if (!isReady) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      saveDraft(draft);
-    }, 600);
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [draft, isReady]);
 
   const updateDraft = useCallback((patch: Partial<BrandProjectDraft>) => {
     setDraft((prev) => touchDraft({ ...prev, ...patch }));
@@ -277,6 +281,7 @@ export function BrandWizardProvider({
       );
     }
     lastSavedSnapshotRef.current = draftSnapshot(toSave);
+    draftPersistedRef.current = true;
     if (view === "generating") {
       setView("steps");
     }
@@ -284,8 +289,11 @@ export function BrandWizardProvider({
   }, [draft, router, view]);
 
   const exitWithoutSaving = useCallback(() => {
+    if (!draftPersistedRef.current) {
+      deleteDraft(draft.id);
+    }
     router.push("/");
-  }, [router]);
+  }, [draft.id, router]);
 
   const toOrchestrateInput = useCallback((): WizardOrchestrateInput => {
     const refUrls = getDraftReferenceImageUrls(draft);
@@ -336,7 +344,6 @@ export function BrandWizardProvider({
   const cancelGenerating = useCallback(() => {
     const next = { ...draft, status: "draft" as const, step: WIZARD_STEP_COUNT - 1 };
     setDraft(touchDraft(next));
-    saveDraft(next);
     setView("steps");
   }, [draft]);
 

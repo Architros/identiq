@@ -16,8 +16,13 @@ import { useCredits } from "@/contexts/credits-context";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import type { AspectRatio, GenerationPreset, Resolution } from "@/lib/generation/presets";
 import { getPresetById } from "@/lib/generation/presets";
-import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import type {
+  GenerationPhase,
+  IdentiqUIMessage,
+} from "@/lib/generation/chat-message-types";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
+import { setGenerationChromeCompact } from "@/lib/generation/chrome-store";
+import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
 import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
@@ -36,6 +41,7 @@ export type ReferenceImage = {
   /** Omitted when attached from the asset library (URL already on storage). */
   file?: File;
   previewUrl: string;
+  name?: string;
 };
 
 type GenerationContextValue = {
@@ -44,7 +50,6 @@ type GenerationContextValue = {
   activePresetId: string | null;
   prompt: string;
   referenceImages: ReferenceImage[];
-  imageAssistEnabled: boolean;
   aspectRatio: AspectRatio;
   resolution: Resolution;
   quantity: number;
@@ -55,6 +60,9 @@ type GenerationContextValue = {
   activeChatId: string | null;
   chatTitle: string;
   generationStartedAt: number | null;
+  generationPhase: GenerationPhase | null;
+  generationActivity: string | null;
+  libraryTemplateId: string | null;
   historyOpen: boolean;
   setHistoryOpen: (open: boolean) => void;
   addPreset: (preset: GenerationPreset) => void;
@@ -63,8 +71,8 @@ type GenerationContextValue = {
   setPrompt: (value: string) => void;
   addReferenceImage: (files: FileList | File[]) => void;
   addReferenceImageFromUrl: (params: { url: string; name: string }) => boolean;
+  setLibraryTemplateId: (id: string | null) => void;
   removeReferenceImage: (id: string) => void;
-  setImageAssistEnabled: (value: boolean) => void;
   setAspectRatio: (value: AspectRatio) => void;
   setResolution: (value: Resolution) => void;
   setQuantity: (value: number) => void;
@@ -73,6 +81,8 @@ type GenerationContextValue = {
   closeChat: () => void;
   clearError: () => void;
   startNewChat: () => void;
+  /** Opens chat UI for a library template remix (clears prior chat session). */
+  prepareLibraryRemixSession: () => void;
   openChatSession: (chatId: string) => Promise<void>;
   continueFromMessageIndex: (index: number) => Promise<void>;
   refreshChatHistory: () => Promise<IdeasChatSummary[]>;
@@ -107,7 +117,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
-  const [imageAssistEnabled, setImageAssistEnabled] = useState(true);
+  const [libraryTemplateId, setLibraryTemplateIdState] = useState<string | null>(
+    null,
+  );
+  const libraryTemplateIdRef = useRef<string | null>(null);
+  const [generationPhase, setGenerationPhase] =
+    useState<GenerationPhase | null>(null);
+  const [generationPresetTitle, setGenerationPresetTitle] = useState<
+    string | undefined
+  >();
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [quantity, setQuantity] = useState(1);
@@ -126,6 +144,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const referenceImagesRef = useRef<ReferenceImage[]>([]);
   const activeChatIdRef = useRef<string | null>(null);
 
+  const setLibraryTemplateId = useCallback((id: string | null) => {
+    libraryTemplateIdRef.current = id;
+    setLibraryTemplateIdState(id);
+  }, []);
+
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
@@ -134,13 +157,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     referenceImagesRef.current = referenceImages;
   }, [referenceImages]);
 
+  useEffect(() => {
+    libraryTemplateIdRef.current = libraryTemplateId;
+  }, [libraryTemplateId]);
+
   const settingsSnapshot = useCallback(
     () => ({
       presets: selectedPresets.map((p) => p.id),
       aspectRatio,
       resolution,
       quantity,
-      imageAssist: imageAssistEnabled,
       userPrompt: prompt,
     }),
     [
@@ -148,7 +174,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
-      imageAssistEnabled,
       prompt,
     ],
   );
@@ -169,8 +194,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         aspectRatio: p.aspectRatio,
       })),
       userPrompt: prompt,
-      imageAssist: imageAssistEnabled,
-      referenceImageCount: referenceImages.length,
+      imageAssist: true,
+      referenceImageCount: referenceImagesRef.current.length,
+      composerReferenceImages: referenceImagesRef.current.map((img) => ({
+        url: img.previewUrl,
+        name: img.name,
+      })),
+      libraryTemplateId: libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
       settings: { aspectRatio, resolution, quantity },
     };
   }, [
@@ -179,8 +209,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     brandMemory,
     selectedPresets,
     prompt,
-    imageAssistEnabled,
-    referenceImages.length,
+    referenceImages,
+    libraryTemplateId,
     aspectRatio,
     resolution,
     quantity,
@@ -216,6 +246,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       transport,
       onFinish: ({ isAbort, isError, messages: finishedMessages }) => {
         setGenerationStartedAt(null);
+        setGenerationPhase(isAbort ? "stopped" : isError ? "error" : "done");
         lastPresetPhaseRef.current = null;
         if (!isAbort && !isError && pendingTokenCostRef.current > 0) {
           void refreshBalance();
@@ -239,9 +270,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       onData: (dataPart) => {
         if (dataPart.type === "data-generation-status") {
           const data = dataPart.data as {
-            phase?: string;
+            phase?: GenerationPhase;
             presetId?: string;
+            presetTitle?: string;
           };
+          if (data.phase) {
+            setGenerationPhase(data.phase);
+          }
+          if (data.presetTitle) {
+            setGenerationPresetTitle(data.presetTitle);
+          }
           if (data.phase === "generating-image") {
             const phaseKey = data.presetId ?? "default";
             if (lastPresetPhaseRef.current !== phaseKey) {
@@ -251,6 +289,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           }
           if (data.phase === "done" || data.phase === "error" || data.phase === "stopped") {
             setGenerationStartedAt(null);
+            setGenerationPhase(data.phase);
             lastPresetPhaseRef.current = null;
           }
         }
@@ -306,12 +345,35 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, [messages]);
 
   const isGenerating = status === "submitted" || status === "streaming";
+  const isLibraryRemix = Boolean(libraryTemplateId);
+
+  const generationActivity = useMemo(() => {
+    if (!isGenerating && generationPhase !== "error") return null;
+    return generationActivityLabel({
+      phase: generationPhase ?? (isGenerating ? "orchestrating" : undefined),
+      presetTitle: generationPresetTitle,
+      isLibraryRemix,
+    });
+  }, [
+    isGenerating,
+    generationPhase,
+    generationPresetTitle,
+    isLibraryRemix,
+  ]);
+
+  useEffect(() => {
+    setGenerationChromeCompact(
+      view === "chat" || isGenerating || Boolean(libraryTemplateId),
+    );
+    return () => setGenerationChromeCompact(false);
+  }, [view, isGenerating, libraryTemplateId]);
 
   useEffect(() => {
     if (isGenerating && generationStartedAt === null && status === "submitted") {
       setGenerationStartedAt(Date.now());
+      setGenerationPhase(isLibraryRemix ? "composing-prompt" : "orchestrating");
     }
-  }, [isGenerating, generationStartedAt, status]);
+  }, [isGenerating, generationStartedAt, status, isLibraryRemix]);
 
   const ensureChatId = useCallback(async (): Promise<string | null> => {
     if (activeChatIdRef.current) return activeChatIdRef.current;
@@ -387,9 +449,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         if (typeof snap?.quantity === "number") {
           setQuantity(snap.quantity);
         }
-        if (typeof snap?.imageAssist === "boolean") {
-          setImageAssistEnabled(snap.imageAssist);
-        }
         if (typeof snap?.userPrompt === "string") {
           setPrompt(snap.userPrompt);
         }
@@ -399,6 +458,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     },
     [setMessages],
   );
+
+  const prepareLibraryRemixSession = useCallback(() => {
+    setActiveChatId(null);
+    activeChatIdRef.current = null;
+    setChatTitle("Library remix");
+    setMessages([]);
+    registeredJobsRef.current.clear();
+    setGenerationStartedAt(null);
+    setGenerationPhase(null);
+    setGenerationPresetTitle(undefined);
+    setErrorMessage(null);
+    setView("chat");
+  }, [setMessages]);
 
   const startNewChat = useCallback(() => {
     if (isGenerating) {
@@ -411,9 +483,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setMessages([]);
     registeredJobsRef.current.clear();
     setGenerationStartedAt(null);
+    setGenerationPhase(null);
+    setGenerationPresetTitle(undefined);
+    setLibraryTemplateId(null);
     setErrorMessage(null);
     setHistoryOpen(false);
-  }, [isGenerating, stop, setMessages]);
+  }, [isGenerating, stop, setMessages, setLibraryTemplateId]);
 
   const continueFromMessageIndex = useCallback(
     async (index: number) => {
@@ -538,7 +613,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       }
 
       const id = crypto.randomUUID();
-      const next: ReferenceImage[] = [...prev, { id, previewUrl: url }];
+      const next: ReferenceImage[] = [
+        ...prev,
+        { id, previewUrl: url, name: params.name },
+      ];
       referenceImagesRef.current = next;
       setReferenceImages(next);
       setErrorMessage(null);
@@ -563,15 +641,18 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setErrorMessage("Create a brand first to generate images.");
       return;
     }
-    if (selectedPresets.length === 0 && !prompt.trim()) return;
+    const remixingLibrary = Boolean(libraryTemplateIdRef.current);
+    if (selectedPresets.length === 0 && !prompt.trim() && !remixingLibrary) {
+      return;
+    }
 
     const tokenCost = calculateGenerationTokenCost({
       presetCount: selectedPresets.length,
       hasPrompt: prompt.trim().length > 0,
+      isLibraryRemix: remixingLibrary,
       quantity,
       resolution,
-      imageAssistEnabled,
-      referenceImageCount: referenceImages.length,
+      referenceImageCount: referenceImagesRef.current.length,
     });
 
     if (tokenCost > availableTokens) {
@@ -590,6 +671,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
     const messageText =
       prompt.trim() ||
+      (remixingLibrary ? " " : "") ||
       selectedPresets.map((p) => p.defaultPrompt).join(" ") ||
       "Generate on-brand assets";
 
@@ -608,7 +690,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     prompt,
     quantity,
     resolution,
-    imageAssistEnabled,
     referenceImages.length,
     availableTokens,
     buildGenerationBody,
@@ -622,6 +703,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     stop();
     pendingTokenCostRef.current = 0;
     setGenerationStartedAt(null);
+    setGenerationPhase("stopped");
     lastPresetPhaseRef.current = null;
   }, [stop]);
 
@@ -631,8 +713,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       pendingTokenCostRef.current = 0;
     }
     setGenerationStartedAt(null);
+    setLibraryTemplateId(null);
     setView("grid");
-  }, [isGenerating, stop]);
+  }, [isGenerating, stop, setLibraryTemplateId]);
 
   const clearError = useCallback(() => {
     setErrorMessage(null);
@@ -645,7 +728,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       activePresetId,
       prompt,
       referenceImages,
-      imageAssistEnabled,
       aspectRatio,
       resolution,
       quantity,
@@ -656,6 +738,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       activeChatId,
       chatTitle,
       generationStartedAt,
+      generationPhase,
+      generationActivity,
+      libraryTemplateId,
       historyOpen,
       setHistoryOpen,
       addPreset,
@@ -664,8 +749,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setPrompt,
       addReferenceImage,
       addReferenceImageFromUrl,
+      setLibraryTemplateId,
       removeReferenceImage,
-      setImageAssistEnabled,
       setAspectRatio,
       setResolution,
       setQuantity,
@@ -674,6 +759,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       closeChat,
       clearError,
       startNewChat,
+      prepareLibraryRemixSession,
       openChatSession,
       continueFromMessageIndex,
       refreshChatHistory,
@@ -684,7 +770,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       activePresetId,
       prompt,
       referenceImages,
-      imageAssistEnabled,
       aspectRatio,
       resolution,
       quantity,
@@ -696,18 +781,24 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       activeChatId,
       chatTitle,
       generationStartedAt,
+      generationPhase,
+      generationActivity,
+      libraryTemplateId,
       historyOpen,
+      setLibraryTemplateId,
       addPreset,
       removePreset,
       setActivePreset,
       addReferenceImage,
       addReferenceImageFromUrl,
+      setLibraryTemplateId,
       removeReferenceImage,
       submitGeneration,
       stopGeneration,
       closeChat,
       clearError,
       startNewChat,
+      prepareLibraryRemixSession,
       openChatSession,
       continueFromMessageIndex,
       refreshChatHistory,

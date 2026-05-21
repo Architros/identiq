@@ -36,6 +36,17 @@ export const generationRequestSchema = z.object({
   userPrompt: z.string(),
   imageAssist: z.boolean(),
   referenceImageCount: z.number().int().min(0),
+  composerReferenceImages: z
+    .array(
+      z.object({
+        url: z.string().min(1),
+        name: z.string().optional(),
+      }),
+    )
+    .max(4)
+    .optional()
+    .default([]),
+  libraryTemplateId: z.string().optional(),
   settings: z.object({
     aspectRatio: z.enum(["1:1", "9:16", "16:9", "4:5", "2:3", "21:9"]),
     resolution: z.enum(["1K", "2K"]),

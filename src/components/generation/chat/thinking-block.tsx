@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { thinkingBlockStatusLabel } from "@/lib/generation/generation-activity-label";
+import type { GenerationPhase } from "@/lib/generation/chat-message-types";
 import { cn } from "@/lib/utils";
 
 type ThinkingBlockProps = {
   isStreaming: boolean;
+  phase?: GenerationPhase | string;
+  isLibraryRemix?: boolean;
+  /** Overrides default status copy while streaming without body text. */
+  activityLabel?: string;
   textContent: string;
   reasoningContent: string;
 };
@@ -20,6 +26,9 @@ function formatThoughtLabel(seconds: number, isStreaming: boolean): string {
 
 export function ThinkingBlock({
   isStreaming,
+  phase,
+  isLibraryRemix,
+  activityLabel,
   textContent,
   reasoningContent,
 }: ThinkingBlockProps) {
@@ -64,7 +73,10 @@ export function ThinkingBlock({
 
   if (!hasContent && !isStreaming) return null;
 
-  const label = formatThoughtLabel(elapsedSec, isStreaming);
+  const label =
+    isStreaming && activityLabel
+      ? activityLabel
+      : formatThoughtLabel(elapsedSec, isStreaming);
 
   return (
     <div className="rounded-xl border border-border/60 bg-sidebar-active/50">
@@ -95,7 +107,12 @@ export function ThinkingBlock({
         <div className="space-y-3 border-t border-border/50 px-4 py-3">
           {isStreaming && !hasContent ? (
             <p className="text-sm text-muted">
-              Refining your prompt with brand context…
+              {activityLabel ??
+                thinkingBlockStatusLabel({
+                  phase,
+                  isLibraryRemix,
+                  isStreaming: true,
+                })}
             </p>
           ) : null}
 

@@ -1,6 +1,7 @@
 import type { BrandAsset, BrandMemory } from "@/lib/brand/types";
 import {
   assembleIdeasGenerationPrompt,
+  assembleLibraryRemixPrompt,
   type BrandPromptContext,
 } from "@/lib/brand/prompt-structure";
 
@@ -19,6 +20,9 @@ export type BuildPromptInput = {
   userPrompt: string;
   imageAssist: boolean;
   referenceImageUrls?: string[];
+  referenceImageNames?: string[];
+  mode?: "default" | "library-remix";
+  hasLogoAttachment?: boolean;
   sector?: string;
   description?: string;
   feelings?: string[];
@@ -48,6 +52,20 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
           url: a.url,
         }))
       : undefined;
+
+  if (input.mode === "library-remix") {
+    const urls = input.referenceImageUrls ?? [];
+    const names =
+      input.referenceImageNames ??
+      urls.map((_, i) => `Reference ${i + 1}`);
+    return assembleLibraryRemixPrompt({
+      brand,
+      userDirection: input.userPrompt,
+      referenceUrls: urls,
+      referenceNames: names,
+      hasLogoAttachment: input.hasLogoAttachment ?? false,
+    });
+  }
 
   return assembleIdeasGenerationPrompt({
     brand,
