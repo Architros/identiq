@@ -101,3 +101,22 @@ body {
 .generation-panel-active {
   animation: generation-glow 2s ease-in-out infinite;
 }
+
+@keyframes home-collage-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.home-collage-scroll {
+  animation: home-collage-scroll 32s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-collage-scroll {
+    animation: none;
+  }
+}

@@ -46,3 +46,25 @@ export function pickHomeCollageTemplates(
 
   return picks.slice(0, count);
 }
+
+/** Several distinct collage panels for marquee scrolling. */
+export function pickHomeCollageTemplateSets(
+  templates: LibraryTemplate[],
+  panelCount = 3,
+  tilesPerPanel = 8,
+): LibraryTemplate[][] {
+  if (templates.length === 0) return [];
+
+  const sets: LibraryTemplate[][] = [];
+  const used = new Set<string>();
+
+  for (let p = 0; p < panelCount; p++) {
+    const pool = templates.filter((t) => !used.has(t.id));
+    const pickFrom = pool.length >= tilesPerPanel ? pool : templates;
+    const panel = pickHomeCollageTemplates(pickFrom, tilesPerPanel);
+    for (const t of panel) used.add(t.id);
+    sets.push(panel);
+  }
+
+  return sets;
+}

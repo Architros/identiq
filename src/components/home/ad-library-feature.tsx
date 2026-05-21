@@ -5,6 +5,12 @@ import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Megaphone01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HomeLibraryCollage } from "@/components/home/home-library-collage";
+import {
+  HOME_BENTO_BODY_CLASS,
+  HOME_BENTO_CARD_CLASS,
+  HOME_BENTO_TITLE_CLASS,
+} from "@/lib/home/bento-card";
+import { cn } from "@/lib/utils";
 
 export function AdLibraryFeature() {
   return (
@@ -12,9 +18,14 @@ export function AdLibraryFeature() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex min-h-[280px] overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface lg:min-h-[320px]"
+      className={cn(HOME_BENTO_CARD_CLASS, "flex-col sm:flex-row")}
     >
-      <div className="flex flex-1 flex-col justify-center gap-4 p-8 lg:max-w-[42%]">
+      <div
+        className={cn(
+          HOME_BENTO_BODY_CLASS,
+          "w-full shrink-0 sm:max-w-[46%] sm:border-r sm:border-border/60",
+        )}
+      >
         <span className="inline-flex items-center gap-2 text-sm font-medium text-muted">
           <HugeiconsIcon
             icon={Megaphone01Icon}
@@ -24,7 +35,7 @@ export function AdLibraryFeature() {
           />
           Library
         </span>
-        <h2 className="font-display text-3xl leading-tight tracking-tight text-foreground lg:text-4xl">
+        <h2 className={HOME_BENTO_TITLE_CLASS}>
           Remix ads from top{" "}
           <em className="font-display italic text-accent">brands</em>
         </h2>
@@ -34,7 +45,7 @@ export function AdLibraryFeature() {
         </p>
         <Link
           href="/library"
-          className="inline-flex w-fit items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-accent"
+          className="inline-flex w-fit shrink-0 items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-accent"
         >
           Browse Library
           <HugeiconsIcon
@@ -48,7 +59,7 @@ export function AdLibraryFeature() {
 
       <Link
         href="/library"
-        className="hidden min-w-0 flex-1 sm:block"
+        className="relative hidden min-h-0 min-w-0 flex-1 overflow-hidden sm:block"
         aria-label="Browse Library templates"
       >
         <HomeLibraryCollage />

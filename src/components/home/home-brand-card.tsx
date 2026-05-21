@@ -10,6 +10,7 @@ import {
 import type { BrandKit } from "@/lib/brand/types";
 import type { BrandSummary } from "@/lib/brand/brands";
 import {
+  brandColorPair,
   brandPaletteSwatches,
   brandTraitTags,
   pickBrandLogoUrl,
@@ -27,6 +28,7 @@ type HomeBrandCardProps = {
 
 export function HomeBrandCard({ summary, kit, onSelect }: HomeBrandCardProps) {
   const logoUrl = pickBrandLogoUrl(kit);
+  const { primary } = brandColorPair(kit);
   const swatches = brandPaletteSwatches(kit);
   const tags = brandTraitTags(kit);
   const visibleSwatches = swatches.slice(0, MAX_SWATCHES);
@@ -46,23 +48,28 @@ export function HomeBrandCard({ summary, kit, onSelect }: HomeBrandCardProps) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
       )}
     >
-      <div className="relative flex aspect-[5/3] w-full items-center justify-center overflow-hidden rounded-lg bg-[#0a0a0a]">
+      <div className="relative aspect-[5/3] w-full overflow-hidden rounded-lg bg-white">
         {logoUrl ? (
           <Image
             src={logoUrl}
             alt=""
-            width={160}
-            height={80}
-            className="max-h-[72%] max-w-[80%] object-contain"
+            fill
+            className="object-contain object-center p-2"
+            sizes="(max-width: 1280px) 280px, 320px"
             unoptimized
           />
         ) : (
-          <span
-            className="font-display text-4xl tracking-tight text-white/90"
-            aria-hidden
+          <div
+            className="flex size-full items-center justify-center"
+            style={{ backgroundColor: primary }}
           >
-            {heroLetter}
-          </span>
+            <span
+              className="font-display text-4xl tracking-tight text-white/90"
+              aria-hidden
+            >
+              {heroLetter}
+            </span>
+          </div>
         )}
       </div>
 

@@ -7,10 +7,14 @@ import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { libraryTemplates } from "@/lib/library/templates";
+import {
+  HOME_BENTO_BODY_CLASS,
+  HOME_BENTO_CARD_CLASS,
+  HOME_BENTO_TITLE_CLASS,
+} from "@/lib/home/bento-card";
 
 const PREVIEW_POOL = libraryTemplates.slice(0, 8);
 const GAP_PX = 12;
-/** Minimum width per thumb — favors 2-up layout in a half-width card (~2× prior size). */
 const MIN_THUMB_PX = 140;
 const MIN_THUMB_PX_FOR_THREE = 200;
 const MAX_VISIBLE = 3;
@@ -63,54 +67,57 @@ export function CreateImageCard() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.05 }}
-      className="flex min-h-[280px] min-w-0 flex-col justify-between rounded-[var(--radius-card)] border border-border bg-surface p-8 lg:min-h-[320px]"
+      className={`${HOME_BENTO_CARD_CLASS} flex-col`}
     >
-      {previews.length > 0 ? (
-        <div
-          ref={stripRef}
-          className="mb-6 grid w-full min-w-0 gap-2 sm:gap-3"
-          style={{
-            gridTemplateColumns: `repeat(${previews.length}, minmax(0, 1fr))`,
-          }}
-        >
-          {previews.map((t) => (
-            <div
-              key={t.id}
-              className="relative h-40 w-full min-w-0 overflow-hidden rounded-xl ring-1 ring-border/80 sm:h-44 lg:h-48"
-            >
-              <Image
-                src={t.imageUrl}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 50vw, 280px"
-                unoptimized
-              />
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <div className={`${HOME_BENTO_BODY_CLASS} h-full`}>
+        {previews.length > 0 ? (
+          <div
+            ref={stripRef}
+            className="grid w-full min-w-0 shrink-0 gap-2 sm:gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${previews.length}, minmax(0, 1fr))`,
+            }}
+          >
+            {previews.map((t) => (
+              <div
+                key={t.id}
+                className="relative h-32 w-full min-w-0 overflow-hidden rounded-xl ring-1 ring-border/80 sm:h-36"
+              >
+                <Image
+                  src={t.imageUrl}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 50vw, 280px"
+                  unoptimized
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="shrink-0" aria-hidden />
+        )}
 
-      <div>
-        <h2 className="font-display text-3xl leading-tight tracking-tight text-foreground">
-          Generate on-brand images
-        </h2>
-        <p className="mt-2 text-sm text-muted">
-          Use your library, references, and prompts on Brand assets.
-        </p>
+        <div className="min-h-0">
+          <h2 className={HOME_BENTO_TITLE_CLASS}>Generate on-brand images</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Use your library, references, and prompts on Brand assets.
+          </p>
+        </div>
+
+        <Link
+          href="/images"
+          className="inline-flex w-fit shrink-0 items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
+        >
+          Open Brand assets
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={16}
+            color="currentColor"
+            strokeWidth={1.75}
+          />
+        </Link>
       </div>
-      <Link
-        href="/images"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
-      >
-        Open Brand assets
-        <HugeiconsIcon
-          icon={ArrowRight01Icon}
-          size={16}
-          color="currentColor"
-          strokeWidth={1.75}
-        />
-      </Link>
     </motion.article>
   );
 }
