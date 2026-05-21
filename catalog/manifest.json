@@ -1,0 +1,10 @@
+{
+  "categories": [
+    { "id": "all", "label": "All" },
+    { "id": "media", "label": "Media" },
+    { "id": "education", "label": "Education" },
+    { "id": "fashion", "label": "Fashion" },
+    { "id": "general", "label": "General" }
+  ],
+  "files": {}
+}

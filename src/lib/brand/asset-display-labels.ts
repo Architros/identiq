@@ -21,7 +21,7 @@ export function assetUsageLabel(asset: GeneratedBrandAsset): string {
 export function assetSourceLabel(
   source: GeneratedBrandAsset["source"] | undefined,
 ): string {
-  if (source === "ideas") return "Ideas";
+  if (source === "ideas") return "Studio";
   if (source === "starter-pack") return "Brand pack";
   return "Generated";
 }

@@ -6,6 +6,7 @@ import { CreditsProvider } from "@/contexts/credits-context";
 import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
 import { ConnectivityProvider } from "@/contexts/connectivity-context";
 import { ConnectivityBanner } from "@/components/shared/connectivity-banner";
+import { BuyTokensModal } from "@/components/brand-create/buy-tokens-modal";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <FloatingSupportWrapper />
               </div>
             </div>
+            <BuyTokensModal />
           </BrandAssetsProvider>
         </CreditsProvider>
       </BrandProvider>

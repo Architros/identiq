@@ -1,87 +1,107 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   HashtagIcon,
   Megaphone01Icon,
-  PackageIcon,
-  File01Icon,
-  Upload01Icon,
+  Image01Icon,
+  BulbIcon,
 } from "@hugeicons/core-free-icons";
-import { mockBrand } from "@/lib/mock-data";
+import { HomeBrandsPanel } from "@/components/home/home-brands-panel";
 import type { IconSvgElement } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 
-const actionIcons: Record<string, IconSvgElement> = {
-  hashtag: HashtagIcon,
-  megaphone: Megaphone01Icon,
-  package: PackageIcon,
-  document: File01Icon,
-};
-
-const actions = [
-  { label: "Social Media", iconName: "hashtag" },
-  { label: "Advertising", iconName: "megaphone" },
-  { label: "Product Shot", iconName: "package" },
-  { label: "Blog & Content", iconName: "document" },
+const quickLinks: {
+  label: string;
+  icon: IconSvgElement;
+  href: string;
+  description: string;
+}[] = [
+  {
+    label: "Social formats",
+    icon: HashtagIcon,
+    href: "/ideas",
+    description: "Preset sizes for feeds and stories",
+  },
+  {
+    label: "Ad layouts",
+    icon: Megaphone01Icon,
+    href: "/library",
+    description: "Remix proven campaign designs",
+  },
+  {
+    label: "Brand assets",
+    icon: Image01Icon,
+    href: "/images",
+    description: "Generate and manage your library",
+  },
+  {
+    label: "Studio",
+    icon: BulbIcon,
+    href: "/ideas",
+    description: "Multi-preset generation workspace",
+  },
 ];
 
-export function ActionCardsGrid() {
+function QuickActionCard({
+  label,
+  icon,
+  href,
+  description,
+  index,
+}: (typeof quickLinks)[number] & { index: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-6 lg:grid-rows-2">
-      {actions.map((action, index) => (
-        <motion.button
-          key={action.label}
-          type="button"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 + index * 0.04 }}
-          whileHover={{ scale: 1.01 }}
-          className="flex min-h-[100px] flex-col items-start justify-between rounded-[var(--radius-card)] border border-border bg-sidebar-active/50 p-5 text-left transition-colors hover:bg-sidebar-active"
-        >
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: 0.12 + index * 0.04 }}
+      className="min-w-0"
+    >
+      <Link
+        href={href}
+        className={cn(
+          "group flex h-[5.25rem] w-full items-center gap-3 rounded-[var(--radius-card)] border border-border",
+          "bg-sidebar-active/50 px-4 py-3 transition-colors hover:bg-sidebar-active",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        )}
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-foreground ring-1 ring-border/60 transition-colors group-hover:ring-accent/30">
           <HugeiconsIcon
-            icon={actionIcons[action.iconName]}
-            size={22}
+            icon={icon}
+            size={20}
             color="currentColor"
             strokeWidth={1.75}
           />
-          <span className="text-sm font-medium text-foreground">
-            {action.label}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-foreground">
+            {label}
           </span>
-        </motion.button>
-      ))}
-
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.26 }}
-        className="col-span-2 flex min-h-[120px] flex-col items-center justify-center rounded-[var(--radius-card)] bg-foreground p-6 lg:col-span-2 lg:col-start-3 lg:row-span-2 lg:min-h-[212px]"
-      >
-        <span className="font-display text-5xl text-surface">
-          {mockBrand.logoLetter}
+          <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted">
+            {description}
+          </span>
         </span>
-        <span className="mt-2 text-xs font-semibold tracking-[0.2em] text-surface/80">
-          {mockBrand.displayName}
-        </span>
-      </motion.div>
+      </Link>
+    </motion.div>
+  );
+}
 
-      <motion.button
-        type="button"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
-        whileHover={{ scale: 1.01 }}
-        className="col-span-2 flex min-h-[120px] flex-col items-center justify-center rounded-[var(--radius-card)] border border-border bg-sidebar-active/50 transition-colors hover:bg-sidebar-active lg:col-span-2 lg:col-start-5 lg:row-span-2 lg:min-h-[212px]"
-        aria-label="Upload assets"
+export function ActionCardsGrid() {
+  return (
+    <div className="space-y-4">
+      <HomeBrandsPanel />
+
+      <div
+        className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4"
+        role="list"
+        aria-label="Quick actions"
       >
-        <HugeiconsIcon
-          icon={Upload01Icon}
-          size={40}
-          color="currentColor"
-          strokeWidth={1.5}
-          className="text-muted"
-        />
-      </motion.button>
+        {quickLinks.map((action, index) => (
+          <QuickActionCard key={action.label} {...action} index={index} />
+        ))}
+      </div>
     </div>
   );
 }

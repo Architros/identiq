@@ -1,19 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Megaphone01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
-
-const adPlaceholders = [
-  { bg: "from-violet-200 to-purple-300", label: "ADP" },
-  { bg: "from-blue-200 to-cyan-300", label: "Webflow" },
-  { bg: "from-pink-200 to-rose-300", label: "Canva" },
-  { bg: "from-amber-200 to-orange-300", label: "Personio" },
-  { bg: "from-emerald-200 to-teal-300", label: "Brand" },
-  { bg: "from-indigo-200 to-blue-300", label: "Ads" },
-  { bg: "from-fuchsia-200 to-pink-300", label: "Social" },
-  { bg: "from-slate-200 to-gray-300", label: "Media" },
-];
+import { HomeLibraryCollage } from "@/components/home/home-library-collage";
 
 export function AdLibraryFeature() {
   return (
@@ -31,40 +22,37 @@ export function AdLibraryFeature() {
             color="currentColor"
             strokeWidth={1.75}
           />
-          Ad Library
+          Library
         </span>
         <h2 className="font-display text-3xl leading-tight tracking-tight text-foreground lg:text-4xl">
-          Recreate ads from top{" "}
-          <em className="font-display italic text-accent">Media</em> brands
+          Remix ads from top{" "}
+          <em className="font-display italic text-accent">brands</em>
         </h2>
-        <button
-          type="button"
+        <p className="text-sm leading-relaxed text-muted">
+          Browse real campaign layouts and apply them to your brand kit in one
+          click.
+        </p>
+        <Link
+          href="/library"
           className="inline-flex w-fit items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-accent"
         >
-          Browse
+          Browse Library
           <HugeiconsIcon
             icon={ArrowRight01Icon}
             size={16}
             color="currentColor"
             strokeWidth={1.75}
           />
-        </button>
+        </Link>
       </div>
 
-      <div className="hidden flex-1 grid-cols-4 gap-2 p-4 sm:grid">
-        {adPlaceholders.map((item, index) => (
-          <div
-            key={item.label}
-            className={`relative overflow-hidden rounded-lg bg-gradient-to-br ${item.bg} ${
-              index % 3 === 0 ? "col-span-2 row-span-2" : ""
-            } ${index === 1 ? "row-span-2" : ""}`}
-          >
-            <span className="absolute bottom-2 left-2 rounded bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
+      <Link
+        href="/library"
+        className="hidden min-w-0 flex-1 sm:block"
+        aria-label="Browse Library templates"
+      >
+        <HomeLibraryCollage />
+      </Link>
     </motion.article>
   );
 }

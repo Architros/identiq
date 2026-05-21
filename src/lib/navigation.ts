@@ -3,7 +3,7 @@ import {
   Home01Icon,
   Image01Icon,
   BulbIcon,
-  Upload01Icon,
+  Megaphone01Icon,
   PaintBoardIcon,
   Message01Icon,
   HelpCircleIcon,
@@ -20,11 +20,11 @@ export type NavItem = {
 export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home01Icon },
   { label: "Brand assets", href: "/images", icon: Image01Icon },
-  { label: "Ideas", href: "/ideas", icon: BulbIcon },
+  { label: "Studio", href: "/ideas", icon: BulbIcon },
 ];
 
 export const secondaryNav: NavItem[] = [
-  { label: "Uploads", href: "#", icon: Upload01Icon, disabled: true },
+  { label: "Library", href: "/library", icon: Megaphone01Icon },
   {
     label: "Brand Details",
     href: "/brands/current",

@@ -1,0 +1,434 @@
+{
+  "categories": [
+    {
+      "id": "all",
+      "label": "All"
+    },
+    {
+      "id": "media",
+      "label": "Media"
+    },
+    {
+      "id": "education",
+      "label": "Education"
+    },
+    {
+      "id": "fashion",
+      "label": "Fashion"
+    },
+    {
+      "id": "general",
+      "label": "General"
+    }
+  ],
+  "templates": [
+    {
+      "id": "009070d6-4131-42a2-9f83-3cb27195a7b6",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/009070d6-4131-42a2-9f83-3cb27195a7b6.png",
+      "width": 1122,
+      "height": 1402,
+      "storageKey": "library/templates/009070d6-4131-42a2-9f83-3cb27195a7b6.png"
+    },
+    {
+      "id": "039694df-2cf3-4a21-9d05-ca6c20aab95b",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/039694df-2cf3-4a21-9d05-ca6c20aab95b.png",
+      "width": 1536,
+      "height": 1024,
+      "storageKey": "library/templates/039694df-2cf3-4a21-9d05-ca6c20aab95b.png"
+    },
+    {
+      "id": "0797a669-6dd5-4fd3-81bf-942c7e8ffd98",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/0797a669-6dd5-4fd3-81bf-942c7e8ffd98.png",
+      "width": 1536,
+      "height": 1024,
+      "storageKey": "library/templates/0797a669-6dd5-4fd3-81bf-942c7e8ffd98.png"
+    },
+    {
+      "id": "0a635aa0-9d5d-431c-ae4b-cfdd740776dc",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/0a635aa0-9d5d-431c-ae4b-cfdd740776dc.png",
+      "width": 1537,
+      "height": 1023,
+      "storageKey": "library/templates/0a635aa0-9d5d-431c-ae4b-cfdd740776dc.png"
+    },
+    {
+      "id": "1330a303-a3e6-49e2-b4ec-4e75f33a1b39",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/1330a303-a3e6-49e2-b4ec-4e75f33a1b39.png",
+      "width": 1672,
+      "height": 941,
+      "storageKey": "library/templates/1330a303-a3e6-49e2-b4ec-4e75f33a1b39.png"
+    },
+    {
+      "id": "179edd39-6bb9-4b39-874d-de3dc1bca13e",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/179edd39-6bb9-4b39-874d-de3dc1bca13e.png",
+      "width": 1983,
+      "height": 793,
+      "storageKey": "library/templates/179edd39-6bb9-4b39-874d-de3dc1bca13e.png"
+    },
+    {
+      "id": "23ea8379-7dbd-434e-9d5c-a017b7b79971",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/23ea8379-7dbd-434e-9d5c-a017b7b79971.png",
+      "width": 1390,
+      "height": 1132,
+      "storageKey": "library/templates/23ea8379-7dbd-434e-9d5c-a017b7b79971.png"
+    },
+    {
+      "id": "249c3a93-414d-4e8f-8b0c-aa8f19775c6c",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/249c3a93-414d-4e8f-8b0c-aa8f19775c6c.png",
+      "width": 1144,
+      "height": 1375,
+      "storageKey": "library/templates/249c3a93-414d-4e8f-8b0c-aa8f19775c6c.png"
+    },
+    {
+      "id": "34a11c19-12b0-4f5b-8457-6ab7ee8c725b",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/34a11c19-12b0-4f5b-8457-6ab7ee8c725b.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/34a11c19-12b0-4f5b-8457-6ab7ee8c725b.png"
+    },
+    {
+      "id": "4bb374c0-e5d6-4b98-969e-40b4fc459bca",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/4bb374c0-e5d6-4b98-969e-40b4fc459bca.png",
+      "width": 1537,
+      "height": 1023,
+      "storageKey": "library/templates/4bb374c0-e5d6-4b98-969e-40b4fc459bca.png"
+    },
+    {
+      "id": "4d653ade-1653-419d-9cd0-dc09745cd29b",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/4d653ade-1653-419d-9cd0-dc09745cd29b.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/4d653ade-1653-419d-9cd0-dc09745cd29b.png"
+    },
+    {
+      "id": "4f268233-f038-42bc-87ca-cce7c653a265",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/4f268233-f038-42bc-87ca-cce7c653a265.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/4f268233-f038-42bc-87ca-cce7c653a265.png"
+    },
+    {
+      "id": "5613b5d5-6738-4299-b75f-823d4089d20f",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/5613b5d5-6738-4299-b75f-823d4089d20f.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/5613b5d5-6738-4299-b75f-823d4089d20f.png"
+    },
+    {
+      "id": "5b6f1c93-e8fc-42ee-8ff2-e9a5f8121e74",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/5b6f1c93-e8fc-42ee-8ff2-e9a5f8121e74.png",
+      "width": 1671,
+      "height": 941,
+      "storageKey": "library/templates/5b6f1c93-e8fc-42ee-8ff2-e9a5f8121e74.png"
+    },
+    {
+      "id": "5d34a4a0-6e02-45ad-a123-56609548b4da",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/5d34a4a0-6e02-45ad-a123-56609548b4da.png",
+      "width": 1537,
+      "height": 1023,
+      "storageKey": "library/templates/5d34a4a0-6e02-45ad-a123-56609548b4da.png"
+    },
+    {
+      "id": "7276cf01-b4e1-4f46-bf91-106daa30026d",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/7276cf01-b4e1-4f46-bf91-106daa30026d.png",
+      "width": 1122,
+      "height": 1402,
+      "storageKey": "library/templates/7276cf01-b4e1-4f46-bf91-106daa30026d.png"
+    },
+    {
+      "id": "74b9ea73-b173-4251-aa28-c1432de78661",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/74b9ea73-b173-4251-aa28-c1432de78661.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/74b9ea73-b173-4251-aa28-c1432de78661.png"
+    },
+    {
+      "id": "76d1dcf1-2f8a-45b7-a339-7b5ef199c8af",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/76d1dcf1-2f8a-45b7-a339-7b5ef199c8af.png",
+      "width": 1254,
+      "height": 1254,
+      "storageKey": "library/templates/76d1dcf1-2f8a-45b7-a339-7b5ef199c8af.png"
+    },
+    {
+      "id": "79d8e8d3-1f0e-46a2-a82c-41b6aad75ab8",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/79d8e8d3-1f0e-46a2-a82c-41b6aad75ab8.png",
+      "width": 1546,
+      "height": 1017,
+      "storageKey": "library/templates/79d8e8d3-1f0e-46a2-a82c-41b6aad75ab8.png"
+    },
+    {
+      "id": "7a74d42d-c1ff-4156-a11f-5c75cdf53430",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/7a74d42d-c1ff-4156-a11f-5c75cdf53430.png",
+      "width": 1672,
+      "height": 941,
+      "storageKey": "library/templates/7a74d42d-c1ff-4156-a11f-5c75cdf53430.png"
+    },
+    {
+      "id": "7ca431c2-4304-4f9a-8e57-eb10ccb9fa2f",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/7ca431c2-4304-4f9a-8e57-eb10ccb9fa2f.png",
+      "width": 1355,
+      "height": 1161,
+      "storageKey": "library/templates/7ca431c2-4304-4f9a-8e57-eb10ccb9fa2f.png"
+    },
+    {
+      "id": "7f94491a-372f-4047-9ecd-bf20a75c3977",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/7f94491a-372f-4047-9ecd-bf20a75c3977.png",
+      "width": 1370,
+      "height": 1148,
+      "storageKey": "library/templates/7f94491a-372f-4047-9ecd-bf20a75c3977.png"
+    },
+    {
+      "id": "7f9e4b5c-267f-4e2f-bbb5-5e9b07941f63",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/7f9e4b5c-267f-4e2f-bbb5-5e9b07941f63.png",
+      "width": 1677,
+      "height": 938,
+      "storageKey": "library/templates/7f9e4b5c-267f-4e2f-bbb5-5e9b07941f63.png"
+    },
+    {
+      "id": "82c7b4cc-bdc5-4bde-8467-daa1d28fc53f",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/82c7b4cc-bdc5-4bde-8467-daa1d28fc53f.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/82c7b4cc-bdc5-4bde-8467-daa1d28fc53f.png"
+    },
+    {
+      "id": "8456f539-89f0-4574-82b2-bae3d05cbe51",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/8456f539-89f0-4574-82b2-bae3d05cbe51.png",
+      "width": 1389,
+      "height": 1132,
+      "storageKey": "library/templates/8456f539-89f0-4574-82b2-bae3d05cbe51.png"
+    },
+    {
+      "id": "8e402238-10c8-46f5-8790-4d555d9b91ad",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/8e402238-10c8-46f5-8790-4d555d9b91ad.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/8e402238-10c8-46f5-8790-4d555d9b91ad.png"
+    },
+    {
+      "id": "8eb005e4-9c4f-4499-9303-35c5e32b5c2e",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/8eb005e4-9c4f-4499-9303-35c5e32b5c2e.png",
+      "width": 1672,
+      "height": 941,
+      "storageKey": "library/templates/8eb005e4-9c4f-4499-9303-35c5e32b5c2e.png"
+    },
+    {
+      "id": "8f10c0da-3b7c-46f4-b39a-d1839bb1dd2b",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/8f10c0da-3b7c-46f4-b39a-d1839bb1dd2b.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/8f10c0da-3b7c-46f4-b39a-d1839bb1dd2b.png"
+    },
+    {
+      "id": "9aee4f40-db48-4658-884a-9b4f435eab6d",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/9aee4f40-db48-4658-884a-9b4f435eab6d.png",
+      "width": 1535,
+      "height": 1024,
+      "storageKey": "library/templates/9aee4f40-db48-4658-884a-9b4f435eab6d.png"
+    },
+    {
+      "id": "a3d3706d-5235-4521-beb1-3845a16c8973",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/a3d3706d-5235-4521-beb1-3845a16c8973.png",
+      "width": 1055,
+      "height": 1491,
+      "storageKey": "library/templates/a3d3706d-5235-4521-beb1-3845a16c8973.png"
+    },
+    {
+      "id": "abddbc3b-7f55-4535-bc97-65dbaf37b370",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/abddbc3b-7f55-4535-bc97-65dbaf37b370.png",
+      "width": 1254,
+      "height": 1254,
+      "storageKey": "library/templates/abddbc3b-7f55-4535-bc97-65dbaf37b370.png"
+    },
+    {
+      "id": "af6a91e7-bd2b-4443-b013-32192f20b85d",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/af6a91e7-bd2b-4443-b013-32192f20b85d.png",
+      "width": 1464,
+      "height": 1075,
+      "storageKey": "library/templates/af6a91e7-bd2b-4443-b013-32192f20b85d.png"
+    },
+    {
+      "id": "bd3c8ff0-6055-4786-b9bd-2130d51fb269-1",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/bd3c8ff0-6055-4786-b9bd-2130d51fb269-1.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/bd3c8ff0-6055-4786-b9bd-2130d51fb269-1.png"
+    },
+    {
+      "id": "bd9def1e-4f49-45e4-a4d1-30e8efaf1955",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/bd9def1e-4f49-45e4-a4d1-30e8efaf1955.png",
+      "width": 1477,
+      "height": 1065,
+      "storageKey": "library/templates/bd9def1e-4f49-45e4-a4d1-30e8efaf1955.png"
+    },
+    {
+      "id": "bda1407d-a405-4b23-bcc4-aec7700b3757",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/bda1407d-a405-4b23-bcc4-aec7700b3757.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/bda1407d-a405-4b23-bcc4-aec7700b3757.png"
+    },
+    {
+      "id": "c767403e-a7a0-4786-8bf8-a9fca6c0ff00",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/c767403e-a7a0-4786-8bf8-a9fca6c0ff00.png",
+      "width": 1082,
+      "height": 1454,
+      "storageKey": "library/templates/c767403e-a7a0-4786-8bf8-a9fca6c0ff00.png"
+    },
+    {
+      "id": "cc4cfcfe-6c35-411e-aa0f-f4cc90f62cad",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/cc4cfcfe-6c35-411e-aa0f-f4cc90f62cad.png",
+      "width": 1404,
+      "height": 1120,
+      "storageKey": "library/templates/cc4cfcfe-6c35-411e-aa0f-f4cc90f62cad.png"
+    },
+    {
+      "id": "d3c0a5a8-1bd6-4662-9e1e-912c5a5af031",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/d3c0a5a8-1bd6-4662-9e1e-912c5a5af031.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/d3c0a5a8-1bd6-4662-9e1e-912c5a5af031.png"
+    },
+    {
+      "id": "d4e575d7-b62c-4666-b31c-be055bd83299",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/d4e575d7-b62c-4666-b31c-be055bd83299.png",
+      "width": 1277,
+      "height": 1231,
+      "storageKey": "library/templates/d4e575d7-b62c-4666-b31c-be055bd83299.png"
+    },
+    {
+      "id": "d7696440-a67e-4965-b646-347f9832614a",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/d7696440-a67e-4965-b646-347f9832614a.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/d7696440-a67e-4965-b646-347f9832614a.png"
+    },
+    {
+      "id": "d877bfd6-2af0-4fa7-a098-cb421a1d26fa",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/d877bfd6-2af0-4fa7-a098-cb421a1d26fa.png",
+      "width": 1423,
+      "height": 1105,
+      "storageKey": "library/templates/d877bfd6-2af0-4fa7-a098-cb421a1d26fa.png"
+    },
+    {
+      "id": "df49dd63-1339-4d36-a236-2d8c65f1e0fe",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/df49dd63-1339-4d36-a236-2d8c65f1e0fe.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/df49dd63-1339-4d36-a236-2d8c65f1e0fe.png"
+    },
+    {
+      "id": "e95b4bff-b011-49f7-bafe-7edd618050ef",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/e95b4bff-b011-49f7-bafe-7edd618050ef.png",
+      "width": 1456,
+      "height": 1080,
+      "storageKey": "library/templates/e95b4bff-b011-49f7-bafe-7edd618050ef.png"
+    },
+    {
+      "id": "f11194d8-84b4-4fe6-b446-cd6d4058299d",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/f11194d8-84b4-4fe6-b446-cd6d4058299d.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/f11194d8-84b4-4fe6-b446-cd6d4058299d.png"
+    },
+    {
+      "id": "f2c9415c-256e-42d8-ba02-28ef379f0364",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/f2c9415c-256e-42d8-ba02-28ef379f0364.png",
+      "width": 1370,
+      "height": 1148,
+      "storageKey": "library/templates/f2c9415c-256e-42d8-ba02-28ef379f0364.png"
+    },
+    {
+      "id": "f522074a-c36c-4b9b-a11a-2993e3dc1885",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/f522074a-c36c-4b9b-a11a-2993e3dc1885.png",
+      "width": 1536,
+      "height": 1024,
+      "storageKey": "library/templates/f522074a-c36c-4b9b-a11a-2993e3dc1885.png"
+    },
+    {
+      "id": "fb9b2c98-332a-4bad-b071-40eb58ea1d06",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/fb9b2c98-332a-4bad-b071-40eb58ea1d06.png",
+      "width": 1448,
+      "height": 1086,
+      "storageKey": "library/templates/fb9b2c98-332a-4bad-b071-40eb58ea1d06.png"
+    },
+    {
+      "id": "fec81ba9-fb10-41ca-bb21-3a516169e4f7",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/fec81ba9-fb10-41ca-bb21-3a516169e4f7.png",
+      "width": 1402,
+      "height": 1122,
+      "storageKey": "library/templates/fec81ba9-fb10-41ca-bb21-3a516169e4f7.png"
+    },
+    {
+      "id": "fefe1f6d-0e0f-42fb-a8cc-3848ce22fc00",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/fefe1f6d-0e0f-42fb-a8cc-3848ce22fc00.png",
+      "width": 1893,
+      "height": 831,
+      "storageKey": "library/templates/fefe1f6d-0e0f-42fb-a8cc-3848ce22fc00.png"
+    },
+    {
+      "id": "image",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/image.png",
+      "width": 640,
+      "height": 800,
+      "storageKey": "library/templates/image.png"
+    },
+    {
+      "id": "nnhmz2sc-400x400",
+      "category": "general",
+      "imageUrl": "https://assets.tryidentiq.com/library/templates/nnhmz2sc-400x400.jpg",
+      "width": 400,
+      "height": 400,
+      "storageKey": "library/templates/nnhmz2sc-400x400.jpg"
+    }
+  ]
+}

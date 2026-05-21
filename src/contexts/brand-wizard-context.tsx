@@ -32,6 +32,8 @@ import {
 import { normalizeBrandDraft } from "@/lib/brand/normalize-draft";
 import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
 import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
+import { runDraftAttachmentUploads } from "@/lib/brand/draft-attachment-uploads";
+import { takePendingDraftUploadJobs } from "@/lib/brand/pending-draft-uploads";
 
 type BrandWizardContextValue = {
   draft: BrandProjectDraft;
@@ -130,6 +132,7 @@ export function BrandWizardProvider({
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
+  const pendingUploadStartedRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +148,31 @@ export function BrandWizardProvider({
       cancelled = true;
     };
   }, [draftIdParam]);
+
+  useEffect(() => {
+    pendingUploadStartedRef.current = null;
+  }, [draftIdParam]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (pendingUploadStartedRef.current === draft.id) return;
+
+    const jobs = takePendingDraftUploadJobs(draft.id);
+    if (!jobs?.length) return;
+
+    pendingUploadStartedRef.current = draft.id;
+    const pendingFiles = new Map(jobs.map((j) => [j.id, j.file]));
+
+    void runDraftAttachmentUploads({
+      draftId: draft.id,
+      jobs,
+      attachments: draft.attachments,
+      pendingFiles,
+      onAttachmentsChange: (attachments) => {
+        setDraft((prev) => touchDraft({ ...prev, attachments }));
+      },
+    });
+  }, [isReady, draft.id]);
 
   const isDirty = useMemo(() => {
     if (!isReady) return false;

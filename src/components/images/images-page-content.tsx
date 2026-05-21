@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
+import { LibraryFromUrl } from "@/components/library/library-from-url";
 import Link from "next/link";
 import { BrandAssetCard } from "@/components/images/brand-asset-card";
 import { GenerationDock } from "@/components/generation/generation-dock";
@@ -136,6 +137,9 @@ export function ImagesPageContent() {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <LibraryFromUrl />
+      </Suspense>
       <div className="relative mx-auto flex min-h-full w-full max-w-6xl flex-col px-6 pt-6 lg:px-8 lg:pt-8">
         <div className="flex-1 pb-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -190,9 +194,9 @@ export function ImagesPageContent() {
           generatedByCategory.length === 0 ? (
             <EmptyState
               title="No generated assets yet"
-              description="Use the prompt at the bottom to create images, or open Ideas for presets."
+              description="Use the prompt at the bottom to create images, or open Studio for presets."
               primaryHref="/ideas"
-              primaryLabel="Open Ideas"
+              primaryLabel="Open Studio"
               secondaryHref="/new-brand"
               secondaryLabel="New brand"
             />
@@ -243,7 +247,7 @@ export function ImagesPageContent() {
             primaryHref="/new-brand"
             primaryLabel="New brand"
             secondaryHref="/ideas"
-            secondaryLabel="Open Ideas"
+            secondaryLabel="Open Studio"
           />
         ) : (
           <div className="space-y-8">
@@ -262,7 +266,7 @@ export function ImagesPageContent() {
                         alt={label}
                         ratio="4:5"
                         usageLabel={label}
-                        metaLine={`${ref.source === "wizard" ? "Wizard" : "Ideas"} · ${formatDisplayDate(ref.createdAt)}`}
+                        metaLine={`${ref.source === "wizard" ? "Wizard" : "Studio"} · ${formatDisplayDate(ref.createdAt)}`}
                         priority={refIndex < 6}
                         actions={{
                           onOpen: () =>
@@ -273,7 +277,7 @@ export function ImagesPageContent() {
                               subtitle:
                                 ref.source === "wizard"
                                   ? "Brand wizard"
-                                  : "Ideas reference",
+                                  : "Studio reference",
                             }),
                           onAttachToChat: () => attachToChat(ref.url, label),
                           isAttachedToChat: attachedUrls.has(ref.url),
@@ -298,7 +302,7 @@ export function ImagesPageContent() {
                     >
                       <span className="font-medium">{ref.name}</span>
                       <span className="ml-2 text-muted">
-                        {ref.source === "wizard" ? "Wizard" : "Ideas"}
+                        {ref.source === "wizard" ? "Wizard" : "Studio"}
                       </span>
                     </li>
                   ))}
@@ -313,9 +317,17 @@ export function ImagesPageContent() {
 
         <div
           id="images-generation-composer"
-          className="sticky bottom-0 z-30 -mx-2 shrink-0 border-t border-border/80 bg-gradient-to-t from-background from-40% via-background/95 to-transparent px-2 pb-4 pt-6 backdrop-blur-md"
+          className="sticky bottom-0 z-30 -mx-2 shrink-0 isolate"
         >
-          <div className="mx-auto flex w-full max-w-2xl justify-center">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 top-0 -z-10 bg-gradient-to-t from-background from-[18%] via-background/75 to-transparent"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 top-0 -z-10 backdrop-blur-xl backdrop-saturate-150 [mask-image:linear-gradient(to_top,black_0%,black_20%,rgba(0,0,0,0.55)_50%,transparent_100%)]"
+          />
+          <div className="relative mx-auto flex w-full max-w-2xl justify-center px-2 pb-4 pt-14">
             <GenerationDock variant="images" />
           </div>
         </div>

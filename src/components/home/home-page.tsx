@@ -11,7 +11,8 @@ export function HomePage() {
           Get Started
         </h1>
         <p className="text-base text-muted">
-          Discover what you can create with your brand
+          Remix campaign templates, generate on-brand assets, and manage your
+          library
         </p>
       </header>
 
@@ -22,7 +23,7 @@ export function HomePage() {
         <CreateImageCard />
       </section>
 
-      <section aria-label="Quick actions">
+      <section aria-label="Brands and quick actions">
         <ActionCardsGrid />
       </section>
     </div>
