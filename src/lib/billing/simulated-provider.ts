@@ -5,10 +5,17 @@ import {
 } from "@/lib/db/repositories/billing";
 
 export const simulatedBillingProvider: BillingProvider = {
-  async createCheckoutSession({ userId, planId }) {
+  async createCheckoutSession({
+    userId,
+    planId,
+    interval,
+    customTokenAmount,
+  }) {
     const session = await createCheckoutSession({
       userId,
       planId,
+      interval,
+      customTokenAmount,
       simulated: true,
     });
     return { sessionId: session.id };

@@ -1,6 +1,5 @@
 "use client";
 
-import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { useGeneration } from "@/contexts/generation-context";
 import type { GenerationPhase } from "@/lib/generation/chat-message-types";
@@ -19,19 +18,27 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
     aspectRatio,
     quantity,
     generationPhase,
+    generationError,
+    submitGeneration,
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
   const activePhase = phase ?? generationPhase;
-  const pendingLibraryStart = isLibraryRemix && !isGenerating;
-  if (!isGenerating && !pendingLibraryStart) return null;
+  const isFailed =
+    activePhase === "error" || Boolean(generationError?.trim());
+  const pendingLibraryStart = isLibraryRemix && !isGenerating && !isFailed;
+
+  if (!isGenerating && !pendingLibraryStart && !isFailed) return null;
 
   const effectivePhase = pendingLibraryStart
     ? ("composing-prompt" as const)
     : activePhase;
   const isComposingEffective =
-    effectivePhase === "composing-prompt" || effectivePhase === "orchestrating";
-  const isRenderingEffective = effectivePhase === "generating-image";
+    !isFailed &&
+    (effectivePhase === "composing-prompt" ||
+      effectivePhase === "orchestrating");
+  const isRenderingEffective =
+    !isFailed && effectivePhase === "generating-image";
 
   const activity =
     generationActivity ??
@@ -40,17 +47,32 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
       isLibraryRemix,
     });
 
+  if (isFailed) {
+    return (
+      <div className="w-full space-y-2">
+        <p className="text-sm text-muted">
+          {generationError ??
+            "Something went wrong while creating your image. Please try again."}
+        </p>
+        <ImageSkeletonGrid
+          aspectRatio={aspectRatio}
+          quantity={quantity}
+          animated={false}
+          failed
+          onRetry={() => void submitGeneration()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-3">
       {isComposingEffective ? (
-        <ThinkingBlock
-          isStreaming={isGenerating || pendingLibraryStart}
-          phase={effectivePhase ?? undefined}
-          isLibraryRemix={isLibraryRemix}
-          activityLabel={activity}
-          textContent=""
-          reasoningContent=""
-        />
+        <p className="text-sm text-muted">
+          {isLibraryRemix && (isGenerating || pendingLibraryStart)
+            ? activity || "Thinking…"
+            : "Thinking…"}
+        </p>
       ) : null}
 
       {isRenderingEffective ? (
@@ -60,7 +82,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           elapsedStartedAt={generationStartedAt}
           activityLabel={activity}
         />
-      ) : !isComposingEffective ? (
+      ) : !isComposingEffective && !isRenderingEffective ? (
         <p className="text-sm font-medium text-foreground">{activity}</p>
       ) : null}
     </div>

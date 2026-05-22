@@ -1,30 +1,16 @@
-/** Fetch image bytes for download / ZIP (handles same-origin and CDN URLs). */
+import { resolveAssetFetchUrl } from "@/lib/download/resolve-fetch-url";
+
+/** Fetch image bytes for download / ZIP (same-origin and CDN via API proxy). */
 export async function fetchImageBlob(url: string): Promise<Blob> {
   const trimmed = url.trim();
   if (!trimmed) throw new Error("Missing image URL");
 
-  if (trimmed.startsWith("data:")) {
-    const res = await fetch(trimmed);
-    return res.blob();
-  }
+  const fetchUrl = resolveAssetFetchUrl(trimmed);
+  const proxied = fetchUrl !== trimmed;
 
-  let sameOrigin = false;
-  if (typeof window !== "undefined") {
-    if (trimmed.startsWith("/")) {
-      sameOrigin = true;
-    } else {
-      try {
-        sameOrigin =
-          new URL(trimmed).origin === window.location.origin;
-      } catch {
-        sameOrigin = false;
-      }
-    }
-  }
-
-  const res = await fetch(trimmed, {
-    mode: "cors",
-    credentials: sameOrigin ? "same-origin" : "omit",
+  const res = await fetch(fetchUrl, {
+    mode: proxied ? "same-origin" : "cors",
+    credentials: proxied ? "same-origin" : "omit",
   });
 
   if (!res.ok) {

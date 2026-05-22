@@ -11,8 +11,6 @@ import {
 import { useGeneration } from "@/contexts/generation-context";
 import { DockSettingsRow } from "@/components/generation/dock-settings-row";
 import { DockCreateButton } from "@/components/generation/dock-create-button";
-import { DockInspirationTags } from "@/components/generation/dock-inspiration-tags";
-import { DockPlatformHint } from "@/components/generation/dock-platform-hint";
 import { cn } from "@/lib/utils";
 
 type DockPromptAreaProps = {
@@ -38,21 +36,18 @@ export function DockPromptArea({
     setHistoryOpen,
     submitGeneration,
     isGenerating,
+    selectedPresets,
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
   const isCompactRemix = compact && isLibraryRemix && view === "chat";
   const submitOnEnter = view === "chat";
 
-  const refThumbSize = isCompactRemix
-    ? "h-14 w-14"
-    : isImages
-      ? "h-24 w-24"
-      : "h-9 w-9";
-  const chromeButtonSize = isCompactRemix ? "h-9 w-9" : isImages ? "h-10 w-10" : "h-9 w-9";
-  const refIconSize = isCompactRemix ? 20 : isImages ? 28 : 18;
-  const chromeIconSize = isCompactRemix ? 18 : isImages ? 20 : 18;
-  const removeIconSize = isCompactRemix ? 14 : isImages ? 20 : 10;
+  const refThumbSize = isImages ? "h-24 w-24" : "h-9 w-9";
+  const chromeButtonSize = isImages ? "h-10 w-10" : "h-9 w-9";
+  const refIconSize = isImages ? 28 : 18;
+  const chromeIconSize = isImages ? 20 : 18;
+  const removeIconSize = isImages ? 20 : 10;
 
   return (
     <div
@@ -61,13 +56,6 @@ export function DockPromptArea({
         isIdeasGrid && "space-y-3 pb-4 pt-3",
       )}
     >
-      {isIdeasGrid ? (
-        <>
-          <DockInspirationTags />
-          <DockPlatformHint />
-        </>
-      ) : null}
-
       <div className={cn("space-y-2", isIdeasGrid ? "space-y-3 px-4" : "px-3")}>
         <div className="flex items-center gap-2">
           <div
@@ -176,7 +164,9 @@ export function DockPromptArea({
             placeholder={
               isLibraryRemix
                 ? "Optional: add direction for this remix…"
-                : "Describe what to generate…"
+                : selectedPresets.length > 0
+                  ? "Optional: add your creative direction…"
+                  : "Describe what to generate…"
             }
             rows={isIdeasGrid ? 3 : 1}
             className={cn(

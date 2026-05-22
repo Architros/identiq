@@ -4,7 +4,9 @@ import { withAuth } from "@/lib/api/with-auth";
 import { getBillingProvider } from "@/lib/billing";
 
 const bodySchema = z.object({
-  planId: z.enum(["starter", "pro", "studio"]),
+  planId: z.enum(["starter", "pro", "studio", "welcome", "custom"]),
+  interval: z.enum(["monthly", "annual"]).optional().default("monthly"),
+  customTokenAmount: z.number().int().optional(),
 });
 
 export async function POST(request: Request) {
@@ -21,15 +23,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const billing = getBillingProvider();
-    const session = await billing.createCheckoutSession({
-      userId: user.id,
-      planId: parsed.data.planId,
-    });
+    const { planId, interval, customTokenAmount } = parsed.data;
 
-    return NextResponse.json({
-      sessionId: session.sessionId,
-      completeUrl: `/billing/simulated/complete?session=${session.sessionId}`,
-    });
+    if (planId === "custom" && customTokenAmount == null) {
+      return NextResponse.json(
+        { error: "customTokenAmount is required for custom packs" },
+        { status: 400 },
+      );
+    }
+
+    if (planId === "welcome" && interval === "annual") {
+      return NextResponse.json(
+        { error: "Welcome offer is one-time only" },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const billing = getBillingProvider();
+      const session = await billing.createCheckoutSession({
+        userId: user.id,
+        planId,
+        interval,
+        customTokenAmount,
+      });
+
+      return NextResponse.json({
+        sessionId: session.sessionId,
+        completeUrl: `/billing/simulated/complete?session=${session.sessionId}`,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Checkout failed";
+      const status =
+        message.includes("Welcome offer") ||
+        message.includes("between") ||
+        message.includes("required")
+          ? 400
+          : 500;
+      return NextResponse.json({ error: message }, { status });
+    }
   });
 }

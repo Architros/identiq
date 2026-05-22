@@ -11,6 +11,8 @@ export type ToastItem = {
 type Listener = () => void;
 
 let toasts: ToastItem[] = [];
+/** Stable empty snapshot for SSR / useSyncExternalStore (must not allocate per call). */
+const SERVER_TOASTS: ToastItem[] = [];
 const listeners = new Set<Listener>();
 const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const recentDedupeKeys = new Map<string, number>();
@@ -37,6 +39,10 @@ export function subscribeToasts(listener: Listener): () => void {
 
 export function getToasts(): ToastItem[] {
   return toasts;
+}
+
+export function getServerToasts(): ToastItem[] {
+  return SERVER_TOASTS;
 }
 
 export function dismissToast(id: string) {

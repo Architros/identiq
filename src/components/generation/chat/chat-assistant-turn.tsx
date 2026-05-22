@@ -2,7 +2,7 @@
 
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message";
-import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
+import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { GeneratedImageCard } from "@/components/generation/chat/generated-image-card";
 import { useGeneration } from "@/contexts/generation-context";
@@ -27,28 +27,31 @@ export function ChatAssistantTurn({
     generationActivity,
     aspectRatio: sessionAspectRatio,
     quantity: sessionQuantity,
+    submitGeneration,
   } = useGeneration();
   const isLibraryRemix = Boolean(libraryTemplateId);
   const {
-    textContent,
-    reasoningContent,
     generationStatus,
     imageResult,
+    errorText,
   } = parseAssistantMessage(message);
 
   const phase = generationStatus?.phase;
-  const hasThought =
-    textContent.trim().length > 0 || reasoningContent.trim().length > 0;
   const isOrchestrating =
     phase === "orchestrating" ||
     phase === "composing-prompt" ||
     (isStreaming && !imageResult && phase !== "generating-image");
-  const showThinking = hasThought || isOrchestrating;
-  const showSkeleton = phase === "generating-image" && !imageResult;
+  const isFailed = phase === "error" || Boolean(errorText?.trim());
+  const showThinking = isOrchestrating && isStreaming && !isFailed;
+  const showSkeleton =
+    (phase === "generating-image" && !imageResult) || (isFailed && !imageResult);
   const showStopped = phase === "stopped";
   const skeletonAspectRatio =
     generationStatus?.aspectRatio ?? sessionAspectRatio;
   const skeletonQuantity = generationStatus?.quantity ?? sessionQuantity;
+  const inlineError = formatInlineGenerationError(
+    errorText ?? generationStatus?.errorMessage,
+  );
 
   return (
     <div className="group flex w-full justify-start">
@@ -65,33 +68,37 @@ export function ChatAssistantTurn({
         </div>
 
         {showThinking ? (
-          <ThinkingBlock
-            isStreaming={Boolean(isOrchestrating && isStreaming)}
-            phase={phase}
-            isLibraryRemix={isLibraryRemix}
-            activityLabel={
-              isOrchestrating && isStreaming
-                ? (generationActivity ?? undefined)
-                : undefined
-            }
-            textContent={textContent}
-            reasoningContent={reasoningContent}
-          />
+          <p className="text-sm text-muted">
+            {generationActivity ??
+              (isLibraryRemix ? "Adapting layout to your brand…" : "Thinking…")}
+          </p>
         ) : null}
 
         {showSkeleton ? (
-          <ImageSkeletonGrid
-            aspectRatio={skeletonAspectRatio}
-            quantity={skeletonQuantity}
-            imageModel={generationStatus?.imageModel}
-            displayDimensions={generationStatus?.displayDimensions}
-            elapsedStartedAt={generationStartedAt}
-            activityLabel={generationActivityLabel({
-              phase: "generating-image",
-              presetTitle: generationStatus?.presetTitle,
-              isLibraryRemix,
-            })}
-          />
+          <div className="space-y-2">
+            {isFailed ? (
+              <p className="text-sm text-muted">{inlineError}</p>
+            ) : null}
+            <ImageSkeletonGrid
+              aspectRatio={skeletonAspectRatio}
+              quantity={skeletonQuantity}
+              imageModel={generationStatus?.imageModel}
+              displayDimensions={generationStatus?.displayDimensions}
+              elapsedStartedAt={isFailed ? null : generationStartedAt}
+              animated={!isFailed}
+              failed={isFailed}
+              onRetry={isFailed ? () => void submitGeneration() : undefined}
+              activityLabel={
+                isFailed
+                  ? undefined
+                  : generationActivityLabel({
+                      phase: "generating-image",
+                      presetTitle: generationStatus?.presetTitle,
+                      isLibraryRemix,
+                    })
+              }
+            />
+          </div>
         ) : null}
 
         {imageResult ? <GeneratedImageCard data={imageResult} /> : null}

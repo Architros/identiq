@@ -27,11 +27,8 @@ import { generationActivityLabel } from "@/lib/generation/generation-activity-la
 import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
-import {
-  showErrorToast,
-  showInfoToast,
-  showSuccessToast,
-} from "@/lib/toast/show-toast";
+import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
+import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
 import { chatTitleFromPrompt } from "@/lib/generation/chat-title";
 
@@ -66,6 +63,7 @@ type GenerationContextValue = {
   generationStartedAt: number | null;
   generationPhase: GenerationPhase | null;
   generationActivity: string | null;
+  generationError: string | null;
   libraryTemplateId: string | null;
   historyOpen: boolean;
   setHistoryOpen: (open: boolean) => void;
@@ -81,6 +79,7 @@ type GenerationContextValue = {
   setResolution: (value: Resolution) => void;
   setQuantity: (value: number) => void;
   submitGeneration: () => Promise<void>;
+  reportGenerationError: (raw: string) => void;
   stopGeneration: () => void;
   closeChat: () => void;
   startNewChat: () => void;
@@ -109,7 +108,7 @@ async function persistChatMessages(
     }),
   });
   if (!res.ok) {
-    showErrorToast("Could not save this chat. Try again.");
+    console.warn("[ideas/chat] could not persist messages", res.status);
   }
 }
 
@@ -141,6 +140,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     null,
   );
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const lastPresetPhaseRef = useRef<string | null>(null);
 
   const pendingTokenCostRef = useRef(0);
@@ -148,16 +148,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const messagesRef = useRef<IdentiqUIMessage[]>([]);
   const referenceImagesRef = useRef<ReferenceImage[]>([]);
   const activeChatIdRef = useRef<string | null>(null);
-  const lastStreamErrorToastRef = useRef<string | null>(null);
+  const lastReportedErrorRef = useRef<string | null>(null);
 
-  const toastGenerationError = useCallback((raw: string) => {
-    const message = raw.trim() || "Generation failed";
-    if (lastStreamErrorToastRef.current === message) return;
-    lastStreamErrorToastRef.current = message;
-    showErrorToast(message, {
-      dedupeKey: "generation-error",
-      id: "toast-generation-error",
-    });
+  const reportGenerationError = useCallback((raw: string) => {
+    const message = formatInlineGenerationError(raw);
+    if (lastReportedErrorRef.current === message) return;
+    lastReportedErrorRef.current = message;
+    setGenerationError(message);
+    setGenerationPhase("error");
+    setGenerationStartedAt(null);
   }, []);
 
   const setLibraryTemplateId = useCallback((id: string | null) => {
@@ -264,17 +263,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setGenerationStartedAt(null);
         setGenerationPhase(isAbort ? "stopped" : isError ? "error" : "done");
         lastPresetPhaseRef.current = null;
-        if (isAbort) {
-          showInfoToast("Generation stopped.", {
-            title: "Stopped",
-            durationMs: 4000,
-            dedupeKey: "generation-stopped",
-          });
-        } else if (isError) {
-          if (!lastStreamErrorToastRef.current) {
-            toastGenerationError("Generation failed");
-          }
-        } else {
+        if (isError && !lastReportedErrorRef.current) {
+          reportGenerationError("Generation failed");
+        } else if (!isAbort && !isError) {
+          setGenerationError(null);
+          lastReportedErrorRef.current = null;
+        }
+        if (!isAbort && !isError) {
           const remixing = Boolean(libraryTemplateIdRef.current);
           showSuccessToast(
             remixing
@@ -334,7 +329,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             lastPresetPhaseRef.current = null;
           }
           if (data.phase === "error" && data.errorMessage) {
-            toastGenerationError(data.errorMessage);
+            reportGenerationError(data.errorMessage);
           }
         }
 
@@ -375,7 +370,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       onError: (err) => {
         setGenerationStartedAt(null);
         lastPresetPhaseRef.current = null;
-        toastGenerationError(err.message);
+        reportGenerationError(err.message);
       },
     });
 
@@ -511,7 +506,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationStartedAt(null);
     setGenerationPhase(null);
     setGenerationPresetTitle(undefined);
-    lastStreamErrorToastRef.current = null;
+    lastReportedErrorRef.current = null;
+    setGenerationError(null);
     setView("chat");
   }, [setMessages]);
 
@@ -530,7 +526,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationPresetTitle(undefined);
     setLibraryTemplateId(null);
     setHistoryOpen(false);
-    lastStreamErrorToastRef.current = null;
+    lastReportedErrorRef.current = null;
+    setGenerationError(null);
   }, [isGenerating, stop, setMessages, setLibraryTemplateId]);
 
   const continueFromMessageIndex = useCallback(
@@ -561,13 +558,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setActivePresetId(preset.id);
         setAspectRatio(preset.aspectRatio);
         setResolution(preset.suggestedResolution);
-        if (!prompt.trim()) {
-          setPrompt(preset.defaultPrompt);
-        }
         return next;
       });
     },
-    [prompt],
+    [],
   );
 
   const removePreset = useCallback((id: string) => {
@@ -704,7 +698,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    lastStreamErrorToastRef.current = null;
+    lastReportedErrorRef.current = null;
+    setGenerationError(null);
     pendingTokenCostRef.current = tokenCost;
     setGenerationStartedAt(Date.now());
     lastPresetPhaseRef.current = null;
@@ -712,10 +707,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
     await ensureChatId();
 
+    const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
     const messageText =
       prompt.trim() ||
       (remixingLibrary ? " " : "") ||
-      selectedPresets.map((p) => p.defaultPrompt).join(" ") ||
+      presetSummary ||
       "Generate on-brand assets";
 
     await sendMessage(
@@ -778,6 +774,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       generationStartedAt,
       generationPhase,
       generationActivity,
+      generationError,
       libraryTemplateId,
       historyOpen,
       setHistoryOpen,
@@ -793,6 +790,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setResolution,
       setQuantity,
       submitGeneration,
+      reportGenerationError,
       stopGeneration,
       closeChat,
       startNewChat,
@@ -818,6 +816,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       generationStartedAt,
       generationPhase,
       generationActivity,
+      generationError,
       libraryTemplateId,
       historyOpen,
       setLibraryTemplateId,
@@ -829,6 +828,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setLibraryTemplateId,
       removeReferenceImage,
       submitGeneration,
+      reportGenerationError,
       stopGeneration,
       closeChat,
       startNewChat,

@@ -1,6 +1,10 @@
+import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
+
 export type CreateCheckoutParams = {
   userId: string;
-  planId: string;
+  planId: PackPlanId;
+  interval?: BillingInterval;
+  customTokenAmount?: number;
 };
 
 export type CreateCheckoutResult = {

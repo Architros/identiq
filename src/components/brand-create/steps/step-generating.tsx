@@ -15,7 +15,6 @@ import { GenerationPhaseBar } from "@/components/brand-create/generation/generat
 import { StarterPackGenerationView } from "@/components/brand-create/generation/starter-pack-generation-view";
 import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import { getDraftLogoUrl } from "@/lib/brand/draft-media";
-import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
 import {
   buildInitialAssetProgress,
   parseCreateMessage,
@@ -389,12 +388,8 @@ export function StepGenerating() {
           statusMessage={statusMessage}
         />
 
-        {!brandMemory ? (
-          <ThinkingBlock
-            isStreaming={isOrchestrating}
-            textContent={statusMessage}
-            reasoningContent=""
-          />
+        {!brandMemory && isOrchestrating ? (
+          <p className="text-sm text-muted">Thinking…</p>
         ) : null}
 
         {brandMemory ? <BrandSystemPanel data={brandMemory} /> : null}

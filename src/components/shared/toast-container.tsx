@@ -20,6 +20,8 @@ import {
 
   dismissToast,
 
+  getServerToasts,
+
   getToasts,
 
   subscribeToasts,
@@ -226,7 +228,11 @@ function ToastCard({ toast }: { toast: ToastItem }) {
 
 export function ToastContainer() {
 
-  const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => []);
+  const toasts = useSyncExternalStore(
+    subscribeToasts,
+    getToasts,
+    getServerToasts,
+  );
 
 
 

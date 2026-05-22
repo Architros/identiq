@@ -25,7 +25,7 @@ export function GenerationDock({ variant, compact }: GenerationDockProps) {
       {resolvedVariant === "ideas-grid" ? <DockPresetTabs /> : null}
       <div
         className={cn(
-          "w-full overflow-hidden rounded-2xl border border-border/80 bg-surface",
+          "w-full overflow-visible rounded-2xl border border-border/80 bg-surface",
           "shadow-sm",
         )}
       >

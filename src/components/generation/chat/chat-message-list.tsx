@@ -12,7 +12,8 @@ export function ChatMessageList({
   /** Slimmer footer (library remix) — less scroll padding. */
   compactFooter?: boolean;
 }) {
-  const { messages, isGenerating, generationPhase } = useGeneration();
+  const { messages, isGenerating, generationPhase, generationError } =
+    useGeneration();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,9 +23,13 @@ export function ChatMessageList({
   const lastMessage = messages[messages.length - 1];
   const showInlineProgress =
     isGenerating && (!lastMessage || lastMessage.role === "user");
+  const showInlineFailure =
+    !isGenerating &&
+    (generationPhase === "error" || Boolean(generationError?.trim())) &&
+    (!lastMessage || lastMessage.role === "user");
 
   const scrollPadding = compactFooter
-    ? "pb-36 scroll-pb-36"
+    ? "pb-44 scroll-pb-44"
     : "pb-28 scroll-pb-28";
 
   return (
@@ -56,7 +61,7 @@ export function ChatMessageList({
           );
         })}
 
-        {showInlineProgress ? (
+        {showInlineProgress || showInlineFailure ? (
           <ChatGenerationProgress phase={generationPhase} />
         ) : null}
 

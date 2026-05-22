@@ -8,7 +8,6 @@ import { useGeneration } from "@/contexts/generation-context";
 import { getLibraryTemplate } from "@/lib/library/templates";
 import { aspectRatioForLibraryTemplate } from "@/lib/library/template-aspect-ratio";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
-import { showErrorToast } from "@/lib/toast/show-toast";
 
 /** Applies `?libraryId=` — attaches template, opens chat, auto-remixes when tokens allow. */
 export function LibraryFromUrl() {
@@ -21,6 +20,7 @@ export function LibraryFromUrl() {
     setAspectRatio,
     submitGeneration,
     prepareLibraryRemixSession,
+    reportGenerationError,
     isGenerating,
     referenceImages,
     quantity,
@@ -70,9 +70,7 @@ export function LibraryFromUrl() {
     if (tokenCost > availableTokens) {
       if (insufficientTokensNotifiedRef.current !== libraryId) {
         insufficientTokensNotifiedRef.current = libraryId;
-        showErrorToast("Insufficient tokens", {
-          dedupeKey: "insufficient-tokens",
-        });
+        reportGenerationError("Insufficient tokens");
       }
       return;
     }
@@ -92,6 +90,7 @@ export function LibraryFromUrl() {
     setLibraryTemplateId,
     setAspectRatio,
     prepareLibraryRemixSession,
+    reportGenerationError,
     submitGeneration,
   ]);
 

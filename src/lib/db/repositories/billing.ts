@@ -1,3 +1,5 @@
+import { resolveCheckoutPack } from "@/lib/billing/resolve-checkout";
+import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
 import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
 import type { CheckoutSessionRow, PlanRow } from "@/lib/db/types";
 
@@ -25,13 +27,40 @@ export async function getPlan(planId: string): Promise<PlanRow | null> {
   return data as PlanRow;
 }
 
+export async function userHasCompletedCheckout(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("billing_checkout_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "completed");
+
+  if (error) return false;
+  return (count ?? 0) > 0;
+}
+
 export async function createCheckoutSession(params: {
   userId: string;
-  planId: string;
+  planId: PackPlanId;
+  interval?: BillingInterval;
+  customTokenAmount?: number;
   simulated?: boolean;
 }): Promise<CheckoutSessionRow> {
   const plan = await getPlan(params.planId);
   if (!plan) throw new Error("Plan not found");
+
+  if (params.planId === "welcome") {
+    const hasPurchase = await userHasCompletedCheckout(params.userId);
+    if (hasPurchase) {
+      throw new Error("Welcome offer is only available for your first purchase");
+    }
+  }
+
+  const resolved = resolveCheckoutPack({
+    planId: params.planId,
+    interval: params.interval,
+    customTokenAmount: params.customTokenAmount,
+  });
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -39,8 +68,8 @@ export async function createCheckoutSession(params: {
     .insert({
       user_id: params.userId,
       plan_id: plan.id,
-      token_amount: plan.token_amount,
-      amount_cents: plan.price_cents,
+      token_amount: resolved.tokenAmount,
+      amount_cents: resolved.amountCents,
       currency: plan.currency,
       status: "pending",
       simulated: params.simulated ?? true,

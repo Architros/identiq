@@ -49,9 +49,13 @@ export function DownloadZipButton({
         { title: "Download ready" },
       );
     } catch (err) {
-      showErrorToast(
-        err instanceof Error ? err.message : "ZIP download failed",
-      );
+      const message =
+        err instanceof Error ? err.message : "ZIP download failed";
+      showErrorToast(message, {
+        title: "Download failed",
+        dedupeKey: "download-zip-error",
+        replaceErrors: true,
+      });
     } finally {
       setLoading(false);
       setProgress(null);
