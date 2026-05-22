@@ -7,6 +7,7 @@ import { IdeasChatView } from "@/components/generation/ideas-chat-view";
 import { GenerationHistoryPanel } from "@/components/generation/generation-history-panel";
 import { presetCategories } from "@/lib/generation/presets";
 import { IdeasPresetFromUrl } from "@/components/generation/ideas-preset-from-url";
+import { IdeasPromptFromUrl } from "@/components/generation/ideas-prompt-from-url";
 import { useGeneration } from "@/contexts/generation-context";
 
 export function IdeasCanvas() {
@@ -19,6 +20,7 @@ export function IdeasCanvas() {
   return (
     <>
       <IdeasPresetFromUrl />
+      <IdeasPromptFromUrl />
       <div className="mx-auto w-full max-w-6xl p-6 lg:p-8">
         <div id="preset-grid" className="space-y-10 pb-8">
           <IdeasPageHeader />

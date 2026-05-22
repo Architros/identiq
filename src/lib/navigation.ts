@@ -15,6 +15,8 @@ export type NavItem = {
   icon: IconSvgElement;
   isNew?: boolean;
   disabled?: boolean;
+  /** Opens an in-app modal instead of navigating away. */
+  supportAction?: "help" | "feedback";
 };
 
 export const primaryNav: NavItem[] = [
@@ -34,6 +36,6 @@ export const secondaryNav: NavItem[] = [
 ];
 
 export const bottomNav: NavItem[] = [
-  { label: "Feedback", href: "#", icon: Message01Icon, disabled: true },
-  { label: "Help", href: "#", icon: HelpCircleIcon, disabled: true },
+  { label: "Feedback", href: "#", icon: Message01Icon, supportAction: "feedback" },
+  { label: "Help", href: "#", icon: HelpCircleIcon, supportAction: "help" },
 ];

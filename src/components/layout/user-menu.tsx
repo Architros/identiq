@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AddTeamIcon,
   CreditCardIcon,
   HelpCircleIcon,
   Logout01Icon,
@@ -12,6 +12,7 @@ import {
   UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 import { useCredits } from "@/contexts/credits-context";
+import { useSupportModals } from "@/contexts/support-modals-context";
 import { mockUser } from "@/lib/mock-data";
 import type { SessionProfile } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
@@ -79,14 +80,12 @@ function MenuItem({
   label,
   href,
   onClick,
-  disabled,
   destructive,
 }: {
   icon: typeof Settings01Icon;
   label: string;
   href?: string;
   onClick?: () => void;
-  disabled?: boolean;
   destructive?: boolean;
 }) {
   const className = cn(
@@ -94,7 +93,6 @@ function MenuItem({
     destructive
       ? "text-red-600 hover:bg-red-50"
       : "text-foreground hover:bg-sidebar-active",
-    disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
   );
 
   const content = (
@@ -116,7 +114,7 @@ function MenuItem({
     </>
   );
 
-  if (href && !disabled) {
+  if (href) {
     return (
       <Link href={href} className={className} role="menuitem" onClick={onClick}>
         {content}
@@ -125,37 +123,42 @@ function MenuItem({
   }
 
   return (
-    <button
-      type="button"
-      className={className}
-      role="menuitem"
-      disabled={disabled}
-      onClick={onClick}
-    >
+    <button type="button" className={className} role="menuitem" onClick={onClick}>
       {content}
     </button>
   );
 }
 
 export function UserMenu() {
+  const router = useRouter();
   const { openBuyTokens } = useCredits();
+  const { openHelp } = useSupportModals();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/me");
-        if (res.ok) {
-          const data = (await res.json()) as { profile: SessionProfile };
-          setProfile(data.profile);
-        }
-      } catch {
-        // Use mock fallback below.
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/me");
+      if (res.ok) {
+        const data = (await res.json()) as { profile: SessionProfile };
+        setProfile(data.profile);
       }
-    })();
+    } catch {
+      // Use mock fallback below.
+    }
   }, []);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    const onProfileUpdated = () => void loadProfile();
+    window.addEventListener("identiq:profile-updated", onProfileUpdated);
+    return () =>
+      window.removeEventListener("identiq:profile-updated", onProfileUpdated);
+  }, [loadProfile]);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -235,8 +238,10 @@ export function UserMenu() {
             <MenuItem
               icon={Settings01Icon}
               label="Account Settings"
-              href="/settings"
-              onClick={close}
+              onClick={() => {
+                close();
+                router.push("/settings");
+              }}
             />
             <MenuItem
               icon={CreditCardIcon}
@@ -250,24 +255,14 @@ export function UserMenu() {
 
           <MenuDivider />
 
-          <MenuSectionLabel>Team</MenuSectionLabel>
-          <div className="px-1.5 pb-1">
-            <MenuItem
-              icon={AddTeamIcon}
-              label="Create Team"
-              disabled
-              onClick={close}
-            />
-          </div>
-
-          <MenuDivider />
-
           <div className="px-1.5 py-1.5">
             <MenuItem
               icon={HelpCircleIcon}
               label="Help & FAQ"
-              href="mailto:support@identiq.com"
-              onClick={close}
+              onClick={() => {
+                close();
+                openHelp();
+              }}
             />
             <MenuItem
               icon={Logout01Icon}

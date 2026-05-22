@@ -34,7 +34,7 @@ export function AppSidebar() {
 
         <SidebarDivider className="mt-auto mb-2" />
 
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col items-stretch gap-1">
           {bottomNav.map((item) => (
             <NavItem key={item.label} item={item} />
           ))}
