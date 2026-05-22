@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UserAdd01Icon, Add01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { BrandSelector } from "@/components/layout/brand-selector";
 import { CreditsBalance } from "@/components/layout/credits-balance";
-import { Button } from "@/components/ui/button";
 import {
   getGenerationChromeCompact,
   subscribeGenerationChrome,
@@ -34,16 +33,6 @@ export function AppTopbar() {
 
         {!compact ? (
           <>
-            <Button variant="secondary" size="sm">
-              <HugeiconsIcon
-                icon={UserAdd01Icon}
-                size={16}
-                color="currentColor"
-                strokeWidth={1.75}
-              />
-              Invite Team
-            </Button>
-
             <Link
               href="/new-brand"
               className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-button)] bg-foreground px-3 text-sm font-medium text-surface hover:bg-foreground/90"

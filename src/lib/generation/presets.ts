@@ -1,65 +1,33 @@
-import type { IconSvgElement } from "@hugeicons/react";
 import {
-  Linkedin01Icon,
-  InstagramIcon,
-  NewTwitterIcon,
-  YoutubeIcon,
-  PinterestIcon,
-  Megaphone01Icon,
-  Image01Icon,
-  QuoteDownCircleIcon,
-} from "@hugeicons/core-free-icons";
+  extendedGenerationPresets,
+  extendedPresetCategories,
+} from "@/lib/generation/presets-extended";
+import { PRESET_ICONS } from "@/lib/generation/preset-icons";
+import type {
+  AspectRatio,
+  GenerationPreset,
+  PresetCategory,
+  Resolution,
+} from "@/lib/generation/presets-types";
 
-export type PresetCategory = "social" | "advertising";
+export type {
+  AspectRatio,
+  GenerationPreset,
+  PresetCategory,
+  Resolution,
+} from "@/lib/generation/presets-types";
+export { ASPECT_RATIO_OPTIONS } from "@/lib/generation/presets-types";
 
-export type AspectRatio =
-  | "1:1"
-  | "9:16"
-  | "16:9"
-  | "4:5"
-  | "2:3"
-  | "21:9";
-
-export const ASPECT_RATIO_OPTIONS: {
-  value: AspectRatio;
-  label: string;
-  description: string;
-}[] = [
-  { value: "1:1", label: "1:1", description: "Square" },
-  { value: "9:16", label: "9:16", description: "Story / Reels" },
-  { value: "16:9", label: "16:9", description: "Wide" },
-  { value: "4:5", label: "4:5", description: "Portrait feed" },
-  { value: "2:3", label: "2:3", description: "Pinterest pin" },
-  { value: "21:9", label: "21:9", description: "Banner" },
-];
-
-export type Resolution = "1K" | "2K";
-
-export type GenerationPreset = {
-  id: string;
-  category: PresetCategory;
-  categoryLabel: string;
-  title: string;
-  description: string;
-  platformIcon: IconSvgElement;
-  defaultPrompt: string;
-  aspectRatio: AspectRatio;
-  suggestedResolution: Resolution;
-  /** Display-only platform target dimensions */
-  platformPixelHint?: string;
-  lockAspectRatio: boolean;
-};
-
-export const generationPresets: GenerationPreset[] = [
+const coreGenerationPresets: GenerationPreset[] = [
   {
     id: "linkedin-post",
     category: "social",
     categoryLabel: "Social Media",
     title: "LinkedIn Post",
     description: "Professional square post for feed engagement",
-    platformIcon: Linkedin01Icon,
+    platformIcon: PRESET_ICONS.linkedinPost,
     defaultPrompt:
-      "A polished LinkedIn post graphic featuring the brand logo and primary colors, clean typography, and a clear focal message.",
+      "A polished LinkedIn post graphic featuring the brand logo and primary colors, clean typography, and a clear focal message. Compose strictly for 1:1 aspect ratio (1:1 · Square).",
     aspectRatio: "1:1",
     suggestedResolution: "2K",
     platformPixelHint: "LinkedIn feed · 1200×1200 recommended",
@@ -71,9 +39,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Social Media",
     title: "Instagram Story",
     description: "Quick vertical content for stories and reels",
-    platformIcon: InstagramIcon,
+    platformIcon: PRESET_ICONS.instagramStory,
     defaultPrompt:
-      "A vertical Instagram Story showing on-brand visuals with bold typography and the brand accent color as highlights.",
+      "A vertical Instagram Story showing on-brand visuals with bold typography and the brand accent color as highlights. Compose strictly for 9:16 aspect ratio (9:16 · Story / Reels).",
     aspectRatio: "9:16",
     suggestedResolution: "2K",
     platformPixelHint: "Story/Reels · 1080×1920",
@@ -85,9 +53,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Social Media",
     title: "Instagram Post",
     description: "Portrait feed post with strong visual hierarchy",
-    platformIcon: InstagramIcon,
+    platformIcon: PRESET_ICONS.instagramPost,
     defaultPrompt:
-      "An Instagram feed post with balanced composition, brand colors, and space for a short headline.",
+      "An Instagram feed post with balanced composition, brand colors, and space for a short headline. Compose strictly for 4:5 aspect ratio (4:5 · Portrait feed).",
     aspectRatio: "4:5",
     suggestedResolution: "2K",
     platformPixelHint: "Instagram feed · 1080×1350 (4:5)",
@@ -99,9 +67,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Social Media",
     title: "X Post",
     description: "Landscape post optimized for X/Twitter",
-    platformIcon: NewTwitterIcon,
+    platformIcon: PRESET_ICONS.xPost,
     defaultPrompt:
-      "An X/Twitter post graphic with crisp layout, brand logo placement, and high-contrast readable text areas.",
+      "An X/Twitter post graphic with crisp layout, brand logo placement, and high-contrast readable text areas. Compose strictly for 16:9 aspect ratio (16:9 · Wide).",
     aspectRatio: "16:9",
     suggestedResolution: "2K",
     platformPixelHint: "X card image · 16:9 landscape",
@@ -113,9 +81,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Social Media",
     title: "YouTube Thumbnail",
     description: "Eye-catching thumbnail for video content",
-    platformIcon: YoutubeIcon,
+    platformIcon: PRESET_ICONS.youtubeThumbnail,
     defaultPrompt:
-      "A YouTube thumbnail with dramatic composition, brand colors, and large readable title treatment.",
+      "A YouTube thumbnail with dramatic composition, brand colors, and large readable title treatment. Compose strictly for 16:9 aspect ratio (16:9 · Wide).",
     aspectRatio: "16:9",
     suggestedResolution: "2K",
     platformPixelHint: "YouTube · 1280×720 minimum",
@@ -127,9 +95,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Social Media",
     title: "Pinterest Pin",
     description: "Tall pin format for discovery and saves",
-    platformIcon: PinterestIcon,
+    platformIcon: PRESET_ICONS.pinterestPin,
     defaultPrompt:
-      "A Pinterest pin with vertical layout, elegant brand styling, and inspirational visual mood.",
+      "A Pinterest pin with vertical layout, elegant brand styling, and inspirational visual mood. Compose strictly for 2:3 aspect ratio (2:3 · Pinterest pin).",
     aspectRatio: "2:3",
     suggestedResolution: "2K",
     platformPixelHint: "Pinterest · 1000×1500 (2:3)",
@@ -141,9 +109,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Advertising",
     title: "LinkedIn Banner",
     description: "Wide banner for profile or campaign headers",
-    platformIcon: Linkedin01Icon,
+    platformIcon: PRESET_ICONS.linkedinBanner,
     defaultPrompt:
-      "A wide LinkedIn banner with brand logo, gradient using primary and secondary colors, and minimal tagline space.",
+      "A wide LinkedIn banner with brand logo, gradient using primary and secondary colors, and minimal tagline space. Compose strictly for 21:9 aspect ratio (21:9 · Banner).",
     aspectRatio: "21:9",
     suggestedResolution: "2K",
     platformPixelHint:
@@ -156,9 +124,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Advertising",
     title: "Social Media Ad",
     description: "Paid social creative with CTA-friendly layout",
-    platformIcon: Megaphone01Icon,
+    platformIcon: PRESET_ICONS.socialMediaAd,
     defaultPrompt:
-      "A social media ad creative with strong hook visual, brand palette, logo, and clear call-to-action area.",
+      "A social media ad creative with strong hook visual, brand palette, logo, and clear call-to-action area. Compose strictly for 1:1 aspect ratio (1:1 · Square).",
     aspectRatio: "1:1",
     suggestedResolution: "2K",
     platformPixelHint: "Paid social · 1:1 square",
@@ -170,9 +138,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Advertising",
     title: "Display Banner",
     description: "Horizontal banner for web display placements",
-    platformIcon: Image01Icon,
+    platformIcon: PRESET_ICONS.displayBanner,
     defaultPrompt:
-      "A horizontal display ad banner with brand identity, product focal point, and clean negative space.",
+      "A horizontal display ad banner with brand identity, product focal point, and clean negative space. Compose strictly for 21:9 aspect ratio (21:9 · Banner).",
     aspectRatio: "21:9",
     suggestedResolution: "2K",
     platformPixelHint: "Display · wide leaderboard-style",
@@ -184,9 +152,9 @@ export const generationPresets: GenerationPreset[] = [
     categoryLabel: "Advertising",
     title: "Customer Testimonial",
     description: "Quote-led creative with brand framing",
-    platformIcon: QuoteDownCircleIcon,
+    platformIcon: PRESET_ICONS.customerTestimonial,
     defaultPrompt:
-      "A testimonial graphic with quote typography, subtle brand frame, logo, and trust-building layout.",
+      "A testimonial graphic with quote typography, subtle brand frame, logo, and trust-building layout. Compose strictly for 4:5 aspect ratio (4:5 · Portrait feed).",
     aspectRatio: "4:5",
     suggestedResolution: "2K",
     platformPixelHint: "Portrait quote card · 4:5",
@@ -194,9 +162,15 @@ export const generationPresets: GenerationPreset[] = [
   },
 ];
 
-export const presetCategories = [
-  { id: "social" as const, label: "Social Media" },
-  { id: "advertising" as const, label: "Advertising" },
+export const generationPresets: GenerationPreset[] = [
+  ...coreGenerationPresets,
+  ...extendedGenerationPresets,
+];
+
+export const presetCategories: { id: PresetCategory; label: string }[] = [
+  { id: "social", label: "Social Media" },
+  { id: "advertising", label: "Advertising" },
+  ...extendedPresetCategories,
 ];
 
 export function getPresetsByCategory(category: PresetCategory) {

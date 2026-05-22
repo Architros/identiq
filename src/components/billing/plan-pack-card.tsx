@@ -47,9 +47,7 @@ export function PlanPackCard({
       ) : null}
       {pack.badge === "best_value" ? (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="rounded-md bg-accent/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-            Best value
-          </span>
+          <Badge>Best value</Badge>
         </div>
       ) : null}
 

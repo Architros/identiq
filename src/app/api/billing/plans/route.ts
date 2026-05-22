@@ -9,7 +9,7 @@ import {
 } from "@/lib/billing/plan-catalog";
 import {
   listActivePlans,
-  userHasCompletedCheckout,
+  userHasRedeemedWelcomeOffer,
 } from "@/lib/db/repositories/billing";
 
 export async function GET(request: Request) {
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     const [dbPlans, welcomeEligible] = await Promise.all([
       listActivePlans(),
-      userHasCompletedCheckout(user.id).then((has) => !has),
+      userHasRedeemedWelcomeOffer(user.id).then((redeemed) => !redeemed),
     ]);
 
     const displayPacks = listDisplayPacks().map((def) =>

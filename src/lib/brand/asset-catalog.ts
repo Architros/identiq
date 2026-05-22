@@ -1,5 +1,5 @@
 import { generationPresets } from "@/lib/generation/presets";
-import type { AspectRatio } from "@/lib/generation/presets";
+import type { AspectRatio, PresetCategory } from "@/lib/generation/presets";
 
 export type AssetCatalogCategory = "logo" | "social" | "advertising";
 
@@ -32,11 +32,17 @@ const LOGO_ITEMS: AssetCatalogItem[] = [
   },
 ];
 
+function presetToCatalogCategory(
+  category: PresetCategory,
+): AssetCatalogCategory {
+  return category === "social" ? "social" : "advertising";
+}
+
 const PRESET_ITEMS: AssetCatalogItem[] = generationPresets.map((preset) => ({
   id: preset.id,
   title: preset.title,
   description: preset.description,
-  category: preset.category === "social" ? "social" : "advertising",
+  category: presetToCatalogCategory(preset.category),
   kind: "preset" as const,
   presetId: preset.id,
   aspectRatio: preset.aspectRatio,

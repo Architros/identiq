@@ -351,7 +351,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             brandId: brandKit.id,
             jobId: data.jobId,
             source: "ideas",
-            category: preset?.category === "social" ? "social" : "advertising",
+            category:
+              preset?.category === "social" ? "social" : "advertising",
             catalogId: preset?.id ?? data.presetId,
             presetId: preset?.id ?? data.presetId,
             presetTitle: data.presetTitle ?? data.presetTitles[0],

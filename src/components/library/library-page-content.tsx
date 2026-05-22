@@ -25,8 +25,6 @@ export function LibraryPageContent() {
     [activeCategory],
   );
 
-  const filterCategories = libraryCategories.filter((c) => c.id !== "all");
-
   return (
     <div className="relative mx-auto flex w-full max-w-6xl flex-col px-6 pb-10 pt-6 lg:px-8 lg:pt-8">
       <div className="mb-6 max-w-2xl">
@@ -72,21 +70,13 @@ export function LibraryPageContent() {
         ))}
       </div>
 
-      {libraryTemplates.length === 0 ? (
+      {libraryTemplates.length === 0 || filtered.length === 0 ? (
         <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface/50 px-6 text-center">
-          <p className="text-base font-medium text-foreground">No templates yet</p>
-          <p className="mt-2 max-w-md text-sm text-muted">
-            Add images to <code className="text-foreground">catalog/</code>, then
-            run{" "}
-            <code className="text-foreground">npm run library:sync</code> to upload
-            and generate the catalog.
+          <p className="text-base font-medium text-foreground">Coming soon</p>
+          <p className="mt-2 max-w-sm text-sm text-muted">
+            We&apos;re adding more templates to this section. Check back shortly.
           </p>
         </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted">
-          No templates in this category. Assign categories in{" "}
-          <code className="text-foreground">catalog/manifest.json</code>.
-        </p>
       ) : (
         <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 [column-gap:1rem]">
           {filtered.map((template) => (
@@ -99,13 +89,6 @@ export function LibraryPageContent() {
           ))}
         </div>
       )}
-
-      {libraryTemplates.length > 0 && filterCategories.length > 0 ? (
-        <p className="mt-6 text-xs text-muted">
-          Tip: set per-file categories in catalog/manifest.json under{" "}
-          <code className="text-foreground">files</code>.
-        </p>
-      ) : null}
 
       <LibraryTemplateModal
         template={previewTemplate}

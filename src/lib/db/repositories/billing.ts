@@ -44,6 +44,21 @@ export async function userHasCompletedCheckout(userId: string): Promise<boolean>
   return (count ?? 0) > 0;
 }
 
+export async function userHasRedeemedWelcomeOffer(
+  userId: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("billing_checkout_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("plan_id", "welcome")
+    .eq("status", "completed");
+
+  if (error) return false;
+  return (count ?? 0) > 0;
+}
+
 export async function createCheckoutSession(params: {
   userId: string;
   planId: PackPlanId;
@@ -55,9 +70,9 @@ export async function createCheckoutSession(params: {
   if (!plan) throw new Error("Plan not found");
 
   if (params.planId === "welcome") {
-    const hasPurchase = await userHasCompletedCheckout(params.userId);
-    if (hasPurchase) {
-      throw new Error("Welcome offer is only available for your first purchase");
+    const redeemed = await userHasRedeemedWelcomeOffer(params.userId);
+    if (redeemed) {
+      throw new Error("Welcome offer has already been claimed");
     }
   }
 

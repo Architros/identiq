@@ -10,7 +10,8 @@ import {
 import { BillingIntervalToggle } from "@/components/billing/billing-interval-toggle";
 import { WelcomeOfferBanner } from "@/components/billing/welcome-offer-banner";
 import { PlanPackCard } from "@/components/billing/plan-pack-card";
-import { CustomPackPanel } from "@/components/billing/custom-pack-panel";
+import { CustomPackTeaserCard } from "@/components/billing/custom-pack-teaser-card";
+import { CustomPackDetailView } from "@/components/billing/custom-pack-detail-view";
 import { useCredits } from "@/contexts/credits-context";
 import {
   listDisplayPacks,
@@ -26,6 +27,8 @@ type PlansApiResponse = {
   welcome?: { priceLabel: string; tokenAmount: number } | null;
 };
 
+type ModalView = "plans" | "custom";
+
 export function ChoosePlanModal() {
   const router = useRouter();
   const {
@@ -35,18 +38,28 @@ export function ChoosePlanModal() {
     assetStorage,
     refreshBalance,
   } = useCredits();
-  const [interval, setInterval] = useState<BillingInterval>("annual");
+  const [view, setView] = useState<ModalView>("plans");
+  const [interval, setInterval] = useState<BillingInterval>("monthly");
   const [packs, setPacks] = useState<DisplayPack[]>(() =>
-    listDisplayPacks().map((d) => toDisplayPack(d, "annual")),
+    listDisplayPacks().map((d) => toDisplayPack(d, "monthly")),
   );
   const [welcomeEligible, setWelcomeEligible] = useState(true);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!buyTokensOpen) return;
+    if (!buyTokensOpen) {
+      setView("plans");
+      setError(null);
+      setWelcomeEligible(true);
+      return;
+    }
     setPacks(listDisplayPacks().map((d) => toDisplayPack(d, interval)));
-    void fetch(`/api/billing/plans?interval=${interval}`, {
+  }, [buyTokensOpen, interval]);
+
+  useEffect(() => {
+    if (!buyTokensOpen) return;
+    void fetch("/api/billing/plans?interval=monthly", {
       credentials: "same-origin",
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -56,9 +69,9 @@ export function ChoosePlanModal() {
         }
       })
       .catch(() => {
-        // Catalog fallback is fine offline.
+        // Keep banner visible; claim stays enabled until API confirms.
       });
-  }, [buyTokensOpen, interval]);
+  }, [buyTokensOpen]);
 
   const startCheckout = useCallback(
     async (input: {
@@ -105,6 +118,8 @@ export function ChoosePlanModal() {
 
   if (!buyTokensOpen) return null;
 
+  const showPlansGrid = view === "plans";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 py-8"
@@ -146,47 +161,61 @@ export function ChoosePlanModal() {
           </p>
         </header>
 
-        {welcomeEligible ? (
-          <div className="mt-6">
-            <WelcomeOfferBanner
-              priceLabel={`$${(WELCOME_PACK.priceCents / 100).toFixed(0)}`}
-              tokenAmount={WELCOME_PACK.tokenAmount}
-              storedAssetLimit={WELCOME_PACK.storedAssetLimit}
-              loading={loadingKey === "welcome-monthly"}
-              onClaim={() => startCheckout({ planId: "welcome" })}
-            />
-          </div>
-        ) : null}
+        <div className="mt-6">
+          <WelcomeOfferBanner
+            priceLabel={`$${(WELCOME_PACK.priceCents / 100).toFixed(0)}`}
+            tokenAmount={WELCOME_PACK.tokenAmount}
+            storedAssetLimit={WELCOME_PACK.storedAssetLimit}
+            loading={loadingKey === "welcome-monthly"}
+            claimable={welcomeEligible}
+            onClaim={() => startCheckout({ planId: "welcome" })}
+          />
+        </div>
 
         <div className="mt-8 flex justify-center">
           <BillingIntervalToggle value={interval} onChange={setInterval} />
         </div>
 
-        {error ? (
+        {showPlansGrid && error ? (
           <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {packs.map((pack) => (
-            <PlanPackCard
-              key={pack.id}
-              pack={pack}
+        {showPlansGrid ? (
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {packs.map((pack) => (
+              <PlanPackCard
+                key={pack.id}
+                pack={pack}
+                interval={interval}
+                highlighted={pack.badge === "most_popular"}
+                loading={loadingKey === `${pack.id}-${interval}`}
+                onBuy={() => startCheckout({ planId: pack.id })}
+              />
+            ))}
+            <CustomPackTeaserCard
               interval={interval}
-              highlighted={pack.badge === "most_popular"}
-              loading={loadingKey === `${pack.id}-${interval}`}
-              onBuy={() => startCheckout({ planId: pack.id })}
+              onCustomize={() => {
+                setError(null);
+                setView("custom");
+              }}
             />
-          ))}
-          <CustomPackPanel
+          </div>
+        ) : (
+          <CustomPackDetailView
             interval={interval}
             loading={loadingKey?.startsWith("custom-") ?? false}
+            error={error}
+            onBack={() => {
+              setError(null);
+              setView("plans");
+            }}
             onBuy={(tokenAmount) =>
               startCheckout({ planId: "custom", customTokenAmount: tokenAmount })
             }
           />
-        </div>
+        )}
 
         <footer className="mt-6 flex flex-col items-center gap-2 border-t border-border pt-4 sm:flex-row sm:justify-between">
           <div className="flex flex-col items-center gap-1 sm:items-start">

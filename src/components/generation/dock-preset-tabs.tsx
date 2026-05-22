@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { DockTokenBadge } from "@/components/generation/dock-token-badge";
@@ -21,6 +21,8 @@ function PresetTabHint({
   platformPixelHint,
   aspectRatio,
   resolution,
+  onClose,
+  hintRef,
 }: {
   presetId: string;
   title: string;
@@ -28,6 +30,8 @@ function PresetTabHint({
   platformPixelHint?: string;
   aspectRatio: string;
   resolution: string;
+  onClose: () => void;
+  hintRef: RefObject<HTMLDivElement | null>;
 }) {
   const ratioLabel = ASPECT_RATIO_OPTIONS.find((o) => o.value === aspectRatio);
   const resLabel = getResolutionOptionLabels({
@@ -36,7 +40,23 @@ function PresetTabHint({
   }).find((o) => o.value === resolution);
 
   return (
-    <div className="rounded-lg border border-border/60 bg-white/70 px-3 py-2.5 text-xs backdrop-blur-sm">
+    <div
+      ref={hintRef}
+      className="relative rounded-lg border border-border/60 bg-white/70 py-2.5 pl-3 pr-9 text-xs backdrop-blur-sm"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-2 top-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-sidebar-active hover:text-foreground"
+        aria-label="Close preset details"
+      >
+        <HugeiconsIcon
+          icon={Cancel01Icon}
+          size={14}
+          color="currentColor"
+          strokeWidth={2}
+        />
+      </button>
       <p className="font-medium text-foreground">{title}</p>
       <p className="mt-1 leading-relaxed text-muted">{description}</p>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
@@ -63,6 +83,8 @@ export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
   } = useGeneration();
 
   const [hintPresetId, setHintPresetId] = useState<string | null>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
+  const presetTabsRef = useRef<HTMLDivElement>(null);
 
   const hintPreset = hintPresetId
     ? selectedPresets.find((p) => p.id === hintPresetId)
@@ -74,6 +96,20 @@ export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
     }
   }, [hintPresetId, selectedPresets]);
 
+  useEffect(() => {
+    if (!hintPresetId) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (hintRef.current?.contains(target)) return;
+      if (presetTabsRef.current?.contains(target)) return;
+      setHintPresetId(null);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [hintPresetId]);
+
   return (
     <div
       className={cn(
@@ -84,7 +120,10 @@ export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
       )}
     >
       <div className="flex w-full items-stretch gap-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div
+          ref={presetTabsRef}
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+        >
           {selectedPresets.length === 0 && (
             <span className="px-2 py-1.5 text-xs text-muted">
               {embedded
@@ -158,12 +197,14 @@ export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
 
       {hintPreset ? (
         <PresetTabHint
+          hintRef={hintRef}
           presetId={hintPreset.id}
           title={hintPreset.title}
           description={hintPreset.description}
           platformPixelHint={hintPreset.platformPixelHint}
           aspectRatio={aspectRatio}
           resolution={resolution}
+          onClose={() => setHintPresetId(null)}
         />
       ) : null}
     </div>
