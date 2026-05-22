@@ -8,10 +8,20 @@ import type {
 } from "@/lib/brand/create-stream-types";
 import { groupGenerationItems } from "@/lib/brand/group-generation-items";
 import { subgroupGridClass } from "@/lib/generation/aspect-ratio-styles";
+import { DownloadZipButton } from "@/components/images/download-zip-button";
+import {
+  CATEGORY_FOLDER,
+  zipFilenameForBrand,
+} from "@/lib/download/asset-filename";
+import {
+  starterPackAllZipEntries,
+  starterPackGroupToZipEntries,
+} from "@/lib/download/starter-pack-zip-entries";
 
 type StarterPackGenerationViewProps = {
   items: AssetProgressData[];
   results: Map<string, AssetCompleteData>;
+  brandName?: string;
 };
 
 const containerVariants = {
@@ -30,10 +40,14 @@ const sectionVariants = {
 export function StarterPackGenerationView({
   items,
   results,
+  brandName = "brand",
 }: StarterPackGenerationViewProps) {
   const groups = groupGenerationItems(items);
 
   if (groups.length === 0) return null;
+
+  const allZipEntries = starterPackAllZipEntries(groups, results);
+  const hasAnySaved = allZipEntries.length > 0;
 
   return (
     <motion.div
@@ -42,6 +56,16 @@ export function StarterPackGenerationView({
       initial="hidden"
       animate="show"
     >
+      {hasAnySaved ? (
+        <div className="flex justify-end">
+          <DownloadZipButton
+            zipFilename={zipFilenameForBrand(brandName)}
+            entries={allZipEntries}
+            label="Download all assets"
+            variant="primary"
+          />
+        </div>
+      ) : null}
       {groups.map((group) => {
         const groupSaved = group.subgroups.reduce(
           (n, sg) =>
@@ -59,13 +83,25 @@ export function StarterPackGenerationView({
             variants={sectionVariants}
             className="space-y-4"
           >
-            <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                {group.label}
-              </h3>
-              <span className="text-xs text-muted tabular-nums">
-                {groupSaved}/{groupTotal}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-2">
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {group.label}
+                </h3>
+                <span className="text-xs text-muted tabular-nums">
+                  {groupSaved}/{groupTotal}
+                </span>
+              </div>
+              {groupSaved > 0 ? (
+                <DownloadZipButton
+                  zipFilename={zipFilenameForBrand(
+                    brandName,
+                    CATEGORY_FOLDER[group.category],
+                  )}
+                  entries={starterPackGroupToZipEntries(group, results)}
+                  label="Download ZIP"
+                />
+              ) : null}
             </div>
 
             <div className="space-y-6">

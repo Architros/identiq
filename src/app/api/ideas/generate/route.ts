@@ -396,8 +396,7 @@ export async function POST(request: Request) {
           isLibraryRemix,
           promptLength: finalPrompt.length,
         });
-        const { title, message, supportHint } =
-          toUserFacingGenerationError(raw);
+        const { message, supportHint } = toUserFacingGenerationError(raw);
         const userMessage = supportHint
           ? `${message} ${supportHint}`
           : message;
@@ -405,7 +404,7 @@ export async function POST(request: Request) {
         writer.write({
           type: "data-generation-status",
           id: statusId,
-          data: { phase: "error", errorMessage: `${title}: ${userMessage}` },
+          data: { phase: "error", errorMessage: userMessage },
         });
 
         writer.write({ type: "error", errorText: userMessage });

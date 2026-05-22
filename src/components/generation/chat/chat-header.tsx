@@ -17,6 +17,7 @@ export function ChatHeader() {
     generationActivity,
     libraryTemplateId,
     setHistoryOpen,
+    stopGeneration,
   } = useGeneration();
   const elapsed = useGenerationElapsed(
     isGenerating ? generationStartedAt : null,
@@ -37,6 +38,15 @@ export function ChatHeader() {
         <p className="mt-0.5 truncate text-sm text-muted">{subtitle}</p>
       </div>
       <div className="flex items-center gap-2">
+        {isGenerating ? (
+          <button
+            type="button"
+            onClick={() => stopGeneration()}
+            className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-sidebar-active"
+          >
+            Stop
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setHistoryOpen(true)}

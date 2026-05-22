@@ -7,6 +7,7 @@ import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
 import { ConnectivityProvider } from "@/contexts/connectivity-context";
 import { ConnectivityBanner } from "@/components/shared/connectivity-banner";
 import { BuyTokensModal } from "@/components/brand-create/buy-tokens-modal";
+import { ToastContainer } from "@/components/shared/toast-container";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
@@ -24,6 +25,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <BuyTokensModal />
+            <ToastContainer />
           </BrandAssetsProvider>
         </CreditsProvider>
       </BrandProvider>

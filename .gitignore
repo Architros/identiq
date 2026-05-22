@@ -49,3 +49,4 @@ next-env.d.ts
 # local library source images (manifest + synced JSON are committed)
 /catalog/*
 !/catalog/manifest.json
+/identiq-landing

@@ -5,7 +5,6 @@ import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message"
 import { ThinkingBlock } from "@/components/generation/chat/thinking-block";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { GeneratedImageCard } from "@/components/generation/chat/generated-image-card";
-import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 import { useGeneration } from "@/contexts/generation-context";
 import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
 
@@ -35,7 +34,6 @@ export function ChatAssistantTurn({
     reasoningContent,
     generationStatus,
     imageResult,
-    errorText,
   } = parseAssistantMessage(message);
 
   const phase = generationStatus?.phase;
@@ -48,8 +46,6 @@ export function ChatAssistantTurn({
   const showThinking = hasThought || isOrchestrating;
   const showSkeleton = phase === "generating-image" && !imageResult;
   const showStopped = phase === "stopped";
-  const showError = phase === "error" || Boolean(errorText);
-
   const skeletonAspectRatio =
     generationStatus?.aspectRatio ?? sessionAspectRatio;
   const skeletonQuantity = generationStatus?.quantity ?? sessionQuantity;
@@ -104,21 +100,10 @@ export function ChatAssistantTurn({
           <p className="text-sm text-muted">Generation stopped.</p>
         ) : null}
 
-        {showError ? (
-          <UserFacingErrorAlert
-            message={
-              generationStatus?.errorMessage ??
-              errorText ??
-              "Generation failed"
-            }
-          />
-        ) : null}
-
         {!showThinking &&
         !showSkeleton &&
         !imageResult &&
         !showStopped &&
-        !showError &&
         isStreaming ? (
           <p className="text-sm text-muted">
             {generationActivity ?? "Working…"}

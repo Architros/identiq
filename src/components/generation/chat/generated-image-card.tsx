@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
 import { formatRelativeTime } from "@/lib/generation/format-elapsed";
+import { showSuccessToast } from "@/lib/toast/show-toast";
 import {
   aspectRatioGenerationLeftWrapperClass,
   parseAspectRatio,
@@ -70,7 +71,13 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => approveAsset(data.jobId)}
+            onClick={() => {
+              approveAsset(data.jobId);
+              showSuccessToast("Saved to Brand assets.", {
+                dedupeKey: "save-brand-asset",
+                title: "Saved",
+              });
+            }}
             className="cursor-pointer rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
           >
             Save to Brand assets

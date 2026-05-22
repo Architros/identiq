@@ -410,7 +410,11 @@ export function StepGenerating() {
           />
         ) : null}
 
-        <StarterPackGenerationView items={items} results={results} />
+        <StarterPackGenerationView
+          items={items}
+          results={results}
+          brandName={draft.name.trim() || "brand"}
+        />
       </main>
     </div>
   );

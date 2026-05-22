@@ -35,6 +35,7 @@ import { runDraftAttachmentUploads } from "@/lib/brand/draft-attachment-uploads"
 import {
   clearWizardSession,
   getWizardSession,
+  takeWizardSession,
 } from "@/lib/brand/pending-wizard-session";
 
 type BrandWizardContextValue = {

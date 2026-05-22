@@ -18,6 +18,7 @@ import type { AspectRatio, GenerationPreset, Resolution } from "@/lib/generation
 import { getPresetById } from "@/lib/generation/presets";
 import type {
   GenerationPhase,
+  GenerationStatusData,
   IdentiqUIMessage,
 } from "@/lib/generation/chat-message-types";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
@@ -26,7 +27,11 @@ import { generationActivityLabel } from "@/lib/generation/generation-activity-la
 import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
-import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
+import {
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
+} from "@/lib/toast/show-toast";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
 import { chatTitleFromPrompt } from "@/lib/generation/chat-title";
 
@@ -53,7 +58,6 @@ type GenerationContextValue = {
   aspectRatio: AspectRatio;
   resolution: Resolution;
   quantity: number;
-  errorMessage: string | null;
   messages: IdentiqUIMessage[];
   chatStatus: "submitted" | "streaming" | "ready" | "error";
   isGenerating: boolean;
@@ -79,7 +83,6 @@ type GenerationContextValue = {
   submitGeneration: () => Promise<void>;
   stopGeneration: () => void;
   closeChat: () => void;
-  clearError: () => void;
   startNewChat: () => void;
   /** Opens chat UI for a library template remix (clears prior chat session). */
   prepareLibraryRemixSession: () => void;
@@ -95,7 +98,7 @@ async function persistChatMessages(
   messages: IdentiqUIMessage[],
   options?: { title?: string; settingsSnapshot?: Record<string, unknown> },
 ) {
-  await fetch(`/api/ideas/chats/${chatId}/messages`, {
+  const res = await fetch(`/api/ideas/chats/${chatId}/messages`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
@@ -105,6 +108,9 @@ async function persistChatMessages(
       settingsSnapshot: options?.settingsSnapshot,
     }),
   });
+  if (!res.ok) {
+    showErrorToast("Could not save this chat. Try again.");
+  }
 }
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
@@ -129,7 +135,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [quantity, setQuantity] = useState(1);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState("New chat");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
@@ -143,6 +148,17 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const messagesRef = useRef<IdentiqUIMessage[]>([]);
   const referenceImagesRef = useRef<ReferenceImage[]>([]);
   const activeChatIdRef = useRef<string | null>(null);
+  const lastStreamErrorToastRef = useRef<string | null>(null);
+
+  const toastGenerationError = useCallback((raw: string) => {
+    const message = raw.trim() || "Generation failed";
+    if (lastStreamErrorToastRef.current === message) return;
+    lastStreamErrorToastRef.current = message;
+    showErrorToast(message, {
+      dedupeKey: "generation-error",
+      id: "toast-generation-error",
+    });
+  }, []);
 
   const setLibraryTemplateId = useCallback((id: string | null) => {
     libraryTemplateIdRef.current = id;
@@ -240,7 +256,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     [settingsSnapshot],
   );
 
-  const { messages, sendMessage, stop, status, error, setMessages } =
+  const { messages, sendMessage, stop, status, setMessages } =
     useChat<IdentiqUIMessage>({
       id: activeChatId ?? undefined,
       transport,
@@ -248,6 +264,30 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setGenerationStartedAt(null);
         setGenerationPhase(isAbort ? "stopped" : isError ? "error" : "done");
         lastPresetPhaseRef.current = null;
+        if (isAbort) {
+          showInfoToast("Generation stopped.", {
+            title: "Stopped",
+            durationMs: 4000,
+            dedupeKey: "generation-stopped",
+          });
+        } else if (isError) {
+          if (!lastStreamErrorToastRef.current) {
+            toastGenerationError("Generation failed");
+          }
+        } else {
+          const remixing = Boolean(libraryTemplateIdRef.current);
+          showSuccessToast(
+            remixing
+              ? "Your remixed layout is ready — save it to Brand assets when you like it."
+              : "Your image is ready — save it to Brand assets when you like it.",
+            {
+              title: remixing ? "Remix complete" : "Generation complete",
+              dedupeKey: remixing
+                ? "generation-complete|library-remix"
+                : "generation-complete|ideas",
+            },
+          );
+        }
         if (!isAbort && !isError && pendingTokenCostRef.current > 0) {
           void refreshBalance();
           pendingTokenCostRef.current = 0;
@@ -273,6 +313,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             phase?: GenerationPhase;
             presetId?: string;
             presetTitle?: string;
+            errorMessage?: string;
           };
           if (data.phase) {
             setGenerationPhase(data.phase);
@@ -291,6 +332,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             setGenerationStartedAt(null);
             setGenerationPhase(data.phase);
             lastPresetPhaseRef.current = null;
+          }
+          if (data.phase === "error" && data.errorMessage) {
+            toastGenerationError(data.errorMessage);
           }
         }
 
@@ -331,12 +375,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       onError: (err) => {
         setGenerationStartedAt(null);
         lastPresetPhaseRef.current = null;
-        const facing = toUserFacingGenerationError(err.message);
-        setErrorMessage(
-          facing.supportHint
-            ? `${facing.title}: ${facing.message} ${facing.supportHint}`
-            : `${facing.title}: ${facing.message}`,
-        );
+        toastGenerationError(err.message);
       },
     });
 
@@ -348,7 +387,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const isLibraryRemix = Boolean(libraryTemplateId);
 
   const generationActivity = useMemo(() => {
-    if (!isGenerating && generationPhase !== "error") return null;
+    if (
+      !isGenerating ||
+      generationPhase === "error" ||
+      generationPhase === "done"
+    ) {
+      return null;
+    }
     return generationActivityLabel({
       phase: generationPhase ?? (isGenerating ? "orchestrating" : undefined),
       presetTitle: generationPresetTitle,
@@ -437,8 +482,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         registeredJobsRef.current.clear();
         setView("chat");
         setHistoryOpen(false);
-        setErrorMessage(null);
-
         const snap = data.chat.settingsSnapshot;
         if (snap?.aspectRatio) {
           setAspectRatio(snap.aspectRatio as AspectRatio);
@@ -453,7 +496,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           setPrompt(snap.userPrompt);
         }
       } catch {
-        setErrorMessage("Could not load this chat. Try again.");
+        showErrorToast("Could not load this chat. Try again.");
       }
     },
     [setMessages],
@@ -468,7 +511,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationStartedAt(null);
     setGenerationPhase(null);
     setGenerationPresetTitle(undefined);
-    setErrorMessage(null);
+    lastStreamErrorToastRef.current = null;
     setView("chat");
   }, [setMessages]);
 
@@ -486,8 +529,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationPhase(null);
     setGenerationPresetTitle(undefined);
     setLibraryTemplateId(null);
-    setErrorMessage(null);
     setHistoryOpen(false);
+    lastStreamErrorToastRef.current = null;
   }, [isGenerating, stop, setMessages, setLibraryTemplateId]);
 
   const continueFromMessageIndex = useCallback(
@@ -608,7 +651,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       const prev = referenceImagesRef.current;
       if (prev.some((img) => img.previewUrl === url)) return true;
       if (prev.length >= MAX_REFERENCE_IMAGES) {
-        setErrorMessage("You can attach up to 4 reference images.");
+        showErrorToast("You can attach up to 4 reference images.");
         return false;
       }
 
@@ -619,7 +662,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       ];
       referenceImagesRef.current = next;
       setReferenceImages(next);
-      setErrorMessage(null);
       return true;
     },
     [],
@@ -638,7 +680,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const submitGeneration = useCallback(async () => {
     if (isLoading) return;
     if (!hasActiveBrand) {
-      setErrorMessage("Create a brand first to generate images.");
+      showErrorToast("Create a brand first to generate images.");
       return;
     }
     const remixingLibrary = Boolean(libraryTemplateIdRef.current);
@@ -656,12 +698,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     });
 
     if (tokenCost > availableTokens) {
-      const facing = toUserFacingGenerationError("Insufficient tokens");
-      setErrorMessage(`${facing.title}: ${facing.message}`);
+      showErrorToast("Insufficient tokens", {
+        dedupeKey: "insufficient-tokens",
+      });
       return;
     }
 
-    setErrorMessage(null);
+    lastStreamErrorToastRef.current = null;
     pendingTokenCostRef.current = tokenCost;
     setGenerationStartedAt(Date.now());
     lastPresetPhaseRef.current = null;
@@ -717,10 +760,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setView("grid");
   }, [isGenerating, stop, setLibraryTemplateId]);
 
-  const clearError = useCallback(() => {
-    setErrorMessage(null);
-  }, []);
-
   const value = useMemo(
     () => ({
       view,
@@ -731,7 +770,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
-      errorMessage: errorMessage ?? error?.message ?? null,
       messages,
       chatStatus: status,
       isGenerating,
@@ -757,7 +795,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       submitGeneration,
       stopGeneration,
       closeChat,
-      clearError,
       startNewChat,
       prepareLibraryRemixSession,
       openChatSession,
@@ -773,8 +810,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
-      errorMessage,
-      error,
       messages,
       status,
       isGenerating,
@@ -796,7 +831,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       submitGeneration,
       stopGeneration,
       closeChat,
-      clearError,
       startNewChat,
       prepareLibraryRemixSession,
       openChatSession,

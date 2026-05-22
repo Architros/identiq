@@ -55,8 +55,24 @@ export function isInfrastructureError(error: unknown): boolean {
   return matchesInfrastructurePattern(collectErrorText(error));
 }
 
+function stripKnownErrorPrefixes(text: string): string {
+  return text
+    .replace(/^generation failed:\s*/i, "")
+    .replace(/^[^:]+:\s*(?=something went wrong|please try|not enough|session expired)/i, "")
+    .trim();
+}
+
+function messageAlreadyHasSupportHint(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes(SUPPORT_EMAIL) ||
+    lower.includes("contact us at") ||
+    lower.includes("if this keeps happening")
+  );
+}
+
 export function toUserFacingGenerationError(raw?: string | null): UserFacingError {
-  const text = (raw ?? "").trim();
+  const text = stripKnownErrorPrefixes((raw ?? "").trim());
   const lower = text.toLowerCase();
 
   if (
@@ -148,10 +164,13 @@ export function toUserFacingGenerationError(raw?: string | null): UserFacingErro
   }
 
   if (text.length > 0 && text.length < 200 && !text.includes("{")) {
+    const hasSupport =
+      lower.includes("support@identiq") ||
+      lower.includes("if this keeps happening");
     return {
       title: "Generation failed",
       message: text,
-      supportHint: supportContactLine(),
+      supportHint: hasSupport ? undefined : supportContactLine(),
     };
   }
 

@@ -17,9 +17,13 @@ import { cn } from "@/lib/utils";
 
 type DockPromptAreaProps = {
   variant?: "ideas-grid" | "images";
+  compact?: boolean;
 };
 
-export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) {
+export function DockPromptArea({
+  variant = "ideas-grid",
+  compact = false,
+}: DockPromptAreaProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isImages = variant === "images";
   const isIdeasGrid = variant === "ideas-grid";
@@ -37,18 +41,23 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
+  const isCompactRemix = compact && isLibraryRemix && view === "chat";
   const submitOnEnter = view === "chat";
 
-  const refThumbSize = isImages ? "h-24 w-24" : "h-9 w-9";
-  const chromeButtonSize = isImages ? "h-10 w-10" : "h-9 w-9";
-  const refIconSize = isImages ? 28 : 18;
-  const chromeIconSize = isImages ? 20 : 18;
-  const removeIconSize = isImages ? 20 : 10;
+  const refThumbSize = isCompactRemix
+    ? "h-14 w-14"
+    : isImages
+      ? "h-24 w-24"
+      : "h-9 w-9";
+  const chromeButtonSize = isCompactRemix ? "h-9 w-9" : isImages ? "h-10 w-10" : "h-9 w-9";
+  const refIconSize = isCompactRemix ? 20 : isImages ? 28 : 18;
+  const chromeIconSize = isCompactRemix ? 18 : isImages ? 20 : 18;
+  const removeIconSize = isCompactRemix ? 14 : isImages ? 20 : 10;
 
   return (
     <div
       className={cn(
-        isImages && "space-y-2 py-2",
+        isImages && (isCompactRemix ? "space-y-1.5 py-1" : "space-y-2 py-2"),
         isIdeasGrid && "space-y-3 pb-4 pt-3",
       )}
     >
@@ -134,23 +143,25 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
             ) : null}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            className={cn(
-              "ml-auto flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
-              chromeButtonSize,
-            )}
-            aria-label="Generation history"
-            title="Generation history"
-          >
-            <HugeiconsIcon
-              icon={TimeScheduleIcon}
-              size={chromeIconSize}
-              color="currentColor"
-              strokeWidth={1.75}
-            />
-          </button>
+          {isCompactRemix ? null : (
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className={cn(
+                "ml-auto flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                chromeButtonSize,
+              )}
+              aria-label="Generation history"
+              title="Generation history"
+            >
+              <HugeiconsIcon
+                icon={TimeScheduleIcon}
+                size={chromeIconSize}
+                color="currentColor"
+                strokeWidth={1.75}
+              />
+            </button>
+          )}
         </div>
 
         <div
@@ -193,7 +204,7 @@ export function DockPromptArea({ variant = "ideas-grid" }: DockPromptAreaProps) 
               isIdeasGrid && "absolute bottom-2 right-2",
             )}
           >
-            {isImages || isIdeasGrid ? (
+            {!isCompactRemix && (isImages || isIdeasGrid) ? (
               <DockSettingsRow compact={isImages} />
             ) : null}
             <DockCreateButton />

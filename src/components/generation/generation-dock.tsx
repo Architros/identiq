@@ -9,9 +9,10 @@ export type GenerationDockVariant = "ideas-grid" | "images";
 
 type GenerationDockProps = {
   variant?: GenerationDockVariant;
+  compact?: boolean;
 };
 
-export function GenerationDock({ variant }: GenerationDockProps) {
+export function GenerationDock({ variant, compact }: GenerationDockProps) {
   const { view } = useGeneration();
   const resolvedVariant: GenerationDockVariant =
     variant ?? (view === "chat" ? "images" : "ideas-grid");
@@ -28,7 +29,7 @@ export function GenerationDock({ variant }: GenerationDockProps) {
           "shadow-sm",
         )}
       >
-        <DockPromptArea variant={resolvedVariant} />
+        <DockPromptArea variant={resolvedVariant} compact={compact} />
       </div>
     </div>
   );

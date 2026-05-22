@@ -7,13 +7,14 @@ import { GenerationHistoryPanel } from "@/components/generation/generation-histo
 import { useGeneration } from "@/contexts/generation-context";
 
 export function IdeasChatView() {
-  const { historyOpen, setHistoryOpen } = useGeneration();
+  const { historyOpen, setHistoryOpen, libraryTemplateId } = useGeneration();
+  const isLibraryRemix = Boolean(libraryTemplateId);
 
   return (
     <>
       <div className="grid h-[calc(100dvh-var(--dashboard-topbar-height,3.5rem))] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
         <ChatHeader />
-        <ChatMessageList />
+        <ChatMessageList compactFooter={isLibraryRemix} />
         <ChatComposer />
       </div>
       <GenerationHistoryPanel

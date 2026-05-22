@@ -8,6 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { LazyAssetThumbnail } from "@/components/images/lazy-asset-thumbnail";
 import { Badge } from "@/components/ui/badge";
+import { downloadImageUrl } from "@/lib/download/fetch-image-blob";
 import type { AspectRatio } from "@/lib/generation/presets";
 import { cn } from "@/lib/utils";
 
@@ -28,18 +29,6 @@ export type BrandAssetCardProps = {
   actions?: BrandAssetCardAction;
   compact?: boolean;
 };
-
-async function downloadImageUrl(url: string, filename: string): Promise<void> {
-  const res = await fetch(url, { credentials: "same-origin" });
-  if (!res.ok) throw new Error("Download failed");
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(objectUrl);
-}
 
 export function BrandAssetCard({
   src,

@@ -6,9 +6,13 @@ import { ChatUserBubble } from "@/components/generation/chat/chat-user-bubble";
 import { ChatAssistantTurn } from "@/components/generation/chat/chat-assistant-turn";
 import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
 
-export function ChatMessageList() {
-  const { messages, isGenerating, generationPhase, libraryTemplateId } =
-    useGeneration();
+export function ChatMessageList({
+  compactFooter = false,
+}: {
+  /** Slimmer footer (library remix) — less scroll padding. */
+  compactFooter?: boolean;
+}) {
+  const { messages, isGenerating, generationPhase } = useGeneration();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,8 +23,14 @@ export function ChatMessageList() {
   const showInlineProgress =
     isGenerating && (!lastMessage || lastMessage.role === "user");
 
+  const scrollPadding = compactFooter
+    ? "pb-36 scroll-pb-36"
+    : "pb-28 scroll-pb-28";
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto scroll-pb-28 px-4 py-4 pb-28 sm:px-6 sm:py-5">
+    <div
+      className={`min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 ${scrollPadding}`}
+    >
       <div className="mr-auto w-full max-w-2xl space-y-6">
         {messages.map((message, index) => {
           const isLast = index === messages.length - 1;

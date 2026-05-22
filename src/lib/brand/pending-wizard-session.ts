@@ -27,6 +27,16 @@ export function getWizardSession(draftId: string): {
   return { draft: pending.draft, jobs: pending.jobs };
 }
 
+/** Returns the pending session once, then clears it (home → wizard handoff). */
+export function takeWizardSession(draftId: string): {
+  draft: BrandProjectDraft;
+  jobs: AttachmentUploadJob[];
+} | undefined {
+  const session = getWizardSession(draftId);
+  if (session) clearWizardSession(draftId);
+  return session;
+}
+
 export function clearWizardSession(draftId: string): void {
   if (pending?.draftId === draftId) pending = null;
 }

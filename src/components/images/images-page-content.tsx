@@ -4,10 +4,10 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { LibraryFromUrl } from "@/components/library/library-from-url";
 import Link from "next/link";
 import { BrandAssetCard } from "@/components/images/brand-asset-card";
+import { DownloadZipButton } from "@/components/images/download-zip-button";
 import { GenerationComposer } from "@/components/generation/generation-composer";
 import { IdeasChatView } from "@/components/generation/ideas-chat-view";
 import { GenerationHistoryPanel } from "@/components/generation/generation-history-panel";
-import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useGeneration } from "@/contexts/generation-context";
@@ -28,6 +28,12 @@ import {
   parseCatalogIdFromJobKey,
   type AssetCatalogCategory,
 } from "@/lib/brand/asset-catalog";
+import { resolveAssetCategory } from "@/lib/brand/resolve-asset-category";
+import {
+  assetsToZipEntries,
+  CATEGORY_FOLDER,
+  zipFilenameForBrand,
+} from "@/lib/download/asset-filename";
 import type { BrandReference } from "@/lib/brand/types";
 import type { GeneratedBrandAsset } from "@/lib/brand/types";
 import type { AspectRatio } from "@/lib/generation/presets";
@@ -40,14 +46,6 @@ import { normalizeReferenceUrl } from "@/lib/brand/reference-url";
 import { cn } from "@/lib/utils";
 
 type ImagesTab = "generated" | "uploaded";
-
-function assetCategory(asset: GeneratedBrandAsset): AssetCatalogCategory {
-  if (asset.category) return asset.category;
-  const catalogId = asset.catalogId ?? parseCatalogIdFromJobKey(asset.jobId);
-  const item = getCatalogItem(catalogId);
-  if (item) return item.category;
-  return "social";
-}
 
 function resolveAssetAspectRatio(asset: GeneratedBrandAsset): AspectRatio {
   const catalogId = asset.catalogId ?? parseCatalogIdFromJobKey(asset.jobId);
@@ -67,8 +65,6 @@ export function ImagesPageContent() {
     view,
     referenceImages,
     addReferenceImageFromUrl,
-    errorMessage,
-    clearError,
     historyOpen,
     setHistoryOpen,
   } = useGeneration();
@@ -98,7 +94,7 @@ export function ImagesPageContent() {
   const generatedByCategory = useMemo(() => {
     const map = new Map<AssetCatalogCategory, GeneratedBrandAsset[]>();
     for (const asset of savedAssets) {
-      const category = assetCategory(asset);
+      const category = resolveAssetCategory(asset);
       const list = map.get(category) ?? [];
       list.push(asset);
       map.set(category, list);
@@ -109,6 +105,11 @@ export function ImagesPageContent() {
       assets: map.get(category) ?? [],
     })).filter((group) => group.assets.length > 0);
   }, [savedAssets]);
+
+  const allAssetsZipEntries = useMemo(
+    () => assetsToZipEntries(savedAssets),
+    [savedAssets],
+  );
 
   const generatedUrlKeys = useMemo(
     () =>
@@ -159,7 +160,16 @@ export function ImagesPageContent() {
               {brandKit.displayName}
             </p>
           </div>
-          <div
+          <div className="flex flex-wrap items-center gap-2">
+            {tab === "generated" && savedAssets.length > 0 ? (
+              <DownloadZipButton
+                zipFilename={zipFilenameForBrand(brandKit.displayName)}
+                entries={allAssetsZipEntries}
+                label="Download all assets"
+                variant="primary"
+              />
+            ) : null}
+            <div
             role="tablist"
             aria-label="Brand assets library"
             className="inline-flex rounded-xl border border-border bg-surface p-1"
@@ -187,15 +197,8 @@ export function ImagesPageContent() {
               </button>
             ))}
           </div>
+          </div>
         </div>
-
-        {errorMessage ? (
-          <UserFacingErrorAlert
-            className="mb-4 rounded-xl px-4 py-3"
-            message={errorMessage}
-            onDismiss={clearError}
-          />
-        ) : null}
 
         {tab === "generated" ? (
           generatedByCategory.length === 0 ? (
@@ -211,9 +214,24 @@ export function ImagesPageContent() {
             <div className="space-y-10">
               {generatedByCategory.map((group, groupIndex) => (
                 <section key={group.category} className="space-y-4">
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {group.label}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {group.label}
+                      <span className="ml-2 font-normal text-muted">
+                        ({group.assets.length})
+                      </span>
+                    </h2>
+                    <DownloadZipButton
+                      zipFilename={zipFilenameForBrand(
+                        brandKit.displayName,
+                        CATEGORY_FOLDER[group.category],
+                      )}
+                      entries={assetsToZipEntries(group.assets, {
+                        categoryFolder: group.category,
+                      })}
+                      label="Download ZIP"
+                    />
+                  </div>
                   <div className={imagesLibraryCardGridClass()}>
                     {group.assets.map((asset, assetIndex) => {
                       const ratio = resolveAssetAspectRatio(asset);
@@ -322,11 +340,7 @@ export function ImagesPageContent() {
         <ImageLightboxModal image={lightbox} onClose={() => setLightbox(null)} />
         </div>
 
-        <GenerationComposer
-          layout="sticky"
-          errorMessage={errorMessage}
-          onDismissError={clearError}
-        />
+        <GenerationComposer layout="sticky" />
       </div>
 
       <GenerationHistoryPanel
