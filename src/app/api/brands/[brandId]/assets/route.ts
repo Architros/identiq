@@ -6,6 +6,7 @@ import {
   listReferencesForBrand,
   saveAssetsForBrand,
 } from "@/lib/db/repositories/assets";
+import { AssetStorageQuotaError } from "@/lib/db/repositories/entitlements";
 import { userOwnsBrand } from "@/lib/db/repositories/brands";
 import type { GeneratedBrandAsset } from "@/lib/brand/types";
 
@@ -50,7 +51,22 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Invalid assets payload" }, { status: 400 });
     }
 
-    await saveAssetsForBrand(user.id, brandId, parsed.data.assets);
-    return NextResponse.json({ ok: true });
+    try {
+      await saveAssetsForBrand(user.id, brandId, parsed.data.assets);
+      return NextResponse.json({ ok: true });
+    } catch (err) {
+      if (err instanceof AssetStorageQuotaError) {
+        return NextResponse.json(
+          {
+            error: err.message,
+            code: err.code,
+            used: err.used,
+            limit: err.limit,
+          },
+          { status: err.status },
+        );
+      }
+      throw err;
+    }
   });
 }

@@ -126,7 +126,7 @@ export function BrandWizardShell() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
               New brand
             </p>
-            <h1 className="font-[family-name:var(--font-instrument-serif)] text-2xl text-foreground">
+            <h1 className="font-display text-2xl text-foreground">
               {WIZARD_STEP_LABELS[draft.step]}
             </h1>
           </div>

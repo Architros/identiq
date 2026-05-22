@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 type WelcomeOfferBannerProps = {
   priceLabel: string;
   tokenAmount: number;
+  storedAssetLimit: number;
   loading: boolean;
   onClaim: () => void;
 };
@@ -14,6 +15,7 @@ type WelcomeOfferBannerProps = {
 export function WelcomeOfferBanner({
   priceLabel,
   tokenAmount,
+  storedAssetLimit,
   loading,
   onClaim,
 }: WelcomeOfferBannerProps) {
@@ -34,8 +36,8 @@ export function WelcomeOfferBanner({
             {priceLabel} for {tokenAmount} tokens
           </p>
           <p className="mt-1 text-sm text-muted">
-            2K output · ~25 on-brand images · First purchase only · Cancel anytime
-            before your next pack
+            2K output · ~25 on-brand images · {storedAssetLimit.toLocaleString()}{" "}
+            stored assets · First purchase only
           </p>
         </div>
         <button

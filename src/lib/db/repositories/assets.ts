@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BrandReference, GeneratedBrandAsset } from "@/lib/brand/types";
+import { assertCanStoreMoreAssets } from "@/lib/db/repositories/entitlements";
 import {
   assetRowToGenerated,
   referenceRowToReference,
@@ -24,11 +25,35 @@ export async function listAssetsForBrand(
   return (data as GeneratedAssetRow[]).map(assetRowToGenerated);
 }
 
+async function countNewAssetsForUser(
+  userId: string,
+  assetIds: string[],
+): Promise<number> {
+  if (assetIds.length === 0) return 0;
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("generated_assets")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "saved")
+    .in("id", assetIds);
+
+  if (error) return assetIds.length;
+  const existing = count ?? 0;
+  return Math.max(0, assetIds.length - existing);
+}
+
 export async function saveAssetsForBrand(
   userId: string,
   brandId: string,
   assets: Omit<GeneratedBrandAsset, "status">[],
 ): Promise<void> {
+  const netNew = await countNewAssetsForUser(
+    userId,
+    assets.map((a) => a.id),
+  );
+  await assertCanStoreMoreAssets(userId, netNew);
+
   const supabase = await createClient();
   const rows = assets.map((a) => ({
     id: a.id,

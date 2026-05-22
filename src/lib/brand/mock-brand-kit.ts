@@ -8,7 +8,7 @@ export const mockBrandKit: BrandKit = {
     brand_style: "minimal creative agency",
     primary_color: "#C46DFD",
     secondary_color: "#111827",
-    font_pairing: "Instrument Serif + Geist",
+    font_pairing: "Varela + Geist",
     visual_language: "soft gradients, rounded cards",
     tone: "premium playful",
   },

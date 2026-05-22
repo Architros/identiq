@@ -33,7 +33,7 @@ export function ReviewBasicsSummary({
           />
         </span>
         <div className="min-w-0">
-          <p className="font-[family-name:var(--font-instrument-serif)] text-2xl leading-tight text-foreground">
+          <p className="font-display text-2xl leading-tight text-foreground">
             {name}
           </p>
         </div>

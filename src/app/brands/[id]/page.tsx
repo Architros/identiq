@@ -29,7 +29,7 @@ export default function BrandDetailsPage() {
         <p className="text-xs font-medium uppercase tracking-wide text-muted">
           Brand details
         </p>
-        <h1 className="font-[family-name:var(--font-instrument-serif)] text-3xl text-foreground">
+        <h1 className="font-display text-3xl text-foreground">
           {summary?.displayName ?? kit.displayName}
         </h1>
         <p className="text-sm text-muted">{kit.domain}</p>

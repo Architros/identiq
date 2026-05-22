@@ -6,7 +6,13 @@ import { useCredits } from "@/contexts/credits-context";
 import { cn } from "@/lib/utils";
 
 export function CreditsBalance({ compact = false }: { compact?: boolean }) {
-  const { availableTokens, isLoading, openBuyTokens } = useCredits();
+  const { availableTokens, assetStorage, isLoading, openBuyTokens } =
+    useCredits();
+
+  const storageTitle =
+    assetStorage.limit > 0
+      ? `${assetStorage.used} / ${assetStorage.limit} saved assets in library`
+      : undefined;
 
   return (
     <button
@@ -19,6 +25,7 @@ export function CreditsBalance({ compact = false }: { compact?: boolean }) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
       )}
       aria-label="View token balance and buy more tokens"
+      title={storageTitle}
     >
       <HugeiconsIcon
         icon={Coins01Icon}

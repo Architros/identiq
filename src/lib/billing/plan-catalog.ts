@@ -1,4 +1,9 @@
 import { computeCustomPack } from "@/lib/billing/custom-pack-pricing";
+import {
+  formatStoredAssetsLimit,
+  PACK_STORED_ASSET_LIMITS,
+  resolveCustomPackStorageLimit,
+} from "@/lib/billing/storage-entitlement";
 
 export type BillingInterval = "monthly" | "annual";
 
@@ -19,6 +24,8 @@ export type CatalogPackDefinition = {
   badge?: PlanBadge;
   monthlyTokens: number;
   monthlyPriceCents: number;
+  /** Max saved generated assets in the library (Bloom-style cap). */
+  storedAssetLimit: number;
   features: string[];
 };
 
@@ -29,6 +36,7 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     tagline: "Get started.",
     monthlyTokens: 120,
     monthlyPriceCents: 700,
+    storedAssetLimit: PACK_STORED_ASSET_LIMITS.starter,
     features: [
       "120 tokens per pack",
       "Studio presets & library remix",
@@ -43,6 +51,7 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     badge: "most_popular",
     monthlyTokens: 550,
     monthlyPriceCents: 2900,
+    storedAssetLimit: PACK_STORED_ASSET_LIMITS.pro,
     features: [
       "550 tokens per pack",
       "Brand starter pack generation",
@@ -57,6 +66,7 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     badge: "best_value",
     monthlyTokens: 1100,
     monthlyPriceCents: 4900,
+    storedAssetLimit: PACK_STORED_ASSET_LIMITS.studio,
     features: [
       "1,100 tokens per pack",
       "Highest volume for teams",
@@ -71,8 +81,11 @@ export const WELCOME_PACK = {
   name: "Welcome offer",
   tokenAmount: 80,
   priceCents: 500,
+  storedAssetLimit: PACK_STORED_ASSET_LIMITS.welcome,
   features: ["80 tokens", "2K image output", "One-time for new customers"],
 };
+
+export { formatStoredAssetsLimit, resolveCustomPackStorageLimit };
 
 export function estimateImages(tokenAmount: number): number {
   return Math.max(1, Math.floor(tokenAmount / TOKENS_PER_IMAGE_ESTIMATE));
@@ -172,6 +185,7 @@ export type DisplayPack = CatalogPackDefinition & {
   displayPriceCents: number;
   displayTokens: number;
   billedLine: string;
+  storedAssetLimitLabel: string;
 };
 
 export function toDisplayPack(
@@ -188,12 +202,17 @@ export function toDisplayPack(
     billedLine = "One-time token pack";
   }
 
-  const features = def.features.map((line, i) => {
-    if (i === 0) {
-      return `${resolved.tokenAmount.toLocaleString()} tokens (~${estimatedImages} images)`;
-    }
-    return line;
-  });
+  const storageLabel = formatStoredAssetsLimit(def.storedAssetLimit);
+  const features = [
+    `${resolved.tokenAmount.toLocaleString()} tokens (~${estimatedImages} images)`,
+    storageLabel,
+    ...def.features.filter(
+      (line) =>
+        !line.toLowerCase().includes("tokens per pack") &&
+        !line.toLowerCase().includes("unlimited brands"),
+    ),
+    "Unlimited brands",
+  ];
 
   return {
     ...def,
@@ -202,5 +221,6 @@ export function toDisplayPack(
     displayPriceCents: resolved.amountCents,
     displayTokens: resolved.tokenAmount,
     billedLine,
+    storedAssetLimitLabel: storageLabel,
   };
 }

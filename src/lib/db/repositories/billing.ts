@@ -1,5 +1,10 @@
 import { resolveCheckoutPack } from "@/lib/billing/resolve-checkout";
 import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
+import {
+  monthlyTokenBasisFromGrantedCustomTokens,
+  resolveStorageLimitForPlan,
+} from "@/lib/billing/storage-entitlement";
+import { upgradeUserAssetStorageLimit } from "@/lib/db/repositories/entitlements";
 import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
 import type { CheckoutSessionRow, PlanRow } from "@/lib/db/types";
 
@@ -127,5 +132,14 @@ export async function completeCheckoutSession(
   });
 
   if (grantError) throw grantError;
+
+  const storageLimit = resolveStorageLimitForPlan(row.plan_id as PackPlanId, {
+    customMonthlyTokenBasis:
+      row.plan_id === "custom"
+        ? monthlyTokenBasisFromGrantedCustomTokens(row.token_amount)
+        : undefined,
+  });
+  await upgradeUserAssetStorageLimit(userId, storageLimit);
+
   return { balance: balance as number };
 }

@@ -19,7 +19,7 @@ export const CURATED_GOOGLE_FONTS: GoogleFontEntry[] = [
   { family: "Playfair Display", category: "serif", variants: ["400", "500", "600", "700"] },
   { family: "Merriweather", category: "serif", variants: ["400", "700"] },
   { family: "Lora", category: "serif", variants: ["400", "500", "600", "700"] },
-  { family: "Instrument Serif", category: "serif", variants: ["400"] },
+  { family: "Varela", category: "sans-serif", variants: ["400"] },
   { family: "Libre Baskerville", category: "serif", variants: ["400", "700"] },
   { family: "Cormorant Garamond", category: "serif", variants: ["400", "500", "600"] },
   { family: "Space Grotesk", category: "sans-serif", variants: ["400", "500", "600", "700"] },

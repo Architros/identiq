@@ -3,6 +3,14 @@ import assert from "node:assert/strict";
 import { computeCustomPack } from "./custom-pack-pricing.js";
 import { resolveCheckoutPack } from "./resolve-checkout.js";
 import { resolvePack } from "./plan-catalog.js";
+import {
+  DEFAULT_FREE_ASSET_STORAGE_LIMIT,
+  mergeStorageLimits,
+  monthlyTokenBasisFromGrantedCustomTokens,
+  PACK_STORED_ASSET_LIMITS,
+  resolveCustomPackStorageLimit,
+  resolveStorageLimitForPlan,
+} from "./storage-entitlement.js";
 
 describe("resolvePack", () => {
   it("resolves monthly starter/pro/studio at catalog prices", () => {
@@ -86,6 +94,35 @@ describe("computeCustomPack", () => {
   it("rejects out-of-range token amounts", () => {
     assert.throws(() => computeCustomPack(199, "monthly"), /between/);
     assert.throws(() => computeCustomPack(5001, "monthly"), /between/);
+  });
+});
+
+describe("storage entitlements", () => {
+  it("assigns Bloom-style stored asset limits per pack", () => {
+    assert.equal(DEFAULT_FREE_ASSET_STORAGE_LIMIT, 25);
+    assert.equal(resolveStorageLimitForPlan("welcome"), 50);
+    assert.equal(resolveStorageLimitForPlan("starter"), 150);
+    assert.equal(resolveStorageLimitForPlan("pro"), 500);
+    assert.equal(resolveStorageLimitForPlan("studio"), 2000);
+  });
+
+  it("tiers custom packs by monthly token slider", () => {
+    assert.equal(resolveCustomPackStorageLimit(200), PACK_STORED_ASSET_LIMITS.starter);
+    assert.equal(resolveCustomPackStorageLimit(750), PACK_STORED_ASSET_LIMITS.pro);
+    assert.equal(resolveCustomPackStorageLimit(1200), PACK_STORED_ASSET_LIMITS.studio);
+  });
+
+  it("infers monthly basis from annual custom grants", () => {
+    assert.equal(monthlyTokenBasisFromGrantedCustomTokens(6000), 500);
+    assert.equal(
+      resolveStorageLimitForPlan("custom", { customMonthlyTokenBasis: 500 }),
+      500,
+    );
+  });
+
+  it("merges storage limits upward only", () => {
+    assert.equal(mergeStorageLimits(150, 500), 500);
+    assert.equal(mergeStorageLimits(500, 150), 500);
   });
 });
 

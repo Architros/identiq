@@ -9,6 +9,8 @@ export type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   role: AppRole;
+  /** Max saved generated assets across all brands (raised by token packs). */
+  asset_storage_limit?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -79,6 +81,7 @@ export type PlanRow = {
   currency: string;
   stripe_price_id: string | null;
   active: boolean;
+  asset_storage_limit?: number | null;
 };
 
 export type CheckoutSessionRow = {

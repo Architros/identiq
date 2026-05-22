@@ -12,8 +12,15 @@ import { mockCredits } from "@/lib/mock-data";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
 
+export type AssetStorageUsage = {
+  used: number;
+  limit: number;
+  remaining: number;
+};
+
 type CreditsContextValue = {
   availableTokens: number;
+  assetStorage: AssetStorageUsage;
   isLoading: boolean;
   refreshBalance: (balance?: number) => Promise<void>;
   /** @deprecated Server deducts tokens; triggers balance refresh. */
@@ -25,8 +32,16 @@ type CreditsContextValue = {
 
 const CreditsContext = createContext<CreditsContextValue | null>(null);
 
+const DEFAULT_STORAGE: AssetStorageUsage = {
+  used: 0,
+  limit: 25,
+  remaining: 25,
+};
+
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
   const [availableTokens, setAvailableTokens] = useState(mockCredits);
+  const [assetStorage, setAssetStorage] =
+    useState<AssetStorageUsage>(DEFAULT_STORAGE);
   const [isLoading, setIsLoading] = useState(true);
   const [buyTokensOpen, setBuyTokensOpen] = useState(false);
   const connectivity = useConnectivityOptional();
@@ -44,8 +59,14 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       }
       if (res.ok) {
         connectivity?.clearConnectivityIssue();
-        const data = (await res.json()) as { balance: number };
+        const data = (await res.json()) as {
+          balance: number;
+          storage?: AssetStorageUsage;
+        };
         setAvailableTokens(data.balance);
+        if (data.storage) {
+          setAssetStorage(data.storage);
+        }
       }
     } catch {
       // Keep current balance when API is unavailable.
@@ -74,6 +95,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       availableTokens,
+      assetStorage,
       isLoading,
       refreshBalance,
       deductTokens,
@@ -83,6 +105,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       availableTokens,
+      assetStorage,
       isLoading,
       refreshBalance,
       deductTokens,

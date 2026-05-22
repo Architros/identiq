@@ -28,8 +28,13 @@ type PlansApiResponse = {
 
 export function ChoosePlanModal() {
   const router = useRouter();
-  const { buyTokensOpen, closeBuyTokens, availableTokens, refreshBalance } =
-    useCredits();
+  const {
+    buyTokensOpen,
+    closeBuyTokens,
+    availableTokens,
+    assetStorage,
+    refreshBalance,
+  } = useCredits();
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [packs, setPacks] = useState<DisplayPack[]>(() =>
     listDisplayPacks().map((d) => toDisplayPack(d, "annual")),
@@ -146,6 +151,7 @@ export function ChoosePlanModal() {
             <WelcomeOfferBanner
               priceLabel={`$${(WELCOME_PACK.priceCents / 100).toFixed(0)}`}
               tokenAmount={WELCOME_PACK.tokenAmount}
+              storedAssetLimit={WELCOME_PACK.storedAssetLimit}
               loading={loadingKey === "welcome-monthly"}
               onClaim={() => startCheckout({ planId: "welcome" })}
             />
@@ -183,15 +189,22 @@ export function ChoosePlanModal() {
         </div>
 
         <footer className="mt-6 flex flex-col items-center gap-2 border-t border-border pt-4 sm:flex-row sm:justify-between">
-          <p className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <HugeiconsIcon
-              icon={Coins01Icon}
-              size={16}
-              color="currentColor"
-              strokeWidth={1.75}
-            />
-            Current balance: {availableTokens.toLocaleString()} tokens
-          </p>
+          <div className="flex flex-col items-center gap-1 sm:items-start">
+            <p className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <HugeiconsIcon
+                icon={Coins01Icon}
+                size={16}
+                color="currentColor"
+                strokeWidth={1.75}
+              />
+              Current balance: {availableTokens.toLocaleString()} tokens
+            </p>
+            <p className="text-xs text-muted">
+              Library storage: {assetStorage.used.toLocaleString()} /{" "}
+              {assetStorage.limit.toLocaleString()} saved assets
+              {assetStorage.remaining === 0 ? " · full" : null}
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => void refreshBalance()}

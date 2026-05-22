@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test src/lib/ai/image/resolve-image-output.test.ts src/lib/billing/billing-catalog.test.ts",
+    "test": "node --import tsx --test \"src/lib/**/*.test.ts\"",
     "library:sync": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts"
   },
   "dependencies": {

@@ -10,8 +10,10 @@ import {
 } from "@/lib/billing/custom-pack-pricing";
 import {
   estimateImages,
+  formatStoredAssetsLimit,
   formatUsd,
   formatUsdPerMonth,
+  resolveCustomPackStorageLimit,
   type BillingInterval,
 } from "@/lib/billing/plan-catalog";
 import { cn } from "@/lib/utils";
@@ -22,12 +24,12 @@ type CustomPackPanelProps = {
   onBuy: (tokenAmount: number) => void;
 };
 
-const CUSTOM_FEATURES = [
+const CUSTOM_FEATURE_BASE = [
   "Pick your token amount",
   "2K image output",
   "Studio, library & brand wizard",
   "Unlimited brands",
-];
+] as const;
 
 export function CustomPackPanel({
   interval,
@@ -39,6 +41,20 @@ export function CustomPackPanel({
   const { tokenAmount, amountCents } = useMemo(
     () => computeCustomPack(tokens, interval),
     [tokens, interval],
+  );
+
+  const storageLimit = useMemo(
+    () => resolveCustomPackStorageLimit(tokens),
+    [tokens],
+  );
+
+  const customFeatures = useMemo(
+    () => [
+      CUSTOM_FEATURE_BASE[0],
+      formatStoredAssetsLimit(storageLimit),
+      ...CUSTOM_FEATURE_BASE.slice(1),
+    ],
+    [storageLimit],
   );
 
   const headlinePrice =
@@ -85,7 +101,7 @@ export function CustomPackPanel({
       </div>
 
       <ul className="mt-5 flex-1 space-y-2.5">
-        {CUSTOM_FEATURES.map((feature) => (
+        {customFeatures.map((feature) => (
           <li
             key={feature}
             className="flex items-start gap-2 text-sm text-foreground"

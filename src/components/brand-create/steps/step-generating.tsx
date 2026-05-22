@@ -344,7 +344,7 @@ export function StepGenerating() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Creating brand
           </p>
-          <h1 className="font-[family-name:var(--font-instrument-serif)] text-2xl text-foreground">
+          <h1 className="font-display text-2xl text-foreground">
             {draft.name || "Your brand"}
           </h1>
           {items.length > 0 ? (
