@@ -3,7 +3,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
 import type { BillingInterval } from "@/lib/billing/plan-catalog";
-import { CUSTOM_TOKEN_MIN } from "@/lib/billing/custom-pack-pricing";
+import {
+  CUSTOM_TOKEN_MAX,
+  CUSTOM_TOKEN_MIN,
+} from "@/lib/billing/custom-pack-pricing";
 import { cn } from "@/lib/utils";
 
 type CustomPackTeaserCardProps = {
@@ -25,14 +28,16 @@ export function CustomPackTeaserCard({
     <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5">
       <div>
         <p className="mt-1 font-display text-3xl font-normal tracking-tight text-foreground">
-          Custom
+          Scale
         </p>
         <p className="mt-1 text-xs text-muted">
           {interval === "annual"
             ? "Annual lump · 2 months free"
-            : "One-time custom pack"}
+            : "From $39 · volume pricing"}
         </p>
-        <p className="mt-2 text-sm text-muted">Volume pricing at your pace.</p>
+        <p className="mt-2 text-sm text-muted">
+          Built for teams and agencies.
+        </p>
       </div>
 
       <ul className="mt-5 flex-1 space-y-2.5">
@@ -54,7 +59,8 @@ export function CustomPackTeaserCard({
         <li className="flex items-start gap-2 text-sm text-muted">
           <span className="mt-0.5 shrink-0 text-xs">·</span>
           <span>
-            {CUSTOM_TOKEN_MIN.toLocaleString()}–5,000 tokens per pack
+            {CUSTOM_TOKEN_MIN.toLocaleString()}–
+            {CUSTOM_TOKEN_MAX.toLocaleString()} tokens per pack
           </span>
         </li>
       </ul>

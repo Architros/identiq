@@ -20,6 +20,8 @@ import {
   loadUserBrandSummaries,
   saveUserBrand,
 } from "@/lib/brand/brand-storage";
+import { toneTagsToBrandPatch } from "@/lib/brand/brand-details-utils";
+import type { BrandPatchInput } from "@/lib/db/repositories/brands";
 import {
   pickDefaultBrandId,
   readLastActiveBrandId,
@@ -40,6 +42,10 @@ type BrandContextValue = {
   setActiveBrand: (id: string) => void;
   getBrandKit: (id: string) => BrandKit | undefined;
   createBrand: (kit: BrandKit, summary: BrandSummary) => Promise<void>;
+  updateBrandKit: (
+    brandId: string,
+    patch: BrandPatchInput,
+  ) => Promise<BrandKit | null>;
   refreshBrands: () => Promise<void>;
 };
 
@@ -137,6 +143,66 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     [userKits],
   );
 
+  const updateBrandKit = useCallback(
+    async (brandId: string, patch: BrandPatchInput) => {
+      const existing = userKits[brandId];
+      if (!existing) return null;
+
+      try {
+        const res = await fetch(`/api/brands/${brandId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(patch),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { kit: BrandKit };
+          setUserKits((prev) => ({ ...prev, [brandId]: data.kit }));
+          const summary = userSummaries.find((s) => s.id === brandId);
+          if (summary) {
+            saveUserBrand(data.kit, summary);
+          }
+          return data.kit;
+        }
+      } catch {
+        // Fall through to local merge.
+      }
+
+      const toneFromTags = patch.toneTags
+        ? toneTagsToBrandPatch(patch.toneTags)
+        : null;
+
+      const merged: BrandKit = {
+        ...existing,
+        description:
+          patch.description !== undefined
+            ? patch.description
+            : existing.description,
+        tagline:
+          patch.tagline !== undefined ? patch.tagline : existing.tagline,
+        sector:
+          patch.sector !== undefined
+            ? (patch.sector ?? undefined)
+            : existing.sector,
+        feelings: toneFromTags
+          ? toneFromTags.feelings
+          : patch.feelings !== undefined
+            ? patch.feelings
+            : existing.feelings,
+        memory: {
+          ...existing.memory,
+          ...(patch.memory ?? {}),
+          ...(toneFromTags ? { tone: toneFromTags.tone } : {}),
+        },
+      };
+      setUserKits((prev) => ({ ...prev, [brandId]: merged }));
+      const summary = userSummaries.find((s) => s.id === brandId);
+      if (summary) saveUserBrand(merged, summary);
+      return merged;
+    },
+    [userKits, userSummaries],
+  );
+
   const createBrand = useCallback(
     async (kit: BrandKit, summary: BrandSummary) => {
       try {
@@ -184,6 +250,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       setActiveBrand,
       getBrandKit,
       createBrand,
+      updateBrandKit,
       refreshBrands,
     }),
     [
@@ -197,6 +264,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       setActiveBrand,
       getBrandKit,
       createBrand,
+      updateBrandKit,
       refreshBrands,
     ],
   );

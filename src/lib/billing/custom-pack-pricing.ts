@@ -1,37 +1,59 @@
 import type { BillingInterval } from "@/lib/billing/plan-catalog";
 
-export const CUSTOM_TOKEN_MIN = 200;
-export const CUSTOM_TOKEN_MAX = 5000;
-export const CUSTOM_MIN_CHARGE_CENTS = 1500;
-/** 5¢ per token (monthly basis). */
-export const CUSTOM_CENTS_PER_TOKEN = 5;
+/** Discrete monthly token tiers — slider snaps to these only (agency volume pricing). */
+export const CUSTOM_PACK_TIERS = [
+  { monthlyTokens: 300, monthlyPriceCents: 3_900 },
+  { monthlyTokens: 500, monthlyPriceCents: 5_900 },
+  { monthlyTokens: 1_000, monthlyPriceCents: 9_900 },
+  { monthlyTokens: 2_000, monthlyPriceCents: 16_900 },
+  { monthlyTokens: 5_000, monthlyPriceCents: 34_900 },
+] as const;
+
+export type CustomPackTier = (typeof CUSTOM_PACK_TIERS)[number];
+
+export const CUSTOM_TOKEN_MIN = CUSTOM_PACK_TIERS[0].monthlyTokens;
+export const CUSTOM_TOKEN_MAX =
+  CUSTOM_PACK_TIERS[CUSTOM_PACK_TIERS.length - 1].monthlyTokens;
 
 const ANNUAL_MONTHS_CHARGED = 10;
 const ANNUAL_MONTHS_GRANTED = 12;
+
+export function getCustomPackTierIndex(monthlyTokens: number): number {
+  const index = CUSTOM_PACK_TIERS.findIndex(
+    (t) => t.monthlyTokens === Math.round(monthlyTokens),
+  );
+  if (index < 0) {
+    throw new Error(
+      `Custom packs must use one of: ${CUSTOM_PACK_TIERS.map((t) => t.monthlyTokens).join(", ")} tokens`,
+    );
+  }
+  return index;
+}
+
+export function getCustomPackTier(monthlyTokens: number): CustomPackTier {
+  return CUSTOM_PACK_TIERS[getCustomPackTierIndex(monthlyTokens)];
+}
+
+/** Per-token rate at the lowest tier (13¢) — used to show volume savings on higher tiers. */
+export function customPackVolumeSavingsPercent(tier: CustomPackTier): number {
+  const baseline =
+    CUSTOM_PACK_TIERS[0].monthlyPriceCents / CUSTOM_PACK_TIERS[0].monthlyTokens;
+  const actual = tier.monthlyPriceCents / tier.monthlyTokens;
+  return Math.max(0, Math.round((1 - actual / baseline) * 100));
+}
 
 export function computeCustomPack(
   requestedTokens: number,
   interval: BillingInterval,
 ): { tokenAmount: number; amountCents: number } {
-  const tokens = Math.round(requestedTokens);
-  if (tokens < CUSTOM_TOKEN_MIN || tokens > CUSTOM_TOKEN_MAX) {
-    throw new Error(
-      `Custom packs must be between ${CUSTOM_TOKEN_MIN} and ${CUSTOM_TOKEN_MAX} tokens`,
-    );
-  }
+  const tier = getCustomPackTier(requestedTokens);
 
-  let amountCents = tokens * CUSTOM_CENTS_PER_TOKEN;
-  if (amountCents < CUSTOM_MIN_CHARGE_CENTS) {
-    amountCents = CUSTOM_MIN_CHARGE_CENTS;
-  }
+  let amountCents = tier.monthlyPriceCents;
+  let tokenAmount = tier.monthlyTokens;
 
-  let tokenAmount = tokens;
   if (interval === "annual") {
-    tokenAmount = tokens * ANNUAL_MONTHS_GRANTED;
-    amountCents = tokens * ANNUAL_MONTHS_CHARGED * CUSTOM_CENTS_PER_TOKEN;
-    if (amountCents < CUSTOM_MIN_CHARGE_CENTS * ANNUAL_MONTHS_CHARGED) {
-      amountCents = CUSTOM_MIN_CHARGE_CENTS * ANNUAL_MONTHS_CHARGED;
-    }
+    tokenAmount = tier.monthlyTokens * ANNUAL_MONTHS_GRANTED;
+    amountCents = tier.monthlyPriceCents * ANNUAL_MONTHS_CHARGED;
   }
 
   return { tokenAmount, amountCents };

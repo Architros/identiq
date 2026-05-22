@@ -67,5 +67,10 @@ ${
     prompt: buildOrchestratorInputContext(input),
   });
 
-  return object;
+  return {
+    ...object,
+    primary_color: input.colors.primary,
+    secondary_color: input.colors.secondary,
+    accent_color: input.colors.accent?.trim() || object.accent_color,
+  };
 }

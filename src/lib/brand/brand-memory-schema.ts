@@ -13,6 +13,7 @@ export const brandMemorySchema = z.object({
   brand_style: z.string(),
   primary_color: z.string(),
   secondary_color: z.string(),
+  accent_color: z.string().optional(),
   font_pairing: z.string(),
   visual_language: z.string(),
   tone: z.string(),

@@ -4,10 +4,14 @@ export type BrandMemory = {
   brand_style: string;
   primary_color: string;
   secondary_color: string;
+  /** CTA / highlight color from the brand wizard palette */
+  accent_color?: string;
   font_pairing: string;
   visual_language: string;
   tone: string;
 };
+
+export type BrandColorRole = "primary" | "secondary" | "accent";
 
 export type BrandAssetType =
   | "logo_primary"

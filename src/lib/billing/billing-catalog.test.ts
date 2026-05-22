@@ -73,27 +73,36 @@ describe("resolvePack", () => {
 });
 
 describe("computeCustomPack", () => {
-  it("charges 5¢/token with $15 minimum monthly", () => {
-    assert.deepEqual(computeCustomPack(200, "monthly"), {
-      tokenAmount: 200,
-      amountCents: 1500,
+  it("uses tier pricing starting at $39 for 300 tokens monthly", () => {
+    assert.deepEqual(computeCustomPack(300, "monthly"), {
+      tokenAmount: 300,
+      amountCents: 3900,
     });
     assert.deepEqual(computeCustomPack(500, "monthly"), {
       tokenAmount: 500,
-      amountCents: 2500,
+      amountCents: 5900,
+    });
+    assert.deepEqual(computeCustomPack(1000, "monthly"), {
+      tokenAmount: 1000,
+      amountCents: 9900,
     });
   });
 
-  it("annual custom grants 12× slider tokens at 10× monthly charge", () => {
+  it("annual custom grants 12× tier tokens at 10× monthly charge", () => {
     assert.deepEqual(computeCustomPack(500, "annual"), {
       tokenAmount: 6000,
-      amountCents: 25000,
+      amountCents: 59000,
+    });
+    assert.deepEqual(computeCustomPack(300, "annual"), {
+      tokenAmount: 3600,
+      amountCents: 39000,
     });
   });
 
-  it("rejects out-of-range token amounts", () => {
-    assert.throws(() => computeCustomPack(199, "monthly"), /between/);
-    assert.throws(() => computeCustomPack(5001, "monthly"), /between/);
+  it("rejects non-tier token amounts", () => {
+    assert.throws(() => computeCustomPack(199, "monthly"), /one of:/);
+    assert.throws(() => computeCustomPack(750, "monthly"), /one of:/);
+    assert.throws(() => computeCustomPack(5001, "monthly"), /one of:/);
   });
 });
 
@@ -107,9 +116,9 @@ describe("storage entitlements", () => {
   });
 
   it("tiers custom packs by monthly token slider", () => {
-    assert.equal(resolveCustomPackStorageLimit(200), PACK_STORED_ASSET_LIMITS.starter);
-    assert.equal(resolveCustomPackStorageLimit(750), PACK_STORED_ASSET_LIMITS.pro);
-    assert.equal(resolveCustomPackStorageLimit(1200), PACK_STORED_ASSET_LIMITS.studio);
+    assert.equal(resolveCustomPackStorageLimit(300), PACK_STORED_ASSET_LIMITS.starter);
+    assert.equal(resolveCustomPackStorageLimit(500), PACK_STORED_ASSET_LIMITS.pro);
+    assert.equal(resolveCustomPackStorageLimit(1000), PACK_STORED_ASSET_LIMITS.studio);
   });
 
   it("infers monthly basis from annual custom grants", () => {
@@ -134,7 +143,7 @@ describe("resolveCheckoutPack", () => {
         interval: "monthly",
         customTokenAmount: 1000,
       }).amountCents,
-      5000,
+      9900,
     );
     assert.throws(
       () =>

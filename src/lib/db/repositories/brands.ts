@@ -91,3 +91,53 @@ export async function userOwnsBrand(
   const brand = await getBrandForUser(userId, brandId);
   return brand !== null;
 }
+
+export type BrandPatchInput = {
+  description?: string;
+  tagline?: string;
+  sector?: string | null;
+  feelings?: string[];
+  /** Client sends labels; mapped to feelings + memory.tone on the server. */
+  toneTags?: string[];
+  memory?: Partial<BrandKit["memory"]>;
+};
+
+export async function patchBrandForUser(
+  userId: string,
+  brandId: string,
+  patch: BrandPatchInput,
+): Promise<BrandKit | null> {
+  const existing = await getBrandForUser(userId, brandId);
+  if (!existing) return null;
+
+  const supabase = await createClient();
+  const nextMemory = patch.memory
+    ? { ...existing.memory, ...patch.memory }
+    : existing.memory;
+
+  const row = {
+    description:
+      patch.description !== undefined
+        ? patch.description
+        : (existing.description ?? null),
+    tagline:
+      patch.tagline !== undefined ? patch.tagline : (existing.tagline ?? null),
+    sector:
+      patch.sector !== undefined ? patch.sector : (existing.sector ?? null),
+    feelings:
+      patch.feelings !== undefined ? patch.feelings : (existing.feelings ?? []),
+    memory: nextMemory,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("brands")
+    .update(row)
+    .eq("user_id", userId)
+    .eq("id", brandId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw error;
+  return brandRowToKit(data as BrandRow);
+}

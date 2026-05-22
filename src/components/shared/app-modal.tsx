@@ -14,6 +14,8 @@ type AppModalProps = {
   /** e.g. max-w-lg, max-w-2xl */
   panelClassName?: string;
   titleId?: string;
+  /** Use above other z-50 overlays (e.g. brand switcher). */
+  elevated?: boolean;
 };
 
 export function AppModal({
@@ -24,6 +26,7 @@ export function AppModal({
   children,
   panelClassName = "max-w-lg",
   titleId = "app-modal-title",
+  elevated = false,
 }: AppModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -38,7 +41,10 @@ export function AppModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 py-8"
+      className={cn(
+        "fixed inset-0 flex items-center justify-center overflow-y-auto p-4 py-8",
+        elevated ? "z-[70]" : "z-50",
+      )}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

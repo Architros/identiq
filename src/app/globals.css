@@ -121,3 +121,55 @@ body {
     animation: none;
   }
 }
+
+/* Bloom-style volume slider for Scale / custom pack */
+.custom-pack-slider {
+  background: linear-gradient(
+    to right,
+    var(--foreground) 0%,
+    var(--foreground) var(--slider-fill, 0%),
+    var(--border) var(--slider-fill, 0%),
+    var(--border) 100%
+  );
+}
+
+.custom-pack-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.custom-pack-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--foreground);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.custom-pack-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.custom-pack-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--foreground);
+}
+
+.custom-pack-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--foreground);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}

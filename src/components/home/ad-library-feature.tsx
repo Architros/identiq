@@ -36,8 +36,8 @@ export function AdLibraryFeature() {
           Library
         </span>
         <h2 className={HOME_BENTO_TITLE_CLASS}>
-          Remix ads from top{" "}
-          <em className="font-display italic text-accent">brands</em>
+          Remix Premium{" "}
+          <em className="font-display italic text-accent">Brand Assets</em>
         </h2>
         <p className="text-sm leading-relaxed text-muted">
           Browse real campaign layouts and apply them to your brand kit in one

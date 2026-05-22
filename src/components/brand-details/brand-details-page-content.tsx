@@ -1,33 +1,49 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
-import { DetailFieldActions } from "@/components/brand-details/detail-field-actions";
-import { ReadMoreText } from "@/components/brand-details/read-more-text";
+import {
+  BrandDetailsAiDock,
+  type BrandAiEditTarget,
+} from "@/components/brand-details/brand-details-ai-dock";
+import { BrandColorSwatches } from "@/components/brand-details/brand-color-swatches";
+import { CopyOnHover } from "@/components/brand-details/copy-on-hover";
+import { EditableBrandField } from "@/components/brand-details/editable-brand-field";
+import { FieldEditToolbar } from "@/components/brand-details/field-edit-toolbar";
+import { InlineEditActions } from "@/components/brand-details/inline-edit-actions";
+import { ToneTagsEditor } from "@/components/brand-details/tone-tags-editor";
 import { useBrand } from "@/components/providers/brand-provider";
-import { BRAND_FEELINGS, BRAND_SECTORS } from "@/lib/brand/brand-project-draft";
-import type { BrandAsset, BrandKit } from "@/lib/brand/types";
+import {
+  BRAND_SECTORS,
+  type BrandSector,
+} from "@/lib/brand/brand-project-draft";
+import {
+  BrandDetailsNotFound,
+  BrandDetailsPageSkeleton,
+} from "@/components/brand/brand-skeleton";
+import {
+  colorPatchForRole,
+  getAestheticText,
+  getBrandColorSwatches,
+  getToneTags,
+  parseFontPairing,
+  resolveSectorDisplay,
+} from "@/lib/brand/brand-details-utils";
+import type { BrandColorRole } from "@/lib/brand/types";
+import type { BrandAsset } from "@/lib/brand/types";
+import { showSuccessToast } from "@/lib/toast/show-toast";
 import { cn } from "@/lib/utils";
 
-function parseFontPairing(pairing: string): string[] {
-  const parts = pairing
-    .split(/\s*\+\s*|\s*,\s*/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts : [pairing];
-}
-
-function parseToneTags(kit: BrandKit): string[] {
-  const fromTone = kit.memory.tone
-    .split(/[,;]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const fromFeelings =
-    kit.feelings?.map(
-      (f) => BRAND_FEELINGS.find((x) => x.id === f)?.label ?? f,
-    ) ?? [];
-  return [...new Set([...fromTone, ...fromFeelings])];
-}
+type EditFieldId =
+  | "tagline"
+  | "description"
+  | "aesthetic"
+  | "fonts"
+  | "tone"
+  | "sector"
+  | BrandColorRole;
 
 function primaryLogo(assets: BrandAsset[]) {
   return (
@@ -69,245 +85,377 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DetailRow({
-  label,
-  children,
-  actions,
-}: {
-  label: string;
-  children: React.ReactNode;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <FieldLabel>{label}</FieldLabel>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">{children}</div>
-        {actions}
-      </div>
-    </div>
-  );
-}
-
 export function BrandDetailsPageContent() {
+  const router = useRouter();
   const params = useParams();
   const brandId = params.id as string;
-  const { brands, getBrandKit } = useBrand();
+  const { brands, getBrandKit, updateBrandKit, isLoading, hasBrands } =
+    useBrand();
 
   const kit = getBrandKit(brandId);
   const summary = brands.find((b) => b.id === brandId);
 
+  const [editingField, setEditingField] = useState<EditFieldId | null>(null);
+  const [aiTarget, setAiTarget] = useState<BrandAiEditTarget | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [sectorDraft, setSectorDraft] = useState<BrandSector | "">("");
+  const [fontDraft, setFontDraft] = useState("");
+
+  const displayName = summary?.displayName ?? kit?.displayName ?? "";
+  const logo = kit ? primaryLogo(kit.assets) : undefined;
+  const colorSwatches = kit ? getBrandColorSwatches(kit) : [];
+  const fonts = kit ? parseFontPairing(kit.memory.font_pairing) : [];
+  const toneTags = kit ? getToneTags(kit) : [];
+  const aesthetic = kit ? getAestheticText(kit) : "";
+  const sector = kit ? resolveSectorDisplay(kit.sector) : null;
+
+  const clearEditors = useCallback(() => {
+    setEditingField(null);
+    setAiTarget(null);
+  }, []);
+
+  const startEdit = useCallback((field: EditFieldId) => {
+    setAiTarget(null);
+    setEditingField(field);
+    if (field === "sector" && kit?.sector) {
+      setSectorDraft(kit.sector as BrandSector);
+    }
+  }, [kit?.sector]);
+
+  const startAi = useCallback(
+    (fieldLabel: string, value: string) => {
+      setEditingField(null);
+      setAiTarget({ fieldLabel, value });
+    },
+    [],
+  );
+
+  const patch = useCallback(
+    async (body: Record<string, unknown>) => {
+      if (!kit) return;
+      const next = await updateBrandKit(brandId, body);
+      if (next) {
+        showSuccessToast("Brand details updated.");
+        clearEditors();
+      }
+    },
+    [brandId, kit, updateBrandKit, clearEditors],
+  );
+
+  const handleAiRefine = useCallback(
+    (prompt: string) => {
+      router.push(`/ideas?prompt=${encodeURIComponent(prompt)}`);
+    },
+    [router],
+  );
+
+  const sectorOptions = useMemo(
+    () => BRAND_SECTORS.filter((s) => s.id !== "other"),
+    [],
+  );
+
+  if (isLoading) {
+    return <BrandDetailsPageSkeleton />;
+  }
+
   if (!kit) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-12 text-sm text-muted lg:px-8">
-        Brand not found.
-      </div>
+      <BrandDetailsNotFound brandId={brandId} hasBrands={hasBrands} />
     );
   }
 
-  const displayName = summary?.displayName ?? kit.displayName;
-  const logo = primaryLogo(kit.assets);
-  const fonts = parseFontPairing(kit.memory.font_pairing);
-  const toneTags = parseToneTags(kit);
-  const aesthetic = [kit.memory.visual_language, kit.memory.brand_style]
-    .filter(Boolean)
-    .join(" ");
-
-  const colorSwatches = [
-    { label: "Primary", hex: kit.memory.primary_color },
-    { label: "Secondary", hex: kit.memory.secondary_color },
-    { label: "Light", hex: "#FFFFFF" },
-    { label: "Dark", hex: "#18181B" },
-  ];
-
-  const sectorLabel =
-    BRAND_SECTORS.find((s) => s.id === kit.sector)?.label ?? kit.sector;
+  const description = kit.description ?? "";
+  const descIsLong = description.length > 180;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8 px-6 pb-16 pt-6 lg:px-8 lg:pt-8">
-      <SoftSection title="Identity">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
-          <div className="relative shrink-0">
-            <div className="relative h-28 w-28 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm sm:h-32 sm:w-32">
+    <>
+      <div
+        className={cn(
+          "mx-auto w-full max-w-4xl space-y-8 px-6 pt-6 lg:px-8 lg:pt-8",
+          aiTarget ? "pb-52" : "pb-16",
+        )}
+      >
+        <SoftSection title="Identity">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
+            <div className="group relative shrink-0">
+              <div className="relative h-28 w-28 overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm sm:h-32 sm:w-32">
+                {logo?.url ? (
+                  <Image
+                    src={logo.url}
+                    alt={`${displayName} logo`}
+                    fill
+                    className="object-contain p-3"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-sidebar-active text-lg font-semibold text-muted">
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
               {logo?.url ? (
-                <Image
-                  src={logo.url}
-                  alt={`${displayName} logo`}
-                  fill
-                  className="object-contain p-3"
-                  unoptimized
-                />
+                <CopyOnHover value={logo.url} label="Logo URL" />
+              ) : null}
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-6">
+              <div className="space-y-2">
+                <FieldLabel>Website</FieldLabel>
+                <div className="group relative max-w-full">
+                  <p className="text-lg font-semibold tracking-tight text-foreground">
+                    {kit.domain}
+                  </p>
+                  <CopyOnHover value={kit.domain} label="Website" />
+                </div>
+              </div>
+
+              {description ? (
+                <div className="space-y-2">
+                  <FieldLabel>About</FieldLabel>
+                  <EditableBrandField
+                    fieldKey="description"
+                    fieldLabel="Brand description"
+                    value={description}
+                    brandName={displayName}
+                    isEditing={editingField === "description"}
+                    onStartEdit={() => startEdit("description")}
+                    onStartAi={() => startAi("Brand description", description)}
+                    onSave={(v) => patch({ description: v })}
+                    onDiscard={clearEditors}
+                    multiline
+                    allowCopy
+                  >
+                    <p
+                      className="text-sm leading-relaxed text-muted"
+                      style={
+                        !descExpanded && descIsLong
+                          ? {
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }
+                          : undefined
+                      }
+                    >
+                      {description}
+                    </p>
+                  </EditableBrandField>
+                  {descIsLong && editingField !== "description" ? (
+                    <button
+                      type="button"
+                      onClick={() => setDescExpanded((e) => !e)}
+                      className="cursor-pointer text-sm font-medium text-accent hover:underline"
+                    >
+                      {descExpanded ? "Show less" : "Read more"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {kit.tagline ? (
+                <div className="space-y-2">
+                  <FieldLabel>Tagline</FieldLabel>
+                  <EditableBrandField
+                    fieldKey="tagline"
+                    fieldLabel="Tagline"
+                    value={kit.tagline}
+                    brandName={displayName}
+                    isEditing={editingField === "tagline"}
+                    onStartEdit={() => startEdit("tagline")}
+                    onStartAi={() => startAi("Tagline", kit.tagline!)}
+                    onSave={(v) => patch({ tagline: v })}
+                    onDiscard={clearEditors}
+                  />
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <FieldLabel>Industry</FieldLabel>
+                  {editingField === "sector" ? (
+                    <div className="space-y-2">
+                      <select
+                        value={sectorDraft}
+                        onChange={(e) =>
+                          setSectorDraft(e.target.value as BrandSector)
+                        }
+                        className="w-full cursor-pointer rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                      >
+                        <option value="" disabled>
+                          Select industry…
+                        </option>
+                        {sectorOptions.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted">
+                        {sectorOptions.find((s) => s.id === sectorDraft)
+                          ?.description ?? ""}
+                      </p>
+                      <InlineEditActions
+                        onDiscard={clearEditors}
+                        onSave={() => {
+                          if (!sectorDraft) return;
+                          void patch({ sector: sectorDraft });
+                        }}
+                      />
+                    </div>
+                  ) : sector ? (
+                    <div className="group flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {sector.label}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          {sector.description}
+                        </p>
+                      </div>
+                      <FieldEditToolbar
+                        fieldLabel="Industry"
+                        onEdit={() => startEdit("sector")}
+                        onEditWithAi={() =>
+                          startAi(
+                            "Industry",
+                            `${sector.label} — ${sector.description}`,
+                          )
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEdit("sector")}
+                      className="cursor-pointer text-sm font-medium text-accent hover:underline"
+                    >
+                      Add industry
+                    </button>
+                  )}
+              </div>
+            </div>
+          </div>
+        </SoftSection>
+
+        <SoftSection title="Design Language">
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <FieldLabel>Colors</FieldLabel>
+              <BrandColorSwatches
+                swatches={colorSwatches}
+                editingId={
+                  editingField === "primary" ||
+                  editingField === "secondary" ||
+                  editingField === "accent"
+                    ? editingField
+                    : null
+                }
+                onStartEdit={(id) => startEdit(id as BrandColorRole)}
+                onStartAi={(swatch) =>
+                  startAi(
+                    `${swatch.label} color`,
+                    swatch.hex ?? "",
+                  )
+                }
+                onSave={async (swatch, hex) => {
+                  await patch({ memory: colorPatchForRole(swatch.id, hex) });
+                }}
+                onDiscard={clearEditors}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="group flex items-center justify-between gap-3">
+                <FieldLabel>Fonts</FieldLabel>
+                {editingField !== "fonts" ? (
+                  <FieldEditToolbar
+                    fieldLabel="Typography"
+                    onEdit={() => startEdit("fonts")}
+                    onEditWithAi={() =>
+                      startAi("Typography", kit.memory.font_pairing)
+                    }
+                  />
+                ) : null}
+              </div>
+              {editingField === "fonts" ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={fontDraft}
+                    onChange={(e) => setFontDraft(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    placeholder="e.g. Helvetica Neue + Bebas Neue"
+                    autoFocus
+                  />
+                  <InlineEditActions
+                    onDiscard={clearEditors}
+                    onSave={() =>
+                      void patch({ memory: { font_pairing: fontDraft } })
+                    }
+                  />
+                </div>
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-sidebar-active text-lg font-semibold text-muted">
-                  {displayName.slice(0, 2).toUpperCase()}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {fonts.map((font) => (
+                    <div
+                      key={font}
+                      className="rounded-xl border border-border/50 bg-background/60 px-4 py-3"
+                    >
+                      <p
+                        className="text-2xl leading-none text-foreground"
+                        style={{ fontFamily: font.split("+")[0]?.trim() }}
+                      >
+                        Aa Bb Cc
+                      </p>
+                      <p className="mt-2 truncate text-xs text-muted">{font}</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-            {logo?.url ? (
-              <div className="absolute -right-1 -top-1">
-                <DetailFieldActions
-                  value={logo.url}
-                  fieldLabel="Logo"
-                  brandName={displayName}
-                  showEdit={false}
-                />
-              </div>
-            ) : null}
-          </div>
 
-          <div className="min-w-0 flex-1 space-y-6">
-            <DetailRow
-              label="Website"
-              actions={
-                <DetailFieldActions
-                  value={kit.domain}
-                  fieldLabel="Website"
-                  brandName={displayName}
-                />
-              }
-            >
-              <p className="text-lg font-semibold tracking-tight text-foreground">
-                {kit.domain}
-              </p>
-            </DetailRow>
-
-            {kit.description ? (
-              <div className="space-y-2">
-                <FieldLabel>About</FieldLabel>
-                <ReadMoreText
-                  text={kit.description}
-                  fieldLabel="Brand description"
-                  brandName={displayName}
-                />
-              </div>
-            ) : null}
-
-            {kit.tagline ? (
-              <DetailRow
-                label="Tagline"
-                actions={
-                  <DetailFieldActions
-                    value={kit.tagline}
-                    fieldLabel="Tagline"
-                    brandName={displayName}
-                  />
-                }
-              >
-                <p className="text-sm leading-relaxed text-foreground">
-                  {kit.tagline}
-                </p>
-              </DetailRow>
-            ) : null}
-
-            {sectorLabel ? (
-              <DetailRow
-                label="Sector"
-                actions={
-                  <DetailFieldActions
-                    value={sectorLabel}
-                    fieldLabel="Sector"
-                    brandName={displayName}
-                  />
-                }
-              >
-                <p className="text-sm text-foreground">{sectorLabel}</p>
-              </DetailRow>
-            ) : null}
-          </div>
-        </div>
-      </SoftSection>
-
-      <SoftSection title="Design Language">
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <FieldLabel>Colors</FieldLabel>
-            <div className="flex flex-wrap gap-4">
-              {colorSwatches.map((swatch) => (
-                <div
-                  key={swatch.label}
-                  className="group flex flex-col items-center gap-2"
-                >
-                  <div className="relative">
-                    <span
-                      className="block h-12 w-12 rounded-full border border-border/70 shadow-sm ring-4 ring-background"
-                      style={{ backgroundColor: swatch.hex }}
-                    />
-                    <div className="absolute -right-1 -top-1">
-                      <DetailFieldActions
-                        value={swatch.hex}
-                        fieldLabel={`${swatch.label} color`}
-                        brandName={displayName}
-                        showEdit={false}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-medium text-muted">
-                    {swatch.hex}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <FieldLabel>Fonts</FieldLabel>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {fonts.map((font) => (
-                <div
-                  key={font}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-background/60 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-2xl leading-none text-foreground">Aa Bb Cc</p>
-                    <p className="mt-2 truncate text-xs text-muted">{font}</p>
-                  </div>
-                  <DetailFieldActions
-                    value={font}
-                    fieldLabel="Typography"
-                    brandName={displayName}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {toneTags.length > 0 ? (
             <div className="space-y-3">
               <FieldLabel>Tone</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {toneTags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-1 rounded-full border border-accent/20 bg-accent/8 pl-3 pr-1 py-1"
-                  >
-                    <span className="text-sm font-medium text-foreground">
-                      {tag}
-                    </span>
-                    <DetailFieldActions
-                      value={tag}
-                      fieldLabel="Tone"
-                      brandName={displayName}
-                      showEdit={false}
-                      className="border-0 bg-transparent p-0"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {aesthetic ? (
-            <div className="space-y-2">
-              <FieldLabel>Aesthetic</FieldLabel>
-              <ReadMoreText
-                text={aesthetic}
-                fieldLabel="Visual aesthetic"
-                brandName={displayName}
+              <ToneTagsEditor
+                tags={toneTags}
+                isEditing={editingField === "tone"}
+                onStartEdit={() => startEdit("tone")}
+                onSave={(tags) => patch({ toneTags: tags })}
+                onDiscard={clearEditors}
               />
             </div>
-          ) : null}
-        </div>
-      </SoftSection>
-    </div>
+
+            {aesthetic ? (
+              <div className="space-y-2">
+                <FieldLabel>Aesthetic</FieldLabel>
+                <EditableBrandField
+                  fieldKey="aesthetic"
+                  fieldLabel="Visual aesthetic"
+                  value={aesthetic}
+                  brandName={displayName}
+                  isEditing={editingField === "aesthetic"}
+                  onStartEdit={() => startEdit("aesthetic")}
+                  onStartAi={() => startAi("Visual aesthetic", aesthetic)}
+                  onSave={(v) =>
+                    patch({
+                      memory: { visual_language: v, brand_style: "" },
+                    })
+                  }
+                  onDiscard={clearEditors}
+                  multiline
+                />
+              </div>
+            ) : null}
+          </div>
+        </SoftSection>
+      </div>
+
+      <BrandDetailsAiDock
+        target={aiTarget}
+        brandName={displayName}
+        onClose={() => setAiTarget(null)}
+        onRefine={handleAiRefine}
+      />
+    </>
   );
 }
