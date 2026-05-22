@@ -32,7 +32,6 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
 import { chatTitleFromPrompt } from "@/lib/generation/chat-title";
 
-const MAX_PRESETS = 5;
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
@@ -555,11 +554,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           setResolution(preset.suggestedResolution);
           return prev;
         }
-        const next = [...prev, preset].slice(-MAX_PRESETS);
         setActivePresetId(preset.id);
         setAspectRatio(preset.aspectRatio);
         setResolution(preset.suggestedResolution);
-        return next;
+        return [preset];
       });
     },
     [],

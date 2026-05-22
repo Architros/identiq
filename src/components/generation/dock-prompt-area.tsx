@@ -43,11 +43,11 @@ export function DockPromptArea({
   const isCompactRemix = compact && isLibraryRemix && view === "chat";
   const submitOnEnter = view === "chat";
 
-  const refThumbSize = isImages ? "h-24 w-24" : "h-9 w-9";
-  const chromeButtonSize = isImages ? "h-10 w-10" : "h-9 w-9";
-  const refIconSize = isImages ? 28 : 18;
-  const chromeIconSize = isImages ? 20 : 18;
-  const removeIconSize = isImages ? 20 : 10;
+  const refThumbSize = isImages ? "h-24 w-24" : "h-14 w-14";
+  const chromeButtonSize = isImages ? "h-10 w-10" : "h-14 w-14";
+  const refIconSize = isImages ? 28 : 22;
+  const chromeIconSize = isImages ? 20 : 20;
+  const removeIconSize = isImages ? 20 : 16;
 
   return (
     <div
@@ -61,7 +61,7 @@ export function DockPromptArea({
           <div
             className={cn(
               "flex min-w-0 flex-1 items-center",
-              isImages ? "gap-2" : "gap-1.5",
+              isImages ? "gap-2" : "gap-2",
             )}
           >
             {referenceImages.map((img) => (

@@ -13,7 +13,7 @@ function SidebarDivider({ className }: { className?: string }) {
 
 export function AppSidebar() {
   return (
-    <aside className="flex h-full w-[240px] shrink-0 flex-col border-r border-border bg-surface px-3 py-4">
+    <aside className="flex h-full w-[240px] shrink-0 flex-col overflow-visible border-r border-border bg-surface px-3 py-4">
       <Link
         href="/"
         className="font-display mb-6 px-3 text-2xl tracking-tight text-foreground"
