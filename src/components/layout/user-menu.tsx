@@ -13,7 +13,11 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useCredits } from "@/contexts/credits-context";
 import { useSupportModals } from "@/contexts/support-modals-context";
-import { mockUser } from "@/lib/mock-data";
+import {
+  AUTH_SIGNED_IN_EVENT,
+  AUTH_SIGNED_OUT_EVENT,
+} from "@/lib/auth/client-storage";
+import { signOutClient } from "@/lib/auth/sign-out-client";
 import type { SessionProfile } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
@@ -139,13 +143,20 @@ export function UserMenu() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const res = await fetch("/api/me");
+      const res = await fetch("/api/me", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (res.status === 401) {
+        setProfile(null);
+        return;
+      }
       if (res.ok) {
         const data = (await res.json()) as { profile: SessionProfile };
         setProfile(data.profile);
       }
     } catch {
-      // Use mock fallback below.
+      setProfile(null);
     }
   }, []);
 
@@ -155,12 +166,24 @@ export function UserMenu() {
 
   useEffect(() => {
     const onProfileUpdated = () => void loadProfile();
+    const onSignedOut = () => setProfile(null);
+    const onSignedIn = () => void loadProfile();
     window.addEventListener("identiq:profile-updated", onProfileUpdated);
-    return () =>
+    window.addEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    return () => {
       window.removeEventListener("identiq:profile-updated", onProfileUpdated);
+      window.removeEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+      window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    };
   }, [loadProfile]);
 
   const close = useCallback(() => setOpen(false), []);
+
+  const handleSignOut = useCallback(() => {
+    close();
+    void signOutClient();
+  }, [close]);
 
   useEffect(() => {
     if (!open) return;
@@ -183,9 +206,9 @@ export function UserMenu() {
     };
   }, [open, close]);
 
-  const name = profile?.full_name ?? mockUser.name;
-  const email = profile?.email ?? mockUser.email;
-  const initials = profile ? initialsFromProfile(profile) : mockUser.initials;
+  const name = profile?.full_name ?? "Account";
+  const email = profile?.email ?? "";
+  const initials = profile ? initialsFromProfile(profile) : "?";
 
   return (
     <div ref={rootRef} className="relative w-full">
@@ -267,9 +290,8 @@ export function UserMenu() {
             <MenuItem
               icon={Logout01Icon}
               label="Sign Out"
-              href="/auth/signout"
               destructive
-              onClick={close}
+              onClick={handleSignOut}
             />
           </div>
         </div>

@@ -8,6 +8,7 @@ import { Coins01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { BillingPlansSection } from "@/components/billing/billing-plans-section";
 import { useCredits } from "@/contexts/credits-context";
 import type { SubscriptionSummary } from "@/lib/db/repositories/billing-account";
+import { AUTH_SIGNED_IN_EVENT } from "@/lib/auth/client-storage";
 import { formatBillingDate } from "@/lib/billing/format-billing";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,12 @@ export function BillingPageContent() {
     try {
       const res = await fetch("/api/billing/account", {
         credentials: "same-origin",
+        cache: "no-store",
       });
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
       if (!res.ok) {
         setAccount(null);
         setBanner({
@@ -54,10 +60,16 @@ export function BillingPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [refreshBalance]);
+  }, [refreshBalance, router]);
 
   useEffect(() => {
     void loadAccount();
+  }, [loadAccount]);
+
+  useEffect(() => {
+    const onSignedIn = () => void loadAccount();
+    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    return () => window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
   }, [loadAccount]);
 
   useEffect(() => {

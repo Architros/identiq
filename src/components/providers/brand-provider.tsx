@@ -29,6 +29,10 @@ import {
 } from "@/lib/brand/active-brand-storage";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
+import {
+  AUTH_SIGNED_IN_EVENT,
+  AUTH_SIGNED_OUT_EVENT,
+} from "@/lib/auth/client-storage";
 
 type BrandContextValue = {
   brands: BrandSummary[];
@@ -107,6 +111,25 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       await refreshBrands();
       setIsLoading(false);
     })();
+  }, [refreshBrands]);
+
+  useEffect(() => {
+    const onSignedOut = () => {
+      setUserKits({});
+      setUserSummaries([]);
+      setActiveBrandId(NO_BRAND_ID);
+      setIsLoading(false);
+    };
+    const onSignedIn = () => {
+      setIsLoading(true);
+      void refreshBrands().finally(() => setIsLoading(false));
+    };
+    window.addEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    return () => {
+      window.removeEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+      window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    };
   }, [refreshBrands]);
 
   const brands = userSummaries;

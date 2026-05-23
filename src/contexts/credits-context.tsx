@@ -11,6 +11,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
+import {
+  AUTH_SIGNED_IN_EVENT,
+  AUTH_SIGNED_OUT_EVENT,
+} from "@/lib/auth/client-storage";
 
 export type AssetStorageUsage = {
   used: number;
@@ -81,6 +85,24 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       await refreshBalance();
       setIsLoading(false);
     })();
+  }, [refreshBalance]);
+
+  useEffect(() => {
+    const onSignedOut = () => {
+      setAvailableTokens(0);
+      setAssetStorage(DEFAULT_STORAGE);
+      setIsLoading(false);
+    };
+    const onSignedIn = () => {
+      setIsLoading(true);
+      void refreshBalance().finally(() => setIsLoading(false));
+    };
+    window.addEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    return () => {
+      window.removeEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
+      window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    };
   }, [refreshBalance]);
 
   const deductTokens = useCallback(

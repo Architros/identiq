@@ -11,6 +11,7 @@ import type { BillingInterval, DisplayPack, PackPlanId } from "@/lib/billing/pla
 import type { ScaleTier } from "@/lib/billing/scale-tiers";
 import { scaleRowsToTiers } from "@/lib/billing/scale-tiers";
 import type { ScalePlanPriceRow } from "@/lib/db/repositories/scale-plan-prices";
+import { AUTH_SIGNED_IN_EVENT } from "@/lib/auth/client-storage";
 
 type PlansApiResponse = {
   interval: BillingInterval;
@@ -45,8 +46,12 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
     try {
       const res = await fetch(
         `/api/billing/plans?interval=${nextInterval}`,
-        { credentials: "same-origin" },
+        { credentials: "same-origin", cache: "no-store" },
       );
+      if (res.status === 401) {
+        setPlansError("Session expired. Sign in again.");
+        return;
+      }
       if (!res.ok) {
         setPlansError("Could not load plans from the server.");
         return;
@@ -65,6 +70,12 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
 
   useEffect(() => {
     void loadPlans(interval);
+  }, [interval, loadPlans]);
+
+  useEffect(() => {
+    const onSignedIn = () => void loadPlans(interval);
+    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
+    return () => window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
   }, [interval, loadPlans]);
 
   const startCheckout = useCallback(
