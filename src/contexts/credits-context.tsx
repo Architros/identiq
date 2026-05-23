@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { mockCredits } from "@/lib/mock-data";
+import { useRouter } from "next/navigation";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
 
@@ -25,9 +25,11 @@ type CreditsContextValue = {
   refreshBalance: (balance?: number) => Promise<void>;
   /** @deprecated Server deducts tokens; triggers balance refresh. */
   deductTokens: (amount: number) => boolean;
-  buyTokensOpen: boolean;
+  /** Opens the billing page to buy tokens or manage subscription. */
   openBuyTokens: () => void;
   closeBuyTokens: () => void;
+  /** @deprecated Plans live on /billing; always false. */
+  buyTokensOpen: boolean;
 };
 
 const CreditsContext = createContext<CreditsContextValue | null>(null);
@@ -39,11 +41,11 @@ const DEFAULT_STORAGE: AssetStorageUsage = {
 };
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const [availableTokens, setAvailableTokens] = useState(mockCredits);
+  const router = useRouter();
+  const [availableTokens, setAvailableTokens] = useState(0);
   const [assetStorage, setAssetStorage] =
     useState<AssetStorageUsage>(DEFAULT_STORAGE);
   const [isLoading, setIsLoading] = useState(true);
-  const [buyTokensOpen, setBuyTokensOpen] = useState(false);
   const connectivity = useConnectivityOptional();
 
   const refreshBalance = useCallback(async (balance?: number) => {
@@ -89,8 +91,11 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     [refreshBalance],
   );
 
-  const openBuyTokens = useCallback(() => setBuyTokensOpen(true), []);
-  const closeBuyTokens = useCallback(() => setBuyTokensOpen(false), []);
+  const openBuyTokens = useCallback(() => {
+    router.push("/billing");
+  }, [router]);
+
+  const closeBuyTokens = useCallback(() => {}, []);
 
   const value = useMemo(
     () => ({
@@ -99,7 +104,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refreshBalance,
       deductTokens,
-      buyTokensOpen,
+      buyTokensOpen: false,
       openBuyTokens,
       closeBuyTokens,
     }),
@@ -109,7 +114,6 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refreshBalance,
       deductTokens,
-      buyTokensOpen,
       openBuyTokens,
       closeBuyTokens,
     ],

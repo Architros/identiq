@@ -7,8 +7,9 @@ const bodySchema = z.object({
   sessionId: z.string().uuid(),
 });
 
+/** Client fallback when server redirect on /billing/complete is not used. */
 export async function POST(request: Request) {
-  return withAuth("billing:purchase", async (user) => {
+  return withAuth(null, async (user) => {
     let json: unknown;
     try {
       json = await request.json();
@@ -27,6 +28,6 @@ export async function POST(request: Request) {
       user.id,
     );
 
-    return NextResponse.json({ balance });
+    return NextResponse.json({ balance, completed: true });
   });
 }

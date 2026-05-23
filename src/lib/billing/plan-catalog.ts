@@ -106,6 +106,14 @@ export function formatUsdPerMonth(annualCents: number): string {
   return `$${perMonth.toFixed(2)}`;
 }
 
+/** Headline price on plan cards: full period amount with /mo or /yr (not monthly amortization). */
+export function formatPlanPrice(
+  cents: number,
+  interval: BillingInterval,
+): string {
+  return `${formatUsd(cents)}${interval === "annual" ? "/yr" : "/mo"}`;
+}
+
 export function getPackDefinition(planId: PackPlanId): CatalogPackDefinition | null {
   return PACK_DEFINITIONS.find((p) => p.id === planId) ?? null;
 }
@@ -197,20 +205,27 @@ export function toDisplayPack(
 
   let billedLine: string;
   if (interval === "annual") {
-    billedLine = `${formatUsd(resolved.amountCents)} billed once · ${formatUsdPerMonth(resolved.amountCents)}/mo equiv · 2 months free`;
+    billedLine =
+      "Billed annually · unused tokens expire after 12 months";
   } else {
-    billedLine = "One-time token pack";
+    billedLine =
+      "Billed monthly · unused tokens expire each billing period";
   }
 
   const storageLabel = formatStoredAssetsLimit(def.storedAssetLimit);
+  const periodTokens =
+    interval === "annual"
+      ? `${def.monthlyTokens.toLocaleString()}/mo allotment (${resolved.tokenAmount.toLocaleString()} per year)`
+      : `${resolved.tokenAmount.toLocaleString()} per month`;
   const features = [
-    `${resolved.tokenAmount.toLocaleString()} tokens (~${estimatedImages} images)`,
+    `${periodTokens} (~${estimateImages(resolved.tokenAmount)} images per ${interval === "annual" ? "year" : "period"})`,
     storageLabel,
     ...def.features.filter(
       (line) =>
         !line.toLowerCase().includes("tokens per pack") &&
         !line.toLowerCase().includes("unlimited brands"),
     ),
+    "Unused tokens do not roll over",
     "Unlimited brands",
   ];
 

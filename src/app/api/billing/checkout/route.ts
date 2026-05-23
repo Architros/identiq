@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       const billing = getBillingProvider();
       const session = await billing.createCheckoutSession({
         userId: user.id,
+        userEmail: user.email,
         planId,
         interval,
         customTokenAmount,
@@ -50,7 +51,13 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         sessionId: session.sessionId,
-        completeUrl: `/billing/simulated/complete?session=${session.sessionId}`,
+        ...(session.url
+          ? { url: session.url }
+          : {
+              completeUrl:
+                session.completeUrl ??
+                `/billing/complete?session=${session.sessionId}`,
+            }),
       });
     } catch (err) {
       const message =

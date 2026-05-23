@@ -135,5 +135,10 @@ export function authErrorResponse(error: unknown) {
       { status: 503 },
     );
   }
+  if (error instanceof Error) {
+    const message = error.message || "Request failed";
+    const status = message.includes("not found") ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }

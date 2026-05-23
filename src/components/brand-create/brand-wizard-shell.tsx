@@ -37,6 +37,7 @@ export function BrandWizardShell() {
     prevStep,
     saveAndExit,
     exitWithoutSaving,
+    hasUserContent,
     isSaving,
     saveError,
     validateStep,
@@ -135,7 +136,7 @@ export function BrandWizardShell() {
             <Button
               variant="ghost"
               size="sm"
-              disabled={isSaving}
+              disabled={!hasUserContent || isSaving}
               onClick={() => void saveAndExit()}
             >
               {isSaving ? "Saving…" : "Save & exit"}
@@ -144,7 +145,13 @@ export function BrandWizardShell() {
               type="button"
               className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-button)] text-muted hover:bg-sidebar-active hover:text-foreground"
               aria-label="Close"
-              onClick={() => setExitDialogOpen(true)}
+              onClick={() => {
+                if (!hasUserContent) {
+                  exitWithoutSaving();
+                  return;
+                }
+                setExitDialogOpen(true);
+              }}
             >
               <HugeiconsIcon
                 icon={Cancel01Icon}
@@ -161,6 +168,7 @@ export function BrandWizardShell() {
       <WizardExitDialog
         open={exitDialogOpen}
         isSaving={isSaving}
+        canSave={hasUserContent}
         onCancel={() => setExitDialogOpen(false)}
         onExitWithoutSaving={() => {
           setExitDialogOpen(false);

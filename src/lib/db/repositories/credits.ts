@@ -1,15 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
+/** Authoritative balance from expiring token lots (server-side). */
 export async function getTokenBalance(userId: string): Promise<number> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("token_wallets")
-    .select("balance")
-    .eq("user_id", userId)
-    .single();
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin.rpc("recompute_token_wallet", {
+    p_user_id: userId,
+  });
 
-  if (error || !data) return 0;
-  return data.balance;
+  if (error || data == null) return 0;
+  return data as number;
 }
 
 export async function deductTokens(params: {
@@ -64,6 +63,8 @@ export async function grantTokens(params: {
     p_reference_type: params.referenceType ?? null,
     p_reference_id: params.referenceId ?? null,
     p_metadata: params.metadata ?? {},
+    p_expires_at:
+      (params.metadata?.expires_at as string | undefined) ?? null,
   });
 
   if (error) throw error;

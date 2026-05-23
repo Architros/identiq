@@ -3,14 +3,13 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
 import type { BillingInterval } from "@/lib/billing/plan-catalog";
-import {
-  CUSTOM_TOKEN_MAX,
-  CUSTOM_TOKEN_MIN,
-} from "@/lib/billing/custom-pack-pricing";
+import { formatUsd } from "@/lib/billing/plan-catalog";
+import type { ScaleTier } from "@/lib/billing/scale-tiers";
 import { cn } from "@/lib/utils";
 
 type CustomPackTeaserCardProps = {
   interval: BillingInterval;
+  scaleTiers: ScaleTier[];
   onCustomize: () => void;
 };
 
@@ -22,8 +21,13 @@ const TEASER_FEATURES = [
 
 export function CustomPackTeaserCard({
   interval,
+  scaleTiers,
   onCustomize,
 }: CustomPackTeaserCardProps) {
+  const minTokens = scaleTiers[0]?.monthlyTokens ?? 300;
+  const maxTokens = scaleTiers[scaleTiers.length - 1]?.monthlyTokens ?? 5000;
+  const fromPrice = scaleTiers[0]?.monthlyPriceCents ?? 3900;
+
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5">
       <div>
@@ -32,8 +36,8 @@ export function CustomPackTeaserCard({
         </p>
         <p className="mt-1 text-xs text-muted">
           {interval === "annual"
-            ? "Annual lump · 2 months free"
-            : "From $39 · volume pricing"}
+            ? "Billed yearly · tokens expire after 12 months"
+            : `From ${formatUsd(fromPrice)}/mo · tokens expire each period`}
         </p>
         <p className="mt-2 text-sm text-muted">
           Built for teams and agencies.
@@ -59,8 +63,8 @@ export function CustomPackTeaserCard({
         <li className="flex items-start gap-2 text-sm text-muted">
           <span className="mt-0.5 shrink-0 text-xs">·</span>
           <span>
-            {CUSTOM_TOKEN_MIN.toLocaleString()}–
-            {CUSTOM_TOKEN_MAX.toLocaleString()} tokens per pack
+            {minTokens.toLocaleString()}–
+            {maxTokens.toLocaleString()} tokens per pack
           </span>
         </li>
       </ul>

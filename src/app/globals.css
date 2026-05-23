@@ -173,3 +173,32 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   cursor: pointer;
 }
+
+/* Thin custom scrollbars (brand switcher, modals, panels) */
+.identiq-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+
+.identiq-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.identiq-scrollbar::-webkit-scrollbar-track {
+  margin: 6px 0;
+  background: transparent;
+}
+
+.identiq-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--border) 90%, var(--muted));
+}
+
+.identiq-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 35%, var(--muted));
+}
+
+.identiq-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}

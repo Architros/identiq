@@ -7,6 +7,7 @@ import {
   PaintBoardIcon,
   Message01Icon,
   HelpCircleIcon,
+  CreditCardIcon,
 } from "@hugeicons/core-free-icons";
 
 export type NavItem = {
@@ -27,6 +28,7 @@ export const primaryNav: NavItem[] = [
 
 export const secondaryNav: NavItem[] = [
   { label: "Library", href: "/library", icon: LayoutGridIcon },
+  { label: "Billing", href: "/billing", icon: CreditCardIcon },
   {
     label: "Brand Details",
     href: "/brands/current",

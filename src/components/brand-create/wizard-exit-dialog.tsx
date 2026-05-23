@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 type WizardExitDialogProps = {
   open: boolean;
   isSaving: boolean;
+  canSave: boolean;
   onSaveAndExit: () => void;
   onExitWithoutSaving: () => void;
   onCancel: () => void;
@@ -13,6 +14,7 @@ type WizardExitDialogProps = {
 export function WizardExitDialog({
   open,
   isSaving,
+  canSave,
   onSaveAndExit,
   onExitWithoutSaving,
   onCancel,
@@ -41,8 +43,9 @@ export function WizardExitDialog({
           Leave brand setup?
         </h2>
         <p className="mt-2 text-sm text-muted">
-          Your progress is autosaved locally. Save & exit syncs to the cloud
-          before you leave. Exit without saving keeps your local draft for later.
+          {canSave
+            ? "Save & exit keeps your draft so you can resume later. Exit without saving discards unsynced changes on this device."
+            : "You have not entered any brand details yet. You can leave without saving a draft."}
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
@@ -53,22 +56,35 @@ export function WizardExitDialog({
           >
             Cancel
           </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            disabled={isSaving}
-            onClick={onExitWithoutSaving}
-          >
-            Exit without saving
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            disabled={isSaving}
-            onClick={onSaveAndExit}
-          >
-            {isSaving ? "Saving…" : "Save & exit"}
-          </Button>
+          {canSave ? (
+            <>
+              <Button
+                variant="ghost"
+                size="md"
+                disabled={isSaving}
+                onClick={onExitWithoutSaving}
+              >
+                Exit without saving
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                disabled={isSaving}
+                onClick={onSaveAndExit}
+              >
+                {isSaving ? "Saving…" : "Save & exit"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              disabled={isSaving}
+              onClick={onExitWithoutSaving}
+            >
+              Leave
+            </Button>
+          )}
         </div>
       </div>
     </div>

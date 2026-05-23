@@ -2,23 +2,26 @@
 
 import { useCallback, useMemo, type CSSProperties } from "react";
 import { CUSTOM_PACK_TIERS } from "@/lib/billing/custom-pack-pricing";
+import type { ScaleTier } from "@/lib/billing/scale-tiers";
 import { cn } from "@/lib/utils";
 
 type CustomPackVolumeSliderProps = {
   tierIndex: number;
   onTierIndexChange: (index: number) => void;
+  tiers?: ScaleTier[];
   className?: string;
 };
-
-const TIER_COUNT = CUSTOM_PACK_TIERS.length;
-const MAX_INDEX = TIER_COUNT - 1;
 
 export function CustomPackVolumeSlider({
   tierIndex,
   onTierIndexChange,
+  tiers: tiersProp,
   className,
 }: CustomPackVolumeSliderProps) {
-  const fillPercent = MAX_INDEX > 0 ? (tierIndex / MAX_INDEX) * 100 : 0;
+  const tiers = tiersProp?.length ? tiersProp : scaleRowsFromCatalog();
+  const maxIndex = Math.max(0, tiers.length - 1);
+  const safeIndex = Math.min(tierIndex, maxIndex);
+  const fillPercent = maxIndex > 0 ? (safeIndex / maxIndex) * 100 : 0;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,8 +31,8 @@ export function CustomPackVolumeSlider({
   );
 
   const marks = useMemo(
-    () => CUSTOM_PACK_TIERS.map((t) => t.monthlyTokens),
-    [],
+    () => tiers.map((t) => t.monthlyTokens),
+    [tiers],
   );
 
   return (
@@ -38,15 +41,15 @@ export function CustomPackVolumeSlider({
         <input
           type="range"
           min={0}
-          max={MAX_INDEX}
+          max={maxIndex}
           step={1}
-          value={tierIndex}
+          value={safeIndex}
           onChange={handleChange}
           aria-label="Token pack size"
           aria-valuemin={marks[0]}
-          aria-valuemax={marks[MAX_INDEX]}
-          aria-valuenow={marks[tierIndex]}
-          aria-valuetext={`${marks[tierIndex].toLocaleString()} tokens`}
+          aria-valuemax={marks[maxIndex]}
+          aria-valuenow={marks[safeIndex]}
+          aria-valuetext={`${marks[safeIndex].toLocaleString()} tokens`}
           className={cn(
             "custom-pack-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-transparent",
             "[&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-10",
@@ -64,7 +67,7 @@ export function CustomPackVolumeSlider({
             key={mark}
             className={cn(
               "min-w-0 text-center transition-colors",
-              i === tierIndex && "text-foreground",
+              i === safeIndex && "text-foreground",
             )}
           >
             {mark.toLocaleString()}
@@ -73,4 +76,12 @@ export function CustomPackVolumeSlider({
       </div>
     </div>
   );
+}
+
+function scaleRowsFromCatalog(): ScaleTier[] {
+  return CUSTOM_PACK_TIERS.map((t) => ({
+    monthlyTokens: t.monthlyTokens,
+    monthlyPriceCents: t.monthlyPriceCents,
+    annualPriceCents: t.monthlyPriceCents * 10,
+  }));
 }

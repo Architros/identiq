@@ -2,6 +2,7 @@ import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
 
 export type CreateCheckoutParams = {
   userId: string;
+  userEmail?: string | null;
   planId: PackPlanId;
   interval?: BillingInterval;
   customTokenAmount?: number;
@@ -9,7 +10,10 @@ export type CreateCheckoutParams = {
 
 export type CreateCheckoutResult = {
   sessionId: string;
+  /** Stripe-hosted checkout URL (live mode). */
   url?: string;
+  /** In-app fulfillment URL (simulated billing). */
+  completeUrl?: string;
 };
 
 export type BillingProvider = {

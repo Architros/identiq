@@ -159,7 +159,7 @@ export function BrandSwitcherPanel({ onClose }: BrandSwitcherPanelProps) {
             </div>
           </div>
 
-          <div className="max-h-[min(60vh,520px)] overflow-y-auto px-2 py-2">
+          <div className="identiq-scrollbar max-h-[min(60vh,520px)] overflow-y-auto overscroll-contain px-2 py-2">
             <div>
               <p className="px-2 py-1.5 text-xs font-medium text-muted">
                 Your Brands

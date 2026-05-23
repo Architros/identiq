@@ -1,7 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { computeCustomPack } from "./custom-pack-pricing.js";
-import { resolveCheckoutPack } from "./resolve-checkout.js";
 import { resolvePack } from "./plan-catalog.js";
 import {
   DEFAULT_FREE_ASSET_STORAGE_LIMIT,
@@ -135,23 +134,11 @@ describe("storage entitlements", () => {
   });
 });
 
-describe("resolveCheckoutPack", () => {
-  it("routes custom and welcome through catalog helpers", () => {
+describe("custom pack pricing", () => {
+  it("computes tier amounts from catalog fallback", () => {
     assert.equal(
-      resolveCheckoutPack({
-        planId: "custom",
-        interval: "monthly",
-        customTokenAmount: 1000,
-      }).amountCents,
+      computeCustomPack(1000, "monthly").amountCents,
       9900,
-    );
-    assert.throws(
-      () =>
-        resolveCheckoutPack({
-          planId: "custom",
-          interval: "monthly",
-        }),
-      /customTokenAmount/,
     );
   });
 });

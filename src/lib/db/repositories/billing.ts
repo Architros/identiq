@@ -9,8 +9,8 @@ import { createServiceRoleClient, createClient } from "@/lib/supabase/server";
 import type { CheckoutSessionRow, PlanRow } from "@/lib/db/types";
 
 export async function listActivePlans(): Promise<PlanRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin
     .from("plans")
     .select("*")
     .eq("active", true)
@@ -21,8 +21,8 @@ export async function listActivePlans(): Promise<PlanRow[]> {
 }
 
 export async function getPlan(planId: string): Promise<PlanRow | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin
     .from("plans")
     .select("*")
     .eq("id", planId)
@@ -42,6 +42,41 @@ export async function userHasCompletedCheckout(userId: string): Promise<boolean>
 
   if (error) return false;
   return (count ?? 0) > 0;
+}
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+]);
+
+/** True when the user may use the app (any completed purchase or active subscription). */
+export async function userHasBillingAccess(userId: string): Promise<boolean> {
+  const admin = createServiceRoleClient();
+
+  const [checkoutRes, subRes] = await Promise.all([
+    admin
+      .from("billing_checkout_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed"),
+    admin
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  if (!checkoutRes.error && (checkoutRes.count ?? 0) > 0) {
+    return true;
+  }
+
+  const status = subRes.data?.status as string | undefined;
+  if (status && ACTIVE_SUBSCRIPTION_STATUSES.has(status)) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function userHasRedeemedWelcomeOffer(
@@ -76,11 +111,13 @@ export async function createCheckoutSession(params: {
     }
   }
 
-  const resolved = resolveCheckoutPack({
+  const resolved = await resolveCheckoutPack({
     planId: params.planId,
     interval: params.interval,
     customTokenAmount: params.customTokenAmount,
   });
+
+  const billingInterval = params.interval ?? "monthly";
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -93,6 +130,7 @@ export async function createCheckoutSession(params: {
       currency: plan.currency,
       status: "pending",
       simulated: params.simulated ?? true,
+      billing_interval: billingInterval,
     })
     .select()
     .single();
@@ -101,9 +139,29 @@ export async function createCheckoutSession(params: {
   return data as CheckoutSessionRow;
 }
 
+export async function linkStripeCheckoutSession(
+  sessionId: string,
+  stripeCheckoutSessionId: string,
+): Promise<void> {
+  const admin = createServiceRoleClient();
+  const { error } = await admin
+    .from("billing_checkout_sessions")
+    .update({
+      stripe_checkout_session_id: stripeCheckoutSessionId,
+      simulated: false,
+    })
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
 export async function completeCheckoutSession(
   sessionId: string,
   userId: string,
+  options?: {
+    billingInterval?: BillingInterval;
+    stripeCheckoutSessionId?: string;
+  },
 ): Promise<{ balance: number }> {
   const admin = createServiceRoleClient();
 
@@ -126,15 +184,47 @@ export async function completeCheckoutSession(
     return { balance: wallet?.balance ?? 0 };
   }
 
+  const completedAt = new Date().toISOString();
   const { error: updateError } = await admin
     .from("billing_checkout_sessions")
     .update({
       status: "completed",
-      completed_at: new Date().toISOString(),
+      completed_at: completedAt,
+      ...(options?.stripeCheckoutSessionId
+        ? {
+            stripe_checkout_session_id: options.stripeCheckoutSessionId,
+            simulated: false,
+          }
+        : {}),
     })
     .eq("id", sessionId);
 
   if (updateError) throw updateError;
+
+  const planId = row.plan_id as PackPlanId;
+  const interval = (options?.billingInterval ??
+    row.billing_interval ??
+    "monthly") as BillingInterval;
+
+  if (planId !== "welcome") {
+    const { activateSubscriptionFromCheckout } = await import(
+      "@/lib/db/repositories/subscription-billing"
+    );
+    const customBasis =
+      planId === "custom"
+        ? monthlyTokenBasisFromGrantedCustomTokens(row.token_amount)
+        : undefined;
+    return activateSubscriptionFromCheckout({
+      userId,
+      planId,
+      billingInterval: interval,
+      invoiceIdempotencyKey: `checkout_${sessionId}`,
+      customMonthlyTokenBasis: customBasis,
+    });
+  }
+
+  const welcomeExpires = new Date();
+  welcomeExpires.setMonth(welcomeExpires.getMonth() + 1);
 
   const { data: balance, error: grantError } = await admin.rpc("grant_tokens", {
     p_user_id: userId,
@@ -143,7 +233,13 @@ export async function completeCheckoutSession(
     p_idempotency_key: `checkout_${sessionId}`,
     p_reference_type: "billing_checkout",
     p_reference_id: sessionId,
-    p_metadata: { plan_id: row.plan_id, simulated: row.simulated },
+    p_metadata: {
+      plan_id: row.plan_id,
+      simulated: row.simulated,
+      billing_interval: interval,
+      expires_at: welcomeExpires.toISOString(),
+    },
+    p_expires_at: welcomeExpires.toISOString(),
   });
 
   if (grantError) throw grantError;

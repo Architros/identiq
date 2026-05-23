@@ -80,6 +80,8 @@ export type PlanRow = {
   price_cents: number;
   currency: string;
   stripe_price_id: string | null;
+  /** One-time annual lump (12× tokens, 10× monthly price) — Stripe Price ID */
+  stripe_price_id_annual: string | null;
   active: boolean;
   asset_storage_limit?: number | null;
 };
@@ -94,6 +96,7 @@ export type CheckoutSessionRow = {
   status: "pending" | "completed" | "expired" | "canceled";
   stripe_checkout_session_id: string | null;
   simulated: boolean;
+  billing_interval: string | null;
   completed_at: string | null;
   created_at: string;
 };

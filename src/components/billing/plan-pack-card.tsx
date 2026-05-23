@@ -4,8 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatUsd,
-  formatUsdPerMonth,
+  formatPlanPrice,
   type BillingInterval,
   type DisplayPack,
 } from "@/lib/billing/plan-catalog";
@@ -26,10 +25,7 @@ export function PlanPackCard({
   loading,
   onBuy,
 }: PlanPackCardProps) {
-  const headlinePrice =
-    interval === "annual"
-      ? `${formatUsdPerMonth(pack.displayPriceCents)}/mo`
-      : formatUsd(pack.displayPriceCents);
+  const headlinePrice = formatPlanPrice(pack.displayPriceCents, interval);
 
   return (
     <div

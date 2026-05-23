@@ -1,0 +1,19 @@
+Price ID,Product ID,Product Name,Product Statement Descriptor,Product Tax Code,Description,Created (UTC),Amount,Currency,Interval,Interval Count,Usage Type,Aggregate Usage,Billing Scheme,Trial Period Days,Tax Behavior
+price_1TZvFkLq8XcYYE1spOFSYLzI,prod_UZ3ME2rlanVqum,myproduct,,,,2026-05-22 15:44,15.00,usd,,,,,per_unit,,unspecified
+price_1TZuvbLq8XcYYE1s82856yIP,prod_UZ31HO6XVHXMqM,Identiq Scale 5000 — Annual,,txcd_10103000,,2026-05-22 15:23,3490.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuugLq8XcYYE1sjX58j1tQ,prod_UZ30vlcDJ1LIom,Identiq Scale 5000 — Monthly,,txcd_10103000,,2026-05-22 15:23,349.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZutgLq8XcYYE1sRNIfr6Lf,prod_UZ2zor7pakqZgK,Identiq Scale 2000 — Annual,,txcd_10103000,,2026-05-22 15:22,1690.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuspLq8XcYYE1s404RbznC,prod_UZ2yFbWNUdcFKS,Identiq Scale 2000 — Monthly,,txcd_10103000,,2026-05-22 15:21,169.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZurhLq8XcYYE1sS3N8yG7H,prod_UZ2x3ZIUbTh3er,Identiq Scale 1000 — Annual,,txcd_10103000,,2026-05-22 15:19,990.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuqvLq8XcYYE1sSNIRPzD4,prod_UZ2w7sHN7IUm36,Identiq Scale 1000 — Monthly,,txcd_10103000,,2026-05-22 15:19,99.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZupgLq8XcYYE1sJZHsv89l,prod_UZ2vM0IlBAH3By,Identiq Scale 500 — Annual,,txcd_10103000,,2026-05-22 15:17,590.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZumCLq8XcYYE1sKMjQrcv2,prod_UZ2rUuNNoGVDhi,Identiq Scale 500 — Monthly,,txcd_10103000,,2026-05-22 15:14,59.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZulHLq8XcYYE1sspBtH4Ru,prod_UZ2q3lv42SZdpW,Identiq Scale 300 — Monthly,,txcd_10103000,,2026-05-22 15:13,39.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZubbLq8XcYYE1sDDu5FVTY,prod_UZ2gkSH58Sueua,Identiq Scale 300 — Annual,,txcd_10103000,,2026-05-22 15:03,390.00,usd,year,1,licensed,,per_unit,,exclusive
+price_1TZuaCLq8XcYYE1szI1Acreo,prod_UZ2fAn3gCECIga,Identiq Welcome Offer,,txcd_10103000,,2026-05-22 15:01,5.00,usd,,,,,per_unit,,inclusive
+price_1TZuZ7Lq8XcYYE1s9pXwhxge,prod_UZ2eCQBMKQ2qyn,Identiq Studio — Annual,,txcd_10103000,,2026-05-22 15:00,490.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuXwLq8XcYYE1sFpRRujPP,prod_UZ2dSh6EACqAgh,Identiq Studio — Monthly,,txcd_10103000,,2026-05-22 14:59,49.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZuWgLq8XcYYE1szuy0EyF7,prod_UZ2bbXda5BhHvC,Identiq Pro — Annual,,txcd_10103000,,2026-05-22 14:58,290.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuVnLq8XcYYE1sh1oa7e9j,prod_UZ2aucSDyspTTg,Identiq Pro — Monthly,,txcd_10103000,,2026-05-22 14:57,29.00,usd,month,1,licensed,,per_unit,,inclusive
+price_1TZuUlLq8XcYYE1scJupTneZ,prod_UZ2ZGygrKDKClD,Identiq Starter — Annual,,txcd_10103000,,2026-05-22 14:56,70.00,usd,year,1,licensed,,per_unit,,inclusive
+price_1TZuLtLq8XcYYE1su3jpYf9x,prod_UZ2QqCvcgp4I7g,Identiq Starter,,txcd_10103000,,2026-05-22 14:47,7.00,usd,month,1,licensed,,per_unit,,inclusive

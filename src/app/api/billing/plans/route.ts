@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
+import { formatUsd, type BillingInterval } from "@/lib/billing/plan-catalog";
 import {
-  listDisplayPacks,
-  toDisplayPack,
-  WELCOME_PACK,
-  formatUsd,
-  type BillingInterval,
-} from "@/lib/billing/plan-catalog";
+  listSubscriptionDisplayPacksFromDb,
+  welcomeDisplayFromDb,
+} from "@/lib/billing/plan-from-db";
 import {
   listActivePlans,
   userHasRedeemedWelcomeOffer,
 } from "@/lib/db/repositories/billing";
+import { listActiveScalePlanPrices } from "@/lib/db/repositories/scale-plan-prices";
 
 export async function GET(request: Request) {
   return withAuth(null, async (user) => {
@@ -19,26 +18,27 @@ export async function GET(request: Request) {
       searchParams.get("interval") === "annual" ? "annual" : "monthly"
     ) as BillingInterval;
 
-    const [dbPlans, welcomeEligible] = await Promise.all([
+    const [dbPlans, welcomeEligible, scaleTiers] = await Promise.all([
       listActivePlans(),
       userHasRedeemedWelcomeOffer(user.id).then((redeemed) => !redeemed),
+      listActiveScalePlanPrices(),
     ]);
 
-    const displayPacks = listDisplayPacks().map((def) =>
-      toDisplayPack(def, interval),
-    );
+    const packs = listSubscriptionDisplayPacksFromDb(dbPlans, interval);
+    const welcomePlan = dbPlans.find((p) => p.id === "welcome") ?? null;
+    const welcomeDisplay = welcomeDisplayFromDb(welcomePlan);
 
     return NextResponse.json({
       interval,
-      packs: displayPacks,
-      welcome: welcomeEligible
+      packs,
+      welcome: welcomeEligible && welcomeDisplay
         ? {
-            ...WELCOME_PACK,
-            priceLabel: formatUsd(WELCOME_PACK.priceCents),
+            ...welcomeDisplay,
+            priceLabel: formatUsd(welcomeDisplay.displayPriceCents),
           }
         : null,
-      dbPlans,
       welcomeEligible,
+      scaleTiers,
     });
   });
 }

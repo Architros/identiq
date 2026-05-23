@@ -7,7 +7,6 @@ import { SupportModalsProvider } from "@/contexts/support-modals-context";
 import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
 import { ConnectivityProvider } from "@/contexts/connectivity-context";
 import { ConnectivityBanner } from "@/components/shared/connectivity-banner";
-import { BuyTokensModal } from "@/components/brand-create/buy-tokens-modal";
 import { ToastContainer } from "@/components/shared/toast-container";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -26,7 +25,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <FloatingSupportWrapper />
                 </div>
               </div>
-              <BuyTokensModal />
               <ToastContainer />
             </BrandAssetsProvider>
           </SupportModalsProvider>

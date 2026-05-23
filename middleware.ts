@@ -1,4 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  billingRequiredUrl,
+  isBillingGateExemptApi,
+  isBillingGateExemptPath,
+  isSubscriptionGateSkipped,
+} from "@/lib/billing/billing-gate";
+import { userHasBillingAccess } from "@/lib/db/repositories/billing";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const PUBLIC_PATHS = [
@@ -59,11 +66,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const gateSkipped = isSubscriptionGateSkipped();
+  const hasAccess =
+    gateSkipped || (await userHasBillingAccess(user.id));
+
   if (pathname === "/login") {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    homeUrl.search = "";
-    return NextResponse.redirect(homeUrl);
+    const dest = request.nextUrl.clone();
+    dest.pathname = hasAccess ? "/" : "/billing";
+    dest.search = hasAccess ? "" : "required=1";
+    return NextResponse.redirect(dest);
+  }
+
+  if (!hasAccess) {
+    if (pathname.startsWith("/api/")) {
+      if (isBillingGateExemptApi(pathname)) {
+        return response;
+      }
+      return NextResponse.json(
+        { error: "subscription_required" },
+        { status: 403 },
+      );
+    }
+
+    if (!isBillingGateExemptPath(pathname)) {
+      return NextResponse.redirect(billingRequiredUrl(request.nextUrl.origin));
+    }
   }
 
   return response;

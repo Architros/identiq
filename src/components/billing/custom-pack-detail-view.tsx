@@ -8,18 +8,18 @@ import {
 } from "@hugeicons/core-free-icons";
 import { CustomPackVolumeSlider } from "@/components/billing/custom-pack-volume-slider";
 import {
-  computeCustomPack,
-  CUSTOM_PACK_TIERS,
-  customPackVolumeSavingsPercent,
-} from "@/lib/billing/custom-pack-pricing";
-import {
   estimateImages,
   formatStoredAssetsLimit,
-  formatUsd,
-  formatUsdPerMonth,
+  formatPlanPrice,
   resolveCustomPackStorageLimit,
   type BillingInterval,
 } from "@/lib/billing/plan-catalog";
+import {
+  computeCustomPackFromTier,
+  customPackVolumeSavingsPercent,
+  type ScaleTier,
+} from "@/lib/billing/scale-tiers";
+import { CUSTOM_PACK_TIERS } from "@/lib/billing/custom-pack-pricing";
 import { cn } from "@/lib/utils";
 
 const CUSTOM_FEATURES = [
@@ -30,11 +30,19 @@ const CUSTOM_FEATURES = [
   "Unlimited members, no per-seat fees",
 ] as const;
 
-/** Default tier: 300 tokens @ $39/mo basis */
 const DEFAULT_TIER_INDEX = 0;
+
+function fallbackTiers(): ScaleTier[] {
+  return CUSTOM_PACK_TIERS.map((t) => ({
+    monthlyTokens: t.monthlyTokens,
+    monthlyPriceCents: t.monthlyPriceCents,
+    annualPriceCents: t.monthlyPriceCents * 10,
+  }));
+}
 
 type CustomPackDetailViewProps = {
   interval: BillingInterval;
+  scaleTiers: ScaleTier[];
   loading: boolean;
   error: string | null;
   onBack: () => void;
@@ -43,18 +51,21 @@ type CustomPackDetailViewProps = {
 
 export function CustomPackDetailView({
   interval,
+  scaleTiers,
   loading,
   error,
   onBack,
   onBuy,
 }: CustomPackDetailViewProps) {
+  const tiers = scaleTiers.length > 0 ? scaleTiers : fallbackTiers();
   const [tierIndex, setTierIndex] = useState(DEFAULT_TIER_INDEX);
-  const tier = CUSTOM_PACK_TIERS[tierIndex];
+  const tier = tiers[Math.min(tierIndex, tiers.length - 1)];
   const monthlyTokens = tier.monthlyTokens;
+  const baseline = tiers[0];
 
   const { tokenAmount, amountCents } = useMemo(
-    () => computeCustomPack(monthlyTokens, interval),
-    [monthlyTokens, interval],
+    () => computeCustomPackFromTier(tier, interval),
+    [tier, interval],
   );
 
   const storageLimit = useMemo(
@@ -62,7 +73,7 @@ export function CustomPackDetailView({
     [monthlyTokens],
   );
 
-  const volumeSavings = customPackVolumeSavingsPercent(tier);
+  const volumeSavings = customPackVolumeSavingsPercent(tier, baseline);
 
   const features = useMemo(
     () => [
@@ -72,20 +83,17 @@ export function CustomPackDetailView({
     [storageLimit],
   );
 
-  const headlinePrice =
-    interval === "annual"
-      ? `${formatUsdPerMonth(amountCents)}/mo`
-      : formatUsd(amountCents);
+  const headlinePrice = formatPlanPrice(amountCents, interval);
 
   const billedLine =
     interval === "annual"
-      ? `${formatUsd(amountCents)} billed once · 12× monthly tokens`
-      : "One-time custom pack";
+      ? "Billed annually · unused tokens expire after 12 months"
+      : "Billed monthly · unused tokens expire each billing period";
 
   const creditsLabel =
     interval === "annual"
-      ? `${monthlyTokens.toLocaleString()} tokens/mo`
-      : `${tokenAmount.toLocaleString()} tokens in pack`;
+      ? `${tokenAmount.toLocaleString()} tokens per year`
+      : `${monthlyTokens.toLocaleString()} tokens per month`;
 
   return (
     <div className="mt-6">
@@ -169,6 +177,7 @@ export function CustomPackDetailView({
           <CustomPackVolumeSlider
             tierIndex={tierIndex}
             onTierIndexChange={setTierIndex}
+            tiers={tiers}
             className="mt-6"
           />
 

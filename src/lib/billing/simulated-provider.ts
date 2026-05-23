@@ -3,6 +3,7 @@ import {
   completeCheckoutSession,
   createCheckoutSession,
 } from "@/lib/db/repositories/billing";
+import { ensureUserSubscriptionRecord } from "@/lib/db/repositories/subscriptions";
 
 export const simulatedBillingProvider: BillingProvider = {
   async createCheckoutSession({
@@ -18,11 +19,16 @@ export const simulatedBillingProvider: BillingProvider = {
       customTokenAmount,
       simulated: true,
     });
-    return { sessionId: session.id };
+    return {
+      sessionId: session.id,
+      completeUrl: `/billing/complete?session=${session.id}`,
+    };
   },
 
   async fulfillCheckout(sessionId, userId) {
-    return completeCheckoutSession(sessionId, userId);
+    const result = await completeCheckoutSession(sessionId, userId);
+    await ensureUserSubscriptionRecord(userId);
+    return result;
   },
 
   async handleWebhook() {

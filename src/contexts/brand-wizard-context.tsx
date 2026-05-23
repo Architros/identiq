@@ -37,11 +37,13 @@ import {
   getWizardSession,
   takeWizardSession,
 } from "@/lib/brand/pending-wizard-session";
+import { draftHasUserContent } from "@/lib/brand/draft-has-user-content";
 
 type BrandWizardContextValue = {
   draft: BrandProjectDraft;
   isReady: boolean;
   isDirty: boolean;
+  hasUserContent: boolean;
   view: "steps" | "generating";
   updateDraft: (patch: Partial<BrandProjectDraft>) => void;
   setStep: (step: number) => void;
@@ -190,10 +192,15 @@ export function BrandWizardProvider({
     });
   }, [isReady, draft.id]);
 
+  const hasUserContent = useMemo(
+    () => isReady && draftHasUserContent(draft),
+    [draft, isReady],
+  );
+
   const isDirty = useMemo(() => {
-    if (!isReady) return false;
+    if (!isReady || !hasUserContent) return false;
     return draftSnapshot(draft) !== lastSavedSnapshotRef.current;
-  }, [draft, isReady]);
+  }, [draft, isReady, hasUserContent]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -265,7 +272,18 @@ export function BrandWizardProvider({
     }
   }, [draft.step, updateDraft]);
 
+  const exitWithoutSaving = useCallback(() => {
+    if (!draftPersistedRef.current || !draftHasUserContent(draft)) {
+      deleteDraft(draft.id);
+    }
+    router.push("/");
+  }, [draft, router]);
+
   const saveAndExit = useCallback(async () => {
+    if (!draftHasUserContent(draft)) {
+      exitWithoutSaving();
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     const toSave: BrandProjectDraft = {
@@ -287,14 +305,7 @@ export function BrandWizardProvider({
       setView("steps");
     }
     router.push("/");
-  }, [draft, router, view]);
-
-  const exitWithoutSaving = useCallback(() => {
-    if (!draftPersistedRef.current) {
-      deleteDraft(draft.id);
-    }
-    router.push("/");
-  }, [draft.id, router]);
+  }, [draft, exitWithoutSaving, router, view]);
 
   const toOrchestrateInput = useCallback((): WizardOrchestrateInput => {
     const refUrls = getDraftReferenceImageUrls(draft);
@@ -359,6 +370,7 @@ export function BrandWizardProvider({
       draft,
       isReady,
       isDirty,
+      hasUserContent,
       view,
       updateDraft,
       setStep,
@@ -380,6 +392,7 @@ export function BrandWizardProvider({
       draft,
       isReady,
       isDirty,
+      hasUserContent,
       view,
       updateDraft,
       setStep,

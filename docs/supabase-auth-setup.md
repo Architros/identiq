@@ -59,12 +59,9 @@ With `BILLING_MODE=simulated`:
 
 No Stripe keys are required.
 
-## 7. Stripe (when ready)
+## 7. Stripe (monthly / annual packs)
 
-1. [Stripe Dashboard](https://dashboard.stripe.com/) → **Developers → API keys** → `STRIPE_SECRET_KEY`.
-2. Add webhook endpoint `https://your-domain.com/api/billing/webhook` → `STRIPE_WEBHOOK_SECRET`.
-3. Create Products/Prices for token packs and map price IDs to `plans.stripe_price_id`.
-4. Set `BILLING_MODE=stripe` and implement the Stripe provider checkout flow.
+See **[stripe-billing-setup.md](./stripe-billing-setup.md)** for Products, **monthly + annual** one-time Prices, `stripe_price_id_annual`, webhooks, and env vars.
 
 ## 8. Admin role
 
