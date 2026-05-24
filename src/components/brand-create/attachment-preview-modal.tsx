@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
+import { isAllowedRasterImageType } from "@/lib/brand/attachment-utils";
 import { attachmentDisplayUrl } from "@/lib/storage/upload-client";
 
 type AttachmentPreviewModalProps = {
@@ -26,8 +27,10 @@ export function AttachmentPreviewModal({
 
   if (!attachment) return null;
 
-  const isImage = attachment.type.startsWith("image/");
-  const isPdf = attachment.type === "application/pdf";
+  const isImage = isAllowedRasterImageType(
+    attachment.type,
+    attachment.name,
+  );
   const imageUrl = attachmentDisplayUrl(attachment);
 
   return (
@@ -70,16 +73,6 @@ export function AttachmentPreviewModal({
               alt={attachment.name}
               className="max-h-[70vh] max-w-full rounded-lg object-contain"
             />
-          ) : isPdf ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <span className="rounded-xl bg-sidebar-active px-4 py-2 text-sm font-medium text-foreground">
-                PDF preview
-              </span>
-              <p className="max-w-sm text-sm text-muted">
-                PDF content is stored for brand direction only. Open the file on
-                your device to view it.
-              </p>
-            </div>
           ) : (
             <p className="text-sm text-muted">Preview not available for this file.</p>
           )}

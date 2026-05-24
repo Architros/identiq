@@ -15,6 +15,7 @@ import {
   uploadReferenceToStorage,
 } from "@/lib/storage/upload-client";
 import { AttachmentUploadThumbnail } from "@/components/brand-create/attachment-upload-thumbnail";
+import { isAllowedRasterImageType } from "@/lib/brand/attachment-utils";
 import { cn } from "@/lib/utils";
 
 type LogoUploadProps = {
@@ -30,8 +31,8 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
 
   const uploadLogo = useCallback(
     async (file: File) => {
-      if (!file.type.startsWith("image/")) {
-        setError("Logo must be a PNG, JPG, or WEBP image.");
+      if (!isAllowedRasterImageType(file.type, file.name)) {
+        setError("Logo must be a PNG, JPG, or WEBP file (SVG not supported).");
         return;
       }
 

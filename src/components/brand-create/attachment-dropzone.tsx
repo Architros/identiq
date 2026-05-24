@@ -22,6 +22,7 @@ import {
   ATTACHMENT_MAX_BYTES,
   ATTACHMENT_MAX_FILES,
   formatAttachmentSize,
+  isAllowedAttachmentFile,
 } from "@/lib/brand/attachment-utils";
 import {
   attachmentKindLabel,
@@ -215,11 +216,16 @@ export function AttachmentDropzone({
       const jobs: AttachmentUploadJob[] = [];
       let count = attachmentsRef.current.length;
       const tooLarge: string[] = [];
+      let skippedUnsupported = 0;
 
       for (const file of Array.from(files)) {
         if (count >= ATTACHMENT_MAX_FILES) break;
-        if (file.size > ATTACHMENT_MAX_BYTES) {
-          tooLarge.push(file.name);
+        if (!isAllowedAttachmentFile(file)) {
+          if (file.size > ATTACHMENT_MAX_BYTES) {
+            tooLarge.push(file.name);
+          } else {
+            skippedUnsupported += 1;
+          }
           continue;
         }
         const id = `att_${crypto.randomUUID().slice(0, 8)}`;
@@ -291,7 +297,7 @@ export function AttachmentDropzone({
             Drop files or click to upload
           </span>
           <span className="text-xs text-muted">
-            PNG, JPG, WEBP, PDF, TXT, MD — up to {ATTACHMENT_MAX_FILES} files,
+            PNG, JPG, WEBP, TXT, MD — up to {ATTACHMENT_MAX_FILES} files,
             10MB each. Files are saved to cloud storage.
           </span>
         </button>

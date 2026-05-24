@@ -1,5 +1,8 @@
 import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
-import { getAttachmentKind } from "@/lib/brand/attachment-utils";
+import {
+  getAttachmentKind,
+  isAllowedRasterImageType,
+} from "@/lib/brand/attachment-utils";
 import {
   UploadAbortedError,
   uploadReferenceToStorage,
@@ -16,7 +19,7 @@ export function createAttachmentPlaceholder(
   file: File,
   id: string,
 ): BrandAttachment {
-  const isImage = file.type.startsWith("image/");
+  const isImage = isAllowedRasterImageType(file.type, file.name);
   return {
     id,
     name: file.name,
@@ -103,5 +106,5 @@ export async function queueAttachmentUploads({
 
 export function attachmentKindLabel(file: BrandAttachment): string {
   const kind = getAttachmentKind(file);
-  return kind === "text" ? "DOC" : kind === "pdf" ? "PDF" : "FILE";
+  return kind === "text" ? "DOC" : kind === "image" ? "IMG" : "FILE";
 }

@@ -2,6 +2,7 @@ import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
 import {
   ATTACHMENT_MAX_BYTES,
   ATTACHMENT_MAX_FILES,
+  isAllowedAttachmentFile,
 } from "@/lib/brand/attachment-utils";
 import {
   placeholdersForJobs,
@@ -26,8 +27,10 @@ export function prepareAttachmentJobs(
 
   for (const file of files) {
     if (count >= ATTACHMENT_MAX_FILES) break;
-    if (file.size > ATTACHMENT_MAX_BYTES) {
-      tooLarge.push(file.name);
+    if (!isAllowedAttachmentFile(file)) {
+      if (file.size > ATTACHMENT_MAX_BYTES) {
+        tooLarge.push(file.name);
+      }
       continue;
     }
     const id = `att_${crypto.randomUUID().slice(0, 8)}`;

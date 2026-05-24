@@ -144,7 +144,7 @@ export function ReviewReferencesGrid({
                     className="text-muted"
                   />
                   <span className="text-[10px] font-medium uppercase text-muted">
-                    {kind === "pdf" ? "PDF" : kind === "text" ? "DOC" : "FILE"}
+                    {kind === "text" ? "DOC" : kind === "image" ? "IMG" : "FILE"}
                   </span>
                 </div>
               )}

@@ -8,24 +8,9 @@ import {
 } from "@/lib/storage/object-keys";
 import { uploadBuffer } from "@/lib/storage/r2";
 import {
-  ATTACHMENT_ACCEPT,
-  ATTACHMENT_MAX_BYTES,
   getAttachmentKind,
+  isAllowedAttachmentFile,
 } from "@/lib/brand/attachment-utils";
-
-const ALLOWED_MIME = new Set(
-  ATTACHMENT_ACCEPT.split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.includes("/")),
-);
-
-function isAllowedFile(file: File): boolean {
-  if (file.size > ATTACHMENT_MAX_BYTES) return false;
-  const name = file.name.toLowerCase();
-  if (file.type && ALLOWED_MIME.has(file.type)) return true;
-  if (name.endsWith(".md") || name.endsWith(".txt")) return true;
-  return false;
-}
 
 export async function POST(request: Request) {
   const auth = await requireApiUserResponse("brand:create");
@@ -73,7 +58,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!isAllowedFile(file)) {
+  if (!isAllowedAttachmentFile(file)) {
     return NextResponse.json(
       { error: "File type or size not allowed" },
       { status: 400 },

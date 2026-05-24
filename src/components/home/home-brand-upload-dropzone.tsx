@@ -120,7 +120,7 @@ export function HomeBrandUploadDropzone({
           {isStarting ? "Starting upload…" : "Drop files or click to upload"}
         </span>
         <span className="max-w-[14rem] text-[10px] leading-snug text-muted">
-          PNG, JPG, WEBP, PDF, TXT — up to {ATTACHMENT_MAX_FILES} files
+          PNG, JPG, WEBP, TXT, MD — up to {ATTACHMENT_MAX_FILES} files
         </span>
       </button>
 
