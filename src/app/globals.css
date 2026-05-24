@@ -1,30 +1,5 @@
 @import "tailwindcss";
-
-:root {
-  --dashboard-topbar-height: 3.5rem;
-  --background: #f7f7f8;
-  --surface: #ffffff;
-  --sidebar-active: #efefef;
-  --foreground: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #c46dfd;
-  --radius-card: 14px;
-  --radius-button: 10px;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-sidebar-active: var(--sidebar-active);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --radius-card: var(--radius-card);
-  --radius-button: var(--radius-button);
-}
+@import "../styles/theme.css";
 
 body {
   background: var(--background);
@@ -92,10 +67,10 @@ body {
 @keyframes generation-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(196, 109, 253, 0);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 3px rgba(196, 109, 253, 0.25);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
   }
 }
 
@@ -148,7 +123,7 @@ body {
   border-radius: 9999px;
   border: 1.5px solid var(--foreground);
   background: var(--surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 12%, transparent);
   cursor: pointer;
 }
 
@@ -170,7 +145,7 @@ body {
   border-radius: 9999px;
   border: 1.5px solid var(--foreground);
   background: var(--surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 12%, transparent);
   cursor: pointer;
 }
 

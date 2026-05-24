@@ -8,8 +8,8 @@ const STATUS_DOT: Record<AssetProgressData["status"], string> = {
   queued: "bg-muted/50",
   generating: "bg-accent animate-pulse",
   uploading: "bg-accent animate-pulse",
-  saved: "bg-emerald-500",
-  error: "bg-red-500",
+  saved: "bg-success",
+  error: "bg-destructive",
 };
 
 type GenerationActivityListProps = {
@@ -46,7 +46,7 @@ export function GenerationActivityList({
           <span
             className={cn(
               "shrink-0 tabular-nums",
-              item.status === "error" ? "text-red-600" : "text-muted",
+              item.status === "error" ? "text-destructive" : "text-muted",
             )}
           >
             {GENERATION_STATUS_LABEL[item.status]}

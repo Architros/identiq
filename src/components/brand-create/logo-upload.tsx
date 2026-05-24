@@ -156,7 +156,7 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
             <button
               type="button"
               onClick={removeLogo}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-sidebar-active hover:text-red-600"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-sidebar-active hover:text-destructive"
               aria-label="Remove logo"
             >
               <HugeiconsIcon icon={Delete02Icon} size={16} color="currentColor" />
@@ -186,7 +186,7 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
       )}
 
       {error ? (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="text-xs text-destructive" role="alert">
           {error}
         </p>
       ) : null}

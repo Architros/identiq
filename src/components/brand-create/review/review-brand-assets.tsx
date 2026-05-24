@@ -42,7 +42,7 @@ export function ReviewBrandAssets({ assetSelections }: ReviewBrandAssetsProps) {
 
   const hasAny = Object.values(grouped).some((g) => g.length > 0);
   if (!hasAny) {
-    return <p className="text-sm text-red-600">No assets selected</p>;
+    return <p className="text-sm text-destructive">No assets selected</p>;
   }
 
   return (

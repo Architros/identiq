@@ -20,8 +20,8 @@ const STATUS_STYLE: Record<AssetProgressData["status"], string> = {
   queued: "text-muted",
   generating: "text-accent",
   uploading: "text-accent",
-  saved: "text-emerald-600",
-  error: "text-red-600",
+  saved: "text-success",
+  error: "text-destructive",
 };
 
 function skeletonLabel(status: AssetProgressData["status"]): string {
@@ -91,10 +91,10 @@ export function GenerationTile({ progress, result }: GenerationTileProps) {
               animate={{ opacity: 1 }}
               className={cn(
                 aspectRatioGenerationWrapperClass(ratio),
-                "flex flex-col items-center justify-center gap-1 bg-red-50",
+                "flex flex-col items-center justify-center gap-1 bg-destructive-muted",
               )}
             >
-              <span className="text-xs font-medium text-red-600">
+              <span className="text-xs font-medium text-destructive">
                 {imageError ? "Preview failed to load" : "Failed"}
               </span>
             </motion.div>
@@ -121,7 +121,7 @@ export function GenerationTile({ progress, result }: GenerationTileProps) {
           {GENERATION_STATUS_LABEL[progress.status]}
         </p>
         {progress.status === "error" && progress.errorMessage ? (
-          <p className="mt-1 text-[10px] text-red-600">{progress.errorMessage}</p>
+          <p className="mt-1 text-[10px] text-destructive">{progress.errorMessage}</p>
         ) : null}
       </div>
     </motion.div>

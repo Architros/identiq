@@ -188,7 +188,7 @@ export function BillingPageContent() {
             "mb-6 flex flex-col gap-3 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between",
             banner.type === "success"
               ? "border-accent/30 bg-accent/10 text-foreground"
-              : "border-red-200 bg-red-50 text-red-800",
+              : "border-destructive-border bg-destructive-muted text-destructive-text-subtle",
           )}
           role="status"
         >

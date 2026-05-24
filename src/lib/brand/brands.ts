@@ -17,6 +17,16 @@ export type BrandSummary = {
   updatedAt: string;
 };
 
+/** Primary label for UI (name first, domain as fallback). */
+export function brandDisplayLabel(
+  brand: Pick<BrandSummary, "displayName" | "domain">,
+): string {
+  const name = brand.displayName.trim();
+  if (name) return name;
+  const domain = brand.domain.trim();
+  return domain || "Unnamed brand";
+}
+
 export const autonomiBrandKit: BrandKit = {
   id: "brand_autonomi",
   domain: "autonomi.run",

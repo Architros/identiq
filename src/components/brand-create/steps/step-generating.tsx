@@ -325,7 +325,7 @@ export function StepGenerating() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
         <div className="max-w-md space-y-4 text-center">
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-destructive">
             {preflightError ??
               (!preflight.ok ? preflight.message : "Cannot start generation.")}
           </p>

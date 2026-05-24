@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import { EmailOtpStep } from "@/components/auth/email-otp-step";
+import { normalizeEmail } from "@/lib/auth/email-otp";
 import { createClient } from "@/lib/supabase/client";
 
 const HERO_IMAGE = "/Hiker in Misty Mountains.png";
@@ -10,7 +12,10 @@ const HERO_IMAGE = "/Hiker in Misty Mountains.png";
 const GITHUB_ICON_SRC = "/icons/github.png";
 
 const oauthButtonClass =
-  "flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg border-0 bg-[#ececef] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-[#e2e2e6] disabled:cursor-not-allowed disabled:opacity-60";
+  "flex w-full cursor-pointer items-center justify-center gap-3 rounded-lg border-0 bg-input px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-input-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+const emailInputClass =
+  "w-full rounded-lg border-0 bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:cursor-not-allowed disabled:opacity-60";
 
 function ProviderIcon({ children }: { children: ReactNode }) {
   return (
@@ -57,16 +62,36 @@ function GitHubIcon() {
   );
 }
 
+function OrDivider() {
+  return (
+    <div className="flex w-full items-center gap-3 py-1">
+      <span className="h-px flex-1 bg-border" aria-hidden />
+      <span className="text-xs font-medium uppercase tracking-wider text-muted">
+        or
+      </span>
+      <span className="h-px flex-1 bg-border" aria-hidden />
+    </div>
+  );
+}
+
+type LoginStep = "providers" | "otp";
+
 function LoginForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/billing";
+  const next = searchParams.get("next") ?? "/";
   const authError = searchParams.get("error");
+  const [step, setStep] = useState<LoginStep>("providers");
+  const [email, setEmail] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [error, setError] = useState<string | null>(
     authError === "auth_callback_failed"
       ? "Sign in could not be completed. Please try again."
       : null,
   );
+
+  const busy = loading !== null || emailBusy;
 
   const signIn = async (provider: "google" | "github") => {
     setLoading(provider);
@@ -89,6 +114,42 @@ function LoginForm() {
     }
   };
 
+  const sendEmailOtp = async () => {
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes("@")) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
+    setEmailBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizeEmail(trimmed) }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Could not send a verification code.");
+        return;
+      }
+
+      setOtpEmail(normalizeEmail(trimmed));
+      setStep("otp");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send a verification code.");
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const backToProviders = () => {
+    setStep("providers");
+    setError(null);
+  };
+
   return (
     <div className="flex w-full max-w-[400px] flex-col items-center">
       <div className="mb-8 flex flex-col items-center text-center">
@@ -101,35 +162,76 @@ function LoginForm() {
       </div>
 
       {error ? (
-        <p className="mb-4 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="mb-4 w-full rounded-lg border border-destructive-border bg-destructive-muted px-4 py-3 text-sm text-destructive-text">
           {error}
         </p>
       ) : null}
 
-      <div className="w-full space-y-3">
-        <button
-          type="button"
-          disabled={loading !== null}
-          onClick={() => signIn("google")}
-          className={oauthButtonClass}
-        >
-          <ProviderIcon>
-            <GoogleIcon className="h-5 w-5" />
-          </ProviderIcon>
-          {loading === "google" ? "Redirecting…" : "Continue with Google"}
-        </button>
-        <button
-          type="button"
-          disabled={loading !== null}
-          onClick={() => signIn("github")}
-          className={oauthButtonClass}
-        >
-          <ProviderIcon>
-            <GitHubIcon />
-          </ProviderIcon>
-          {loading === "github" ? "Redirecting…" : "Continue with GitHub"}
-        </button>
-      </div>
+      {step === "otp" ? (
+        <EmailOtpStep
+          email={otpEmail}
+          next={next}
+          onBack={backToProviders}
+          onError={setError}
+          disabled={busy}
+          setDisabled={setEmailBusy}
+        />
+      ) : (
+        <>
+          <div className="w-full space-y-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => signIn("google")}
+              className={oauthButtonClass}
+            >
+              <ProviderIcon>
+                <GoogleIcon className="h-5 w-5" />
+              </ProviderIcon>
+              {loading === "google" ? "Redirecting…" : "Continue with Google"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => signIn("github")}
+              className={oauthButtonClass}
+            >
+              <ProviderIcon>
+                <GitHubIcon />
+              </ProviderIcon>
+              {loading === "github" ? "Redirecting…" : "Continue with GitHub"}
+            </button>
+          </div>
+
+          <OrDivider />
+
+          <div className="mt-3 w-full space-y-3">
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !busy) void sendEmailOtp();
+              }}
+              disabled={busy}
+              className={emailInputClass}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void sendEmailOtp()}
+              className="flex w-full cursor-pointer items-center justify-center rounded-lg border-0 bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {emailBusy ? "Sending…" : "Continue with email"}
+            </button>
+          </div>
+        </>
+      )}
 
       <p className="mt-10 max-w-[320px] text-center text-xs leading-relaxed text-muted">
         By continuing, you agree to Identiq&apos;s Terms of Service and Privacy
@@ -141,8 +243,7 @@ function LoginForm() {
 
 export function LoginScreen() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#f3f4f6] lg:flex-row">
-      {/* Hero — left on desktop, top on mobile */}
+    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
       <div className="relative h-[38vh] min-h-[220px] shrink-0 p-3 pb-0 lg:h-auto lg:min-h-screen lg:w-1/2 lg:p-4 lg:pr-2">
         <div className="relative h-full w-full overflow-hidden rounded-2xl lg:rounded-3xl lg:rounded-r-[1.75rem]">
           <Image
@@ -156,7 +257,6 @@ export function LoginScreen() {
         </div>
       </div>
 
-      {/* Form — right on desktop */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 lg:w-1/2 lg:py-16">
         <Suspense
           fallback={

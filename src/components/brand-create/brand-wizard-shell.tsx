@@ -114,7 +114,7 @@ export function BrandWizardShell() {
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       {saveError ? (
         <p
-          className="shrink-0 border-b border-red-200 bg-red-50 px-6 py-2 text-center text-sm text-red-700"
+          className="shrink-0 border-b border-destructive-border bg-destructive-muted px-6 py-2 text-center text-sm text-destructive-text"
           role="alert"
         >
           {saveError}
@@ -247,7 +247,7 @@ export function BrandWizardShell() {
             </Button>
             <div className="flex flex-col items-end gap-1">
               {!isReview && displayError ? (
-                <p className="text-xs text-red-600" role="alert">
+                <p className="text-xs text-destructive" role="alert">
                   {displayError}
                 </p>
               ) : null}

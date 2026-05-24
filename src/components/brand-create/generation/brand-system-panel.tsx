@@ -58,7 +58,7 @@ export function BrandSystemPanel({ data, className }: BrandSystemPanelProps) {
       aria-label="Brand system"
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-xs text-emerald-600">
+        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/15 text-xs text-success">
           ✓
         </span>
         <div>

@@ -140,7 +140,7 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
       </div>
 
       {plansError ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-4 rounded-xl border border-destructive-border bg-destructive-muted px-3 py-2 text-sm text-destructive-text">
           {plansError}
         </p>
       ) : null}
@@ -163,7 +163,7 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
       </div>
 
       {view === "plans" && error ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-4 rounded-xl border border-destructive-border bg-destructive-muted px-3 py-2 text-sm text-destructive-text">
           {error}
         </p>
       ) : null}

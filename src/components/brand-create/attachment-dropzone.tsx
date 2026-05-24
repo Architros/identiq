@@ -71,14 +71,14 @@ function AttachmentCardMeta({
 
   if (file.uploadError) {
     return (
-      <span className="text-xs text-red-600">{file.uploadError}</span>
+      <span className="text-xs text-destructive">{file.uploadError}</span>
     );
   }
 
   if (isComplete) {
     return (
       <span className="flex items-center gap-1.5 text-xs">
-        <span className="font-medium text-emerald-600">Uploaded</span>
+        <span className="font-medium text-success">Uploaded</span>
         <span className="text-muted/60" aria-hidden>
           ·
         </span>
@@ -296,7 +296,7 @@ export function AttachmentDropzone({
           </span>
         </button>
         {globalError ? (
-          <p className="text-xs text-red-600" role="alert">
+          <p className="text-xs text-destructive" role="alert">
             {globalError}
           </p>
         ) : null}
@@ -398,7 +398,7 @@ export function AttachmentDropzone({
                         <>
                           {isComplete ? (
                             <span
-                              className="inline-flex h-8 w-8 items-center justify-center text-emerald-600"
+                              className="inline-flex h-8 w-8 items-center justify-center text-success"
                               title="Upload complete"
                               aria-label="Upload complete"
                             >
@@ -413,7 +413,7 @@ export function AttachmentDropzone({
                           <button
                             type="button"
                             onClick={() => remove(file.id)}
-                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-sidebar-active hover:text-red-600"
+                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-sidebar-active hover:text-destructive"
                             aria-label={`Remove ${file.name}`}
                           >
                             <HugeiconsIcon

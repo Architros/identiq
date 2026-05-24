@@ -125,7 +125,7 @@ export function HomeBrandUploadDropzone({
       </button>
 
       {error ? (
-        <p className="mt-1.5 text-center text-[10px] text-red-600" role="alert">
+        <p className="mt-1.5 text-center text-[10px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}

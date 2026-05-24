@@ -21,6 +21,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/favicon")) return true;
   if (pathname === "/api/billing/webhook") return true;
+  if (pathname === "/api/auth/otp/send") return true;
   return false;
 }
 

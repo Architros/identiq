@@ -87,7 +87,7 @@ export function ReviewTokenSummary({
       <div
         className={cn(
           "flex flex-col gap-2 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between",
-          canAfford ? "bg-background" : "bg-red-50/80",
+          canAfford ? "bg-background" : "bg-destructive-muted/80",
         )}
       >
         <div className="flex items-center gap-2 text-sm">
@@ -105,7 +105,7 @@ export function ReviewTokenSummary({
               {remaining} left after generation
             </span>
           ) : (
-            <span className="text-xs font-medium text-red-600">
+            <span className="text-xs font-medium text-destructive">
               Need {totalCost - availableTokens} more
             </span>
           )}

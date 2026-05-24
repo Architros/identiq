@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { BrandSwitcherPanel } from "@/components/layout/brand-switcher-panel";
 import { useBrand } from "@/components/providers/brand-provider";
+import { brandDisplayLabel } from "@/lib/brand/brands";
 import { cn } from "@/lib/utils";
 
 export function BrandSelector({ compact = false }: { compact?: boolean }) {
@@ -12,7 +13,7 @@ export function BrandSelector({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
 
   const label = hasActiveBrand
-    ? activeBrand.domain || activeBrand.displayName
+    ? brandDisplayLabel(activeBrand)
     : hasBrands
       ? "Select a brand"
       : "Add a brand";

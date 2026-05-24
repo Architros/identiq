@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useGeneration } from "@/contexts/generation-context";
+import { ChatWelcomeEmpty } from "@/components/generation/chat/chat-welcome-empty";
 import { ChatUserBubble } from "@/components/generation/chat/chat-user-bubble";
 import { ChatAssistantTurn } from "@/components/generation/chat/chat-assistant-turn";
 import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
+import { cn } from "@/lib/utils";
 
 export function ChatMessageList({
   compactFooter = false,
@@ -28,15 +30,28 @@ export function ChatMessageList({
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
     (!lastMessage || lastMessage.role === "user");
 
+  const showWelcome = messages.length === 0 && !showInlineProgress;
+
   const scrollPadding = compactFooter
     ? "pb-44 scroll-pb-44"
     : "pb-28 scroll-pb-28";
 
   return (
     <div
-      className={`min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 ${scrollPadding}`}
+      className={cn(
+        "min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+        scrollPadding,
+        showWelcome && "flex flex-col justify-center",
+      )}
     >
-      <div className="mr-auto w-full max-w-2xl space-y-6">
+      <div
+        className={cn(
+          "mx-auto w-full space-y-6",
+          showWelcome ? "max-w-xl text-center" : "mr-auto max-w-2xl",
+        )}
+      >
+        {showWelcome ? <ChatWelcomeEmpty /> : null}
+
         {messages.map((message, index) => {
           const isLast = index === messages.length - 1;
           const streaming = isGenerating && isLast && message.role === "assistant";

@@ -20,7 +20,7 @@ import {
   draftProgressLabel,
   formatDraftUpdatedAt,
 } from "@/lib/brand/draft-display";
-import type { BrandSummary } from "@/lib/brand/brands";
+import { brandDisplayLabel, type BrandSummary } from "@/lib/brand/brands";
 import { cn } from "@/lib/utils";
 
 type BrandSwitcherPanelProps = {
@@ -187,7 +187,7 @@ export function BrandSwitcherPanel({ onClose }: BrandSwitcherPanelProps) {
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-2">
                               <span className="text-sm font-medium text-foreground">
-                                {brand.domain || brand.displayName}
+                                {brandDisplayLabel(brand)}
                               </span>
                               {isCurrent ? (
                                 <span className="rounded border border-accent/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
@@ -361,7 +361,7 @@ export function BrandSwitcherPanel({ onClose }: BrandSwitcherPanelProps) {
             type="button"
             disabled={deletingDraft}
             onClick={() => void handleConfirmDeleteDraft()}
-            className="cursor-pointer rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            className="cursor-pointer rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
           >
             {deletingDraft ? "Deleting…" : "Delete draft"}
           </button>

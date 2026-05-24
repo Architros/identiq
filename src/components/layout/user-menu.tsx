@@ -95,7 +95,7 @@ function MenuItem({
   const className = cn(
     "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
     destructive
-      ? "text-red-600 hover:bg-red-50"
+      ? "text-destructive hover:bg-destructive-muted"
       : "text-foreground hover:bg-sidebar-active",
   );
 
@@ -104,7 +104,7 @@ function MenuItem({
       <span
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-          destructive ? "text-red-600" : "text-muted",
+          destructive ? "text-destructive" : "text-muted",
         )}
       >
         <HugeiconsIcon

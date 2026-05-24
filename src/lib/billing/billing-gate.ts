@@ -22,6 +22,7 @@ export function isBillingGateExemptPath(pathname: string): boolean {
 
 /** API routes allowed before the user has billing access. */
 export function isBillingGateExemptApi(pathname: string): boolean {
+  if (pathname.startsWith("/api/auth/")) return true;
   return BILLING_API_EXACT.has(pathname);
 }
 

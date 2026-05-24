@@ -201,7 +201,7 @@ function ColorFieldRow({
       <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
         {label}
         <ColorRoleTooltip role={role} />
-        {required ? <span className="text-red-600">*</span> : null}
+        {required ? <span className="text-destructive">*</span> : null}
         {optional ? (
           <span className="font-normal text-muted">(optional)</span>
         ) : null}

@@ -110,7 +110,7 @@ export function ReviewReferencesGrid({
         }}
       />
       {error ? (
-        <p className="mb-2 text-xs text-red-600" role="alert">
+        <p className="mb-2 text-xs text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -167,7 +167,7 @@ export function ReviewReferencesGrid({
                   <button
                     type="button"
                     onClick={() => remove(file.id)}
-                    className="cursor-pointer rounded-lg bg-surface p-2 text-red-600 shadow-sm hover:bg-red-50"
+                    className="cursor-pointer rounded-lg bg-surface p-2 text-destructive shadow-sm hover:bg-destructive-muted"
                     aria-label="Remove file"
                   >
                     <HugeiconsIcon

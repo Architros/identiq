@@ -16,7 +16,7 @@ export function StepBasics() {
       </p>
       <label className="block space-y-2">
         <span className="text-sm font-medium text-foreground">
-          Brand name <span className="text-red-600">*</span>
+          Brand name <span className="text-destructive">*</span>
         </span>
         <input
           name="brandName"
@@ -64,7 +64,7 @@ export function StepBasics() {
       </label>
       <label className="block space-y-2">
         <span className="text-sm font-medium text-foreground">
-          Short description <span className="text-red-600">*</span>
+          Short description <span className="text-destructive">*</span>
         </span>
         <textarea
           name="brandDescription"

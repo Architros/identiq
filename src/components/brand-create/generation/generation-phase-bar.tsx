@@ -86,7 +86,7 @@ export function GenerationPhaseBar({
               key={step.id}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-                done && "bg-emerald-500/15 text-emerald-700",
+                done && "bg-success/15 text-success-text-subtle",
                 active && "bg-accent/15 text-accent",
                 !done && !active && "bg-sidebar-active text-muted",
               )}

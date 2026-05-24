@@ -1,0 +1,71 @@
+/**
+ * Identiq design tokens — single source of truth for app colors.
+ * Change values here; Tailwind utilities are wired via @theme below.
+ */
+
+:root {
+  /* Brand */
+  --accent: #c46dfd;
+  --on-accent: #ffffff;
+
+  /* Surfaces */
+  --background: #f7f7f8;
+  --surface: #ffffff;
+  --sidebar-active: #efefef;
+  --input: #ececef;
+  --input-hover: #e2e2e6;
+
+  /* Text */
+  --foreground: #111827;
+  --muted: #6b7280;
+
+  /* Borders */
+  --border: #e5e7eb;
+
+  /* Destructive (errors, delete) */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --destructive-muted: #fef2f2;
+  --destructive-border: #fecaca;
+  --destructive-text: #b91c1c;
+  --destructive-text-subtle: #991b1b;
+
+  /* Success */
+  --success: #059669;
+  --success-muted: #ecfdf5;
+  --success-border: #a7f3d0;
+  --success-text: #064e3b;
+  --success-text-subtle: #065f46;
+
+  /* Layout & radius */
+  --dashboard-topbar-height: 3.5rem;
+  --radius-card: 14px;
+  --radius-button: 10px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-input: var(--input);
+  --color-input-hover: var(--input-hover);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-muted: var(--destructive-muted);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-text: var(--destructive-text);
+  --color-destructive-text-subtle: var(--destructive-text-subtle);
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-success-border: var(--success-border);
+  --color-success-text: var(--success-text);
+  --color-success-text-subtle: var(--success-text-subtle);
+  --font-sans: var(--font-geist-sans);
+  --radius-card: var(--radius-card);
+  --radius-button: var(--radius-button);
+}

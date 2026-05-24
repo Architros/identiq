@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import {
-  billingRequiredUrl,
-  isSubscriptionGateSkipped,
-} from "@/lib/billing/billing-gate";
-import { userHasBillingAccess } from "@/lib/db/repositories/billing";
+import { resolvePostAuthPath } from "@/lib/auth/post-auth-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/billing";
+  const next = searchParams.get("next");
 
   if (code) {
     const supabase = await createClient();
@@ -19,16 +15,10 @@ export async function GET(request: Request) {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (
-        user &&
-        !isSubscriptionGateSkipped() &&
-        !(await userHasBillingAccess(user.id))
-      ) {
-        return NextResponse.redirect(billingRequiredUrl(origin));
+      if (user) {
+        const path = await resolvePostAuthPath(user.id, next);
+        return NextResponse.redirect(`${origin}${path}`);
       }
-
-      const redirectTo = next.startsWith("/") ? next : "/";
-      return NextResponse.redirect(`${origin}${redirectTo}`);
     }
   }
 

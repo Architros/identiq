@@ -149,9 +149,9 @@ export function SettingsPageContent() {
             </div>
           </dl>
 
-          <div className="mt-10 rounded-xl border border-red-200/80 bg-red-50/50 p-5">
-            <h2 className="text-sm font-semibold text-red-700">Danger zone</h2>
-            <p className="mt-2 text-sm leading-relaxed text-red-700/90">
+          <div className="mt-10 rounded-xl border border-destructive-border/80 bg-destructive-muted/50 p-5">
+            <h2 className="text-sm font-semibold text-destructive-text">Danger zone</h2>
+            <p className="mt-2 text-sm leading-relaxed text-destructive-text/90">
               Deleting your account will permanently remove your brands,
               generated assets, and billing history. This cannot be undone.
             </p>
@@ -162,7 +162,7 @@ export function SettingsPageContent() {
                   title: "Delete account",
                 })
               }
-              className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-red-300 bg-background px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+              className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-destructive-border bg-background px-4 py-2 text-sm font-medium text-destructive-text transition-colors hover:bg-destructive-muted"
             >
               <HugeiconsIcon
                 icon={Delete02Icon}

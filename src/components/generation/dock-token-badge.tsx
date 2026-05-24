@@ -31,7 +31,7 @@ export function DockTokenBadge() {
   if (insufficient) {
     return (
       <span
-        className="flex h-9 shrink-0 items-center self-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-xs font-semibold text-red-700"
+        className="flex h-9 shrink-0 items-center self-center rounded-lg border border-destructive-border bg-destructive-muted px-2.5 text-xs font-semibold text-destructive-text"
         role="status"
         aria-live="polite"
       >
