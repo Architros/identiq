@@ -12,6 +12,7 @@ import {
   type BillingInterval,
   type DisplayPack,
 } from "@/lib/billing/plan-catalog";
+import { ctaPrimaryClasses } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 type PlanPackCardProps = {
@@ -96,9 +97,7 @@ export function PlanPackCard({
         className={cn(
           "mt-6 w-full cursor-pointer rounded-xl py-2.5 text-sm font-semibold transition-colors",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          highlighted
-            ? "bg-accent text-white hover:bg-accent/90"
-            : "border border-border bg-surface text-foreground hover:bg-sidebar-active",
+          ctaPrimaryClasses,
         )}
       >
         {loading ? "…" : "Buy tokens"}

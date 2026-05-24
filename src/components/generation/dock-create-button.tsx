@@ -4,6 +4,7 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
 import { useGeneration } from "@/contexts/generation-context";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
+import { ctaPrimaryClasses, ctaPrimaryFocusClasses } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 export function DockCreateButton() {
@@ -63,10 +64,11 @@ export function DockCreateButton() {
       disabled={!canSubmit}
       onClick={() => submitGeneration()}
       className={cn(
-        "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold text-white transition-colors",
+        "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold transition-colors",
         canSubmit ? "cursor-pointer" : "cursor-not-allowed",
-        "bg-accent hover:bg-accent/90 disabled:opacity-50",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        ctaPrimaryClasses,
+        "disabled:opacity-50",
+        ctaPrimaryFocusClasses,
       )}
     >
       Create

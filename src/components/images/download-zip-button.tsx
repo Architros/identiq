@@ -6,6 +6,7 @@ import { Download04Icon } from "@hugeicons/core-free-icons";
 import type { AssetZipEntry } from "@/lib/download/asset-filename";
 import { downloadAssetsZip } from "@/lib/download/build-assets-zip";
 import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
+import { ctaPrimaryClasses, ctaPrimaryFocusClasses } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 type DownloadZipButtonProps = {
@@ -71,10 +72,10 @@ export function DownloadZipButton({
       onClick={() => void handleClick()}
       className={cn(
         "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        ctaPrimaryFocusClasses,
         "disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary"
-          ? "border-accent bg-accent text-white hover:bg-accent/90"
+          ? cn("border-accent", ctaPrimaryClasses)
           : "border-border bg-surface text-foreground hover:bg-sidebar-active",
         className,
       )}

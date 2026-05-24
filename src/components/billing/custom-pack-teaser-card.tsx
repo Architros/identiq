@@ -5,6 +5,7 @@ import { Tick01Icon } from "@hugeicons/core-free-icons";
 import type { BillingInterval } from "@/lib/billing/plan-catalog";
 import { formatUsd } from "@/lib/billing/plan-catalog";
 import type { ScaleTier } from "@/lib/billing/scale-tiers";
+import { ctaPrimaryClasses } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 type CustomPackTeaserCardProps = {
@@ -73,7 +74,8 @@ export function CustomPackTeaserCard({
         type="button"
         onClick={onCustomize}
         className={cn(
-          "mt-6 w-full cursor-pointer rounded-xl border border-border py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-sidebar-active",
+          "mt-6 w-full cursor-pointer rounded-xl py-2.5 text-sm font-semibold transition-colors",
+          ctaPrimaryClasses,
         )}
       >
         Customize pack

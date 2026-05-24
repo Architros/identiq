@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { EmailOtpStep } from "@/components/auth/email-otp-step";
 import { normalizeEmail } from "@/lib/auth/email-otp";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { ctaPrimary } from "@/components/ui/cta-styles";
 import { createClient } from "@/lib/supabase/client";
 
 const HERO_IMAGE = "/Hiker in Misty Mountains.png";
@@ -227,7 +228,9 @@ function LoginForm() {
               type="button"
               disabled={busy}
               onClick={() => void sendEmailOtp()}
-              className="flex w-full cursor-pointer items-center justify-center rounded-lg border-0 bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className={ctaPrimary(
+                "flex w-full cursor-pointer items-center justify-center rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
+              )}
             >
               {emailBusy ? "Sending…" : "Continue with email"}
             </button>

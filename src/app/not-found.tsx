@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ctaPrimary } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 const linkButtonClass =
@@ -18,13 +19,7 @@ export default function NotFound() {
         continue.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/"
-          className={cn(
-            linkButtonClass,
-            "bg-foreground text-surface hover:bg-foreground/90",
-          )}
-        >
+        <Link href="/" className={ctaPrimary(linkButtonClass)}>
           Go home
         </Link>
         <Link

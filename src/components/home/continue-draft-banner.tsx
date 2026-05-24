@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ctaPrimary } from "@/components/ui/cta-styles";
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
 import { loadDraftsMerged } from "@/lib/brand/brand-storage";
 
@@ -34,7 +35,9 @@ export function ContinueDraftBanner() {
       </p>
       <Link
         href={`/new-brand?draftId=${encodeURIComponent(draft.id)}`}
-        className="mt-2 inline-block text-sm font-medium text-foreground underline-offset-2 hover:underline"
+        className={ctaPrimary(
+          "mt-3 inline-flex rounded-lg px-3 py-1.5 text-sm font-medium",
+        )}
       >
         Resume wizard
       </Link>

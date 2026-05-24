@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ctaPrimary } from "@/components/ui/cta-styles";
 import {
   mapOtpVerifyError,
   normalizeEmail,
@@ -161,7 +162,9 @@ export function EmailOtpStep({
         type="button"
         disabled={busy}
         onClick={() => void handleVerify()}
-        className="flex w-full cursor-pointer items-center justify-center rounded-lg border-0 bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className={ctaPrimary(
+          "flex w-full cursor-pointer items-center justify-center rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
+        )}
       >
         {verifying ? "Verifying…" : "Verify"}
       </button>

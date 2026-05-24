@@ -11,6 +11,7 @@ import {
   libraryCategories,
   libraryTemplates,
 } from "@/lib/library/templates";
+import { ctaPrimary } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 export function LibraryPageContent() {
@@ -45,7 +46,9 @@ export function LibraryPageContent() {
           </p>
           <Link
             href="/new-brand"
-            className="mt-4 inline-flex rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+            className={ctaPrimary(
+              "mt-4 inline-flex rounded-xl px-4 py-2 text-sm font-medium",
+            )}
           >
             New brand
           </Link>
@@ -61,7 +64,7 @@ export function LibraryPageContent() {
             className={cn(
               "cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
               activeCategory === cat.id
-                ? "bg-foreground text-background"
+                ? "bg-accent text-on-accent"
                 : "bg-surface text-muted ring-1 ring-border hover:text-foreground",
             )}
           >
