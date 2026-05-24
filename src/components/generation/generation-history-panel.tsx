@@ -81,7 +81,7 @@ export function GenerationHistoryPanel({
             <p className="px-2 py-4 text-sm text-muted">Loading…</p>
           ) : chats.length === 0 ? (
             <p className="px-2 py-4 text-sm text-muted">
-              No saved chats yet. Start a generation to create one.
+              No saved generations yet. Complete a generation to see it here.
             </p>
           ) : (
             <ul className="space-y-1">

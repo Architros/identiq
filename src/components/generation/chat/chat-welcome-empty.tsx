@@ -36,7 +36,7 @@ export function ChatWelcomeEmpty() {
     libraryTemplateId != null ? LIBRARY_SUGGESTIONS : DEFAULT_SUGGESTIONS;
 
   return (
-    <header className="space-y-5 pb-2 pt-1">
+    <header className="mx-auto w-full space-y-5 pb-2 pt-1 text-center">
       <div className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">
           Welcome

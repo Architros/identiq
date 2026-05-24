@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import {
+  deriveChatTitle,
+  isMeaningfulChatHistory,
+} from "@/lib/generation/chat-history";
+import {
   deserializeIdentiqMessages,
   serializeIdentiqMessages,
   type StoredChatMessage,
@@ -48,15 +52,74 @@ export async function listIdeasChatsForBrand(
     .eq("brand_id", brandId)
     .order("updated_at", { ascending: false });
 
-  if (error || !data) return [];
+  if (error || !data || data.length === 0) return [];
 
-  return (data as IdeasChatRow[]).map((row) => ({
-    id: row.id,
-    brandId: row.brand_id,
-    title: row.title,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+  const rows = data as IdeasChatRow[];
+  const chatIds = rows.map((row) => row.id);
+
+  const { data: messageRows, error: msgError } = await supabase
+    .from("ideas_chat_messages")
+    .select("id, chat_id, role, parts, metadata, sort_index")
+    .eq("user_id", userId)
+    .in("chat_id", chatIds)
+    .order("sort_index", { ascending: true });
+
+  if (msgError) {
+    return rows.map((row) => ({
+      id: row.id,
+      brandId: row.brand_id,
+      title: row.title,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  const messagesByChat = new Map<string, StoredChatMessage[]>();
+  for (const row of messageRows as IdeasChatMessageRow[]) {
+    const list = messagesByChat.get(row.chat_id) ?? [];
+    list.push({
+      id: row.id,
+      role: row.role as "user" | "assistant",
+      parts: row.parts,
+      metadata: row.metadata,
+    });
+    messagesByChat.set(row.chat_id, list);
+  }
+
+  const meaningful: IdeasChatSummary[] = [];
+  const emptyChatIds: string[] = [];
+
+  for (const row of rows) {
+    const stored = messagesByChat.get(row.id) ?? [];
+    const messages = deserializeIdentiqMessages(stored);
+    if (!isMeaningfulChatHistory(messages)) {
+      emptyChatIds.push(row.id);
+      continue;
+    }
+
+    meaningful.push({
+      id: row.id,
+      brandId: row.brand_id,
+      title: deriveChatTitle(messages, row.title),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+  }
+
+  if (emptyChatIds.length > 0) {
+    await supabase
+      .from("ideas_chat_messages")
+      .delete()
+      .eq("user_id", userId)
+      .in("chat_id", emptyChatIds);
+    await supabase
+      .from("ideas_chats")
+      .delete()
+      .eq("user_id", userId)
+      .in("id", emptyChatIds);
+  }
+
+  return meaningful;
 }
 
 export async function getIdeasChatForUser(
@@ -146,10 +209,19 @@ export async function replaceIdeasChatMessages(
   chatId: string,
   messages: IdentiqUIMessage[],
   options?: { title?: string; settingsSnapshot?: Record<string, unknown> },
-): Promise<void> {
+): Promise<{ saved: boolean; title?: string }> {
+  if (!isMeaningfulChatHistory(messages)) {
+    await deleteIdeasChat(userId, chatId);
+    return { saved: false };
+  }
+
   const supabase = await createClient();
   const now = new Date().toISOString();
   const serialized = serializeIdentiqMessages(messages);
+  const title = deriveChatTitle(
+    messages,
+    options?.title?.trim() || undefined,
+  );
 
   await supabase
     .from("ideas_chat_messages")
@@ -174,8 +246,10 @@ export async function replaceIdeasChatMessages(
     if (insertError) throw insertError;
   }
 
-  const chatUpdate: Record<string, unknown> = { updated_at: now };
-  if (options?.title) chatUpdate.title = options.title;
+  const chatUpdate: Record<string, unknown> = {
+    updated_at: now,
+    title,
+  };
   if (options?.settingsSnapshot !== undefined) {
     chatUpdate.settings_snapshot = options.settingsSnapshot;
   }
@@ -187,6 +261,8 @@ export async function replaceIdeasChatMessages(
     .eq("user_id", userId);
 
   if (chatError) throw chatError;
+
+  return { saved: true, title };
 }
 
 export async function deleteIdeasChat(
@@ -194,6 +270,11 @@ export async function deleteIdeasChat(
   chatId: string,
 ): Promise<void> {
   const supabase = await createClient();
+  await supabase
+    .from("ideas_chat_messages")
+    .delete()
+    .eq("chat_id", chatId)
+    .eq("user_id", userId);
   await supabase
     .from("ideas_chats")
     .delete()

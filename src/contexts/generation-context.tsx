@@ -30,7 +30,10 @@ import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
 import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
-import { chatTitleFromPrompt } from "@/lib/generation/chat-title";
+import {
+  deriveChatTitle,
+  isMeaningfulChatHistory,
+} from "@/lib/generation/chat-history";
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -95,7 +98,7 @@ async function persistChatMessages(
   chatId: string,
   messages: IdentiqUIMessage[],
   options?: { title?: string; settingsSnapshot?: Record<string, unknown> },
-) {
+): Promise<{ removed?: boolean; title?: string } | null> {
   const res = await fetch(`/api/ideas/chats/${chatId}/messages`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -108,7 +111,16 @@ async function persistChatMessages(
   });
   if (!res.ok) {
     console.warn("[ideas/chat] could not persist messages", res.status);
+    return null;
   }
+  return (await res.json()) as { removed?: boolean; title?: string };
+}
+
+async function deleteChatSession(chatId: string) {
+  await fetch(`/api/ideas/chats/${chatId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
 }
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
@@ -240,18 +252,67 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const saveMessages = useCallback(
     async (msgs: IdentiqUIMessage[], title?: string) => {
-      const chatId = activeChatIdRef.current;
-      if (!chatId) return;
+      if (!isMeaningfulChatHistory(msgs)) {
+        const chatId = activeChatIdRef.current;
+        if (chatId) {
+          await deleteChatSession(chatId);
+          setActiveChatId(null);
+          activeChatIdRef.current = null;
+        }
+        return;
+      }
+
+      const resolvedTitle = deriveChatTitle(msgs, title ?? chatTitle);
+
+      let chatId = activeChatIdRef.current;
+      if (!chatId) {
+        if (!hasActiveBrand || !brandKit.id) return;
+        try {
+          const res = await fetch("/api/ideas/chats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              brandId: brandKit.id,
+              title: resolvedTitle,
+              settingsSnapshot: settingsSnapshot(),
+            }),
+          });
+          if (!res.ok) return;
+          const data = (await res.json()) as { chat: IdeasChatSummary };
+          chatId = data.chat.id;
+          setActiveChatId(chatId);
+          activeChatIdRef.current = chatId;
+        } catch {
+          return;
+        }
+      }
+
       try {
-        await persistChatMessages(chatId, msgs, {
-          title,
+        const result = await persistChatMessages(chatId, msgs, {
+          title: resolvedTitle,
           settingsSnapshot: settingsSnapshot(),
         });
+        if (result?.removed) {
+          setActiveChatId(null);
+          activeChatIdRef.current = null;
+          return;
+        }
+        if (result?.title) {
+          setChatTitle(result.title);
+        } else {
+          setChatTitle(resolvedTitle);
+        }
       } catch {
         // Non-blocking; local state remains.
       }
     },
-    [settingsSnapshot],
+    [
+      brandKit.id,
+      chatTitle,
+      hasActiveBrand,
+      settingsSnapshot,
+    ],
   );
 
   const { messages, sendMessage, stop, status, setMessages } =
@@ -286,20 +347,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           void refreshBalance();
           pendingTokenCostRef.current = 0;
         }
-        const firstUser = finishedMessages.find((m) => m.role === "user");
-        const userText =
-          firstUser?.parts
-            ?.filter(
-              (p): p is { type: "text"; text: string } => p.type === "text",
-            )
-            .map((p) => p.text)
-            .join(" ") ?? "";
-        const title =
-          chatTitle === "New chat" && userText
-            ? chatTitleFromPrompt(userText)
-            : chatTitle;
-        if (title !== chatTitle) setChatTitle(title);
-        void saveMessages(finishedMessages, title);
+        const resolvedTitle = deriveChatTitle(finishedMessages, chatTitle);
+        if (resolvedTitle !== chatTitle) setChatTitle(resolvedTitle);
+        void saveMessages(finishedMessages, resolvedTitle);
       },
       onData: (dataPart) => {
         if (dataPart.type === "data-generation-status") {
@@ -414,31 +464,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setGenerationPhase(isLibraryRemix ? "composing-prompt" : "orchestrating");
     }
   }, [isGenerating, generationStartedAt, status, isLibraryRemix]);
-
-  const ensureChatId = useCallback(async (): Promise<string | null> => {
-    if (activeChatIdRef.current) return activeChatIdRef.current;
-    if (!hasActiveBrand || !brandKit.id) return null;
-    try {
-      const res = await fetch("/api/ideas/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          brandId: brandKit.id,
-          title: chatTitleFromPrompt(prompt),
-          settingsSnapshot: settingsSnapshot(),
-        }),
-      });
-      if (!res.ok) return null;
-      const data = (await res.json()) as { chat: IdeasChatSummary };
-      setActiveChatId(data.chat.id);
-      setChatTitle(data.chat.title);
-      activeChatIdRef.current = data.chat.id;
-      return data.chat.id;
-    } catch {
-      return null;
-    }
-  }, [hasActiveBrand, brandKit.id, prompt, settingsSnapshot]);
 
   const refreshChatHistory = useCallback(async (): Promise<IdeasChatSummary[]> => {
     if (!brandKit.id) return [];
@@ -704,8 +729,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     lastPresetPhaseRef.current = null;
     setView("chat");
 
-    await ensureChatId();
-
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
     const messageText =
       prompt.trim() ||
@@ -734,7 +757,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     sendMessage,
     hasActiveBrand,
     isLoading,
-    ensureChatId,
   ]);
 
   const stopGeneration = useCallback(() => {

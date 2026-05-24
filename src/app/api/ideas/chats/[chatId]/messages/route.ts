@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/api/with-auth";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import { deriveChatTitle } from "@/lib/generation/chat-history";
 import {
-  chatTitleFromPrompt,
   getIdeasChatForUser,
   replaceIdeasChatMessages,
 } from "@/lib/db/repositories/ideas-chats";
@@ -36,23 +36,23 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
-    const firstUser = parsed.data.messages.find((m) => m.role === "user");
-    const userText =
-      firstUser?.parts
-        ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-        .map((p) => p.text)
-        .join(" ") ?? "";
+    const result = await replaceIdeasChatMessages(
+      user.id,
+      chatId,
+      parsed.data.messages,
+      {
+        title: parsed.data.title,
+        settingsSnapshot: parsed.data.settingsSnapshot,
+      },
+    );
+
+    if (!result.saved) {
+      return NextResponse.json({ ok: true, removed: true });
+    }
 
     const title =
-      parsed.data.title?.trim() ||
-      (existing.title === "New chat" && userText
-        ? chatTitleFromPrompt(userText)
-        : existing.title);
-
-    await replaceIdeasChatMessages(user.id, chatId, parsed.data.messages, {
-      title,
-      settingsSnapshot: parsed.data.settingsSnapshot,
-    });
+      result.title ??
+      deriveChatTitle(parsed.data.messages, parsed.data.title);
 
     return NextResponse.json({ ok: true, title });
   });
