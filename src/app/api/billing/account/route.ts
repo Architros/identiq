@@ -11,7 +11,6 @@ import {
 } from "@/lib/db/repositories/subscriptions";
 import { getTokenBalance } from "@/lib/db/repositories/credits";
 import { getAssetStorageEntitlement } from "@/lib/db/repositories/entitlements";
-import { syncUserStorageLimitFromPurchases } from "@/lib/db/repositories/storage-sync";
 
 export async function GET() {
   return withAuth(null, async (user) => {
@@ -26,7 +25,7 @@ export async function GET() {
     const [balance, storage, subscription, hasBillingAccess, stripeCustomerId] =
       await Promise.all([
         getTokenBalance(user.id),
-        getAssetStorageEntitlement(user.id, { syncFromPurchases: false }),
+        getAssetStorageEntitlement(user.id),
         getSubscriptionSummary(user.id),
         isSubscriptionGateSkipped()
           ? Promise.resolve(true)
@@ -35,12 +34,6 @@ export async function GET() {
       ]);
 
     void syncWork;
-
-    if (hasBillingAccess) {
-      void syncUserStorageLimitFromPurchases(user.id).catch((err) => {
-        console.error("[billing/account] storage sync failed:", err);
-      });
-    }
 
     return NextResponse.json({
       balance,

@@ -64,7 +64,7 @@ export function BillingPageContent() {
       }
       const data = (await res.json()) as BillingAccountResponse;
       setAccount(data);
-      await refreshBalance(data.balance);
+      await refreshBalance();
     } catch {
       setAccount(null);
       setBanner({

@@ -3,7 +3,7 @@ import {
   DEFAULT_FREE_ASSET_STORAGE_LIMIT,
   mergeStorageLimits,
 } from "@/lib/billing/storage-entitlement";
-import { syncUserStorageLimitFromPurchases } from "@/lib/db/repositories/storage-sync";
+import { resolvePurchasedStorageLimit } from "@/lib/db/repositories/storage-sync";
 
 export type AssetStorageEntitlement = {
   limit: number;
@@ -71,15 +71,30 @@ export async function upgradeUserAssetStorageLimit(
   return next;
 }
 
+/** Profile limit merged with purchased/subscription catalog (repairs stale 25 after checkout). */
+export async function resolveEffectiveAssetStorageLimit(
+  userId: string,
+): Promise<number> {
+  const [profileLimit, purchasedLimit] = await Promise.all([
+    getUserAssetStorageLimit(userId),
+    resolvePurchasedStorageLimit(userId),
+  ]);
+
+  if (purchasedLimit == null) {
+    return profileLimit;
+  }
+
+  const effective = mergeStorageLimits(profileLimit, purchasedLimit);
+  if (effective > profileLimit) {
+    return upgradeUserAssetStorageLimit(userId, purchasedLimit);
+  }
+  return effective;
+}
+
 export async function getAssetStorageEntitlement(
   userId: string,
-  options?: { syncFromPurchases?: boolean },
 ): Promise<AssetStorageEntitlement> {
-  const limit =
-    options?.syncFromPurchases === false
-      ? await getUserAssetStorageLimit(userId)
-      : await syncUserStorageLimitFromPurchases(userId);
-
+  const limit = await resolveEffectiveAssetStorageLimit(userId);
   const used = await countUserSavedAssets(userId);
   return {
     limit,
