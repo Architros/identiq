@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import {
   deleteDraftForUser,
   listDraftsForUser,
@@ -17,14 +17,20 @@ const deleteSchema = z.object({
 });
 
 export async function GET() {
-  return withAuth(null, async (user) => {
-    const drafts = await listDraftsForUser(user.id);
-    return NextResponse.json({ drafts });
-  });
+  return withAuth(
+    null,
+    async (user) => {
+      const drafts = await listDraftsForUser(user.id);
+      return NextResponse.json({ drafts });
+    },
+    requirePurchasedPlan,
+  );
 }
 
 export async function POST(request: Request) {
-  return withAuth(null, async (user) => {
+  return withAuth(
+    null,
+    async (user) => {
     let json: unknown;
     try {
       json = await request.json();
@@ -39,11 +45,15 @@ export async function POST(request: Request) {
 
     await upsertDraft(user.id, parsed.data.draft);
     return NextResponse.json({ ok: true });
-  });
+    },
+    requirePurchasedPlan,
+  );
 }
 
 export async function DELETE(request: Request) {
-  return withAuth("brand:create", async (user) => {
+  return withAuth(
+    "brand:create",
+    async (user) => {
     let json: unknown;
     try {
       json = await request.json();
@@ -58,5 +68,7 @@ export async function DELETE(request: Request) {
 
     await deleteDraftForUser(user.id, parsed.data.draftId);
     return NextResponse.json({ ok: true });
-  });
+    },
+    requirePurchasedPlan,
+  );
 }

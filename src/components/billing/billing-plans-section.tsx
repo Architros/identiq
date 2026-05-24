@@ -11,7 +11,9 @@ import type { BillingInterval, DisplayPack, PackPlanId } from "@/lib/billing/pla
 import type { ScaleTier } from "@/lib/billing/scale-tiers";
 import { scaleRowsToTiers } from "@/lib/billing/scale-tiers";
 import type { ScalePlanPriceRow } from "@/lib/db/repositories/scale-plan-prices";
+import { BillingPlansGridSkeleton } from "@/components/billing/billing-skeleton";
 import { AUTH_SIGNED_IN_EVENT } from "@/lib/auth/client-storage";
+import { cn } from "@/lib/utils";
 
 type PlansApiResponse = {
   interval: BillingInterval;
@@ -23,11 +25,16 @@ type PlansApiResponse = {
 
 type BillingPlansSectionProps = {
   onCheckoutStarted?: () => void;
+  /** Tighter layout for first-time checkout (plans visible above the fold). */
+  compact?: boolean;
 };
 
 type SectionView = "plans" | "custom";
 
-export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionProps) {
+export function BillingPlansSection({
+  onCheckoutStarted,
+  compact = false,
+}: BillingPlansSectionProps) {
   const router = useRouter();
   const [view, setView] = useState<SectionView>("plans");
   const [interval, setInterval] = useState<BillingInterval>("monthly");
@@ -129,24 +136,36 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
   );
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-      <div className="max-w-2xl">
-        <h2 className="font-display text-2xl font-normal tracking-tight text-foreground">
-          Plans
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Prices and token amounts are loaded from your account database.
-        </p>
-      </div>
+    <section
+      className={cn(
+        "rounded-2xl border border-border bg-surface",
+        compact ? "p-4 sm:p-5" : "p-6 sm:p-8",
+      )}
+    >
+      {!compact ? (
+        <div className="max-w-2xl">
+          <h2 className="font-display text-2xl font-normal tracking-tight text-foreground">
+            Plans
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Prices and token amounts are loaded from your account database.
+          </p>
+        </div>
+      ) : null}
 
       {plansError ? (
-        <p className="mt-4 rounded-xl border border-destructive-border bg-destructive-muted px-3 py-2 text-sm text-destructive-text">
+        <p
+          className={cn(
+            "rounded-xl border border-destructive-border bg-destructive-muted px-3 py-2 text-sm text-destructive-text",
+            compact ? "mt-0" : "mt-4",
+          )}
+        >
           {plansError}
         </p>
       ) : null}
 
       {welcomeEligible && welcome ? (
-        <div className="mt-6">
+        <div className={compact ? "mt-2" : "mt-6"}>
           <WelcomeOfferBanner
             priceLabel={welcome.priceLabel}
             tokenAmount={welcome.displayTokens}
@@ -158,7 +177,12 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
         </div>
       ) : null}
 
-      <div className="mt-8 flex justify-center sm:justify-start">
+      <div
+        className={cn(
+          "flex justify-center sm:justify-start",
+          compact ? "mt-3" : "mt-8",
+        )}
+      >
         <BillingIntervalToggle value={interval} onChange={setInterval} />
       </div>
 
@@ -169,9 +193,14 @@ export function BillingPlansSection({ onCheckoutStarted }: BillingPlansSectionPr
       ) : null}
 
       {plansLoading ? (
-        <p className="mt-6 text-sm text-muted">Loading plans…</p>
+        <BillingPlansGridSkeleton />
       ) : view === "plans" ? (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4",
+            compact ? "mt-3" : "mt-6",
+          )}
+        >
           {packs.map((pack) => (
             <PlanPackCard
               key={pack.id}

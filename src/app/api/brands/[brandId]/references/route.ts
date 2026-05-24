@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import { addBrandReference } from "@/lib/db/repositories/assets";
 import { userOwnsBrand } from "@/lib/db/repositories/brands";
 import type { BrandReference } from "@/lib/brand/types";
@@ -33,5 +33,5 @@ export async function POST(request: Request, context: RouteContext) {
 
     await addBrandReference(user.id, parsed.data.reference);
     return NextResponse.json({ ok: true });
-  });
+  }, requirePurchasedPlan);
 }

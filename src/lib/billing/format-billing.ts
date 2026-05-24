@@ -7,10 +7,14 @@ export function formatMoney(cents: number, currency = "usd"): string {
 }
 
 export function formatBillingDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(iso));
+  }).format(date);
 }
 
 export function formatStatusLabel(status: string): string {

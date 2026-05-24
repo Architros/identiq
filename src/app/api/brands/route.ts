@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import { listBrandsForUser, upsertBrand } from "@/lib/db/repositories/brands";
 import type { BrandKit } from "@/lib/brand/types";
 import type { BrandSummary } from "@/lib/brand/brands";
@@ -22,14 +22,20 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  return withAuth(null, async (user) => {
-    const data = await listBrandsForUser(user.id);
-    return NextResponse.json(data);
-  });
+  return withAuth(
+    null,
+    async (user) => {
+      const data = await listBrandsForUser(user.id);
+      return NextResponse.json(data);
+    },
+    requirePurchasedPlan,
+  );
 }
 
 export async function POST(request: Request) {
-  return withAuth("brand:create", async (user) => {
+  return withAuth(
+    "brand:create",
+    async (user) => {
     let json: unknown;
     try {
       json = await request.json();
@@ -55,5 +61,7 @@ export async function POST(request: Request) {
     await upsertBrand(user.id, parsed.data.kit, parsed.data.summary, references);
 
     return NextResponse.json({ ok: true });
-  });
+    },
+    requirePurchasedPlan,
+  );
 }

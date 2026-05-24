@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test \"src/lib/**/*.test.ts\"",
-    "library:sync": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts"
+    "library:sync": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts",
+    "stripe:listen": "node --env-file=.env.local --import tsx scripts/stripe-listen.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.184",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import {
   chatTitleFromPrompt,
   createIdeasChat,
@@ -23,11 +23,13 @@ export async function GET(request: Request) {
   return withAuth(null, async (user) => {
     const chats = await listIdeasChatsForBrand(user.id, brandId);
     return NextResponse.json({ chats });
-  });
+  }, requirePurchasedPlan);
 }
 
 export async function POST(request: Request) {
-  return withAuth(null, async (user) => {
+  return withAuth(
+    null,
+    async (user) => {
     let json: unknown;
     try {
       json = await request.json();
@@ -54,5 +56,5 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ chat });
-  });
+  }, requirePurchasedPlan);
 }

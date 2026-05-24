@@ -19,16 +19,11 @@ import {
   ensureUserSubscriptionRecord,
   upsertUserSubscription,
 } from "@/lib/db/repositories/subscriptions";
+import { periodEndFromStripeSubscription } from "@/lib/billing/stripe-subscription-period";
 import { getServerSupabaseEnv } from "@/lib/supabase/env";
 
 function siteUrl(): string {
   return getServerSupabaseEnv().NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-}
-
-function periodEndFromStripe(sub: Stripe.Subscription): Date {
-  const end = (sub as Stripe.Subscription & { current_period_end: number })
-    .current_period_end;
-  return new Date(end * 1000);
 }
 
 async function fulfillStripeSubscription(
@@ -40,8 +35,10 @@ async function fulfillStripeSubscription(
   idempotencyKey: string,
   customMonthlyTokenBasis?: number,
 ): Promise<void> {
-  const sub = await stripe.subscriptions.retrieve(subscriptionId);
-  const periodEnd = periodEndFromStripe(sub);
+  const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["items.data.price"],
+  });
+  const periodEnd = periodEndFromStripeSubscription(sub, billingInterval);
   const customerId =
     typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
@@ -339,7 +336,9 @@ export const stripeBillingProvider: BillingProvider = {
 
       if (!subId || !invoice.id) return;
 
-      const sub = await stripe.subscriptions.retrieve(subId);
+      const sub = await stripe.subscriptions.retrieve(subId, {
+        expand: ["items.data.price"],
+      });
       const userId = sub.metadata?.identiq_user_id ?? sub.metadata?.user_id;
       const planId = (sub.metadata?.identiq_plan_id ??
         sub.metadata?.plan_id) as PackPlanId | undefined;
@@ -352,6 +351,7 @@ export const stripeBillingProvider: BillingProvider = {
         return;
       }
 
+      const periodEnd = periodEndFromStripeSubscription(sub, interval);
       const customBasis = sub.metadata?.identiq_custom_tokens
         ? Number(sub.metadata.identiq_custom_tokens)
         : undefined;
@@ -360,7 +360,7 @@ export const stripeBillingProvider: BillingProvider = {
         userId,
         planId,
         billingInterval: interval,
-        periodEnd: periodEndFromStripe(sub),
+        periodEnd,
         idempotencyKey: `invoice_${invoice.id}`,
         stripeInvoiceId: invoice.id,
         customMonthlyTokenBasis: customBasis,
@@ -372,7 +372,7 @@ export const stripeBillingProvider: BillingProvider = {
         billingInterval: interval,
         status: sub.status,
         stripeSubscriptionId: sub.id,
-        currentPeriodEnd: periodEndFromStripe(sub),
+        currentPeriodEnd: periodEnd,
       });
       return;
     }
@@ -390,13 +390,14 @@ export const stripeBillingProvider: BillingProvider = {
 
       if (!userId || !planId) return;
 
+      const periodEnd = periodEndFromStripeSubscription(sub, interval);
       await upsertUserSubscription({
         userId,
         planId,
         billingInterval: interval,
         status: sub.status,
         stripeSubscriptionId: sub.id,
-        currentPeriodEnd: periodEndFromStripe(sub),
+        currentPeriodEnd: periodEnd,
       });
     }
 

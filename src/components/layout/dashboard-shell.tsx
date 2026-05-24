@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { BillingCancelledNotice } from "@/components/billing/billing-cancelled-notice";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { FloatingSupportWrapper } from "@/components/home/floating-support-wrapper";
@@ -22,6 +24,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <AppSidebar />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <ConnectivityBanner />
+                    <Suspense fallback={null}>
+                      <BillingCancelledNotice />
+                    </Suspense>
                     <AppTopbar />
                     <main className="relative flex-1 overflow-y-auto">
                       {children}

@@ -3,11 +3,11 @@ import { getBillingProvider } from "@/lib/billing";
 import { getAuthUser } from "@/lib/auth/session";
 
 type PageProps = {
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ session?: string; retried?: string }>;
 };
 
 export default async function BillingCompletePage({ searchParams }: PageProps) {
-  const { session: sessionId } = await searchParams;
+  const { session: sessionId, retried } = await searchParams;
 
   if (!sessionId) {
     redirect("/billing?checkout=error&message=Missing+checkout+session");
@@ -28,8 +28,9 @@ export default async function BillingCompletePage({ searchParams }: PageProps) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Checkout could not be completed";
+    const retriedQuery = retried ? "&retried=1" : "";
     redirect(
-      `/billing?checkout=error&message=${encodeURIComponent(message)}&session=${encodeURIComponent(sessionId)}`,
+      `/billing?checkout=error&message=${encodeURIComponent(message)}&session=${encodeURIComponent(sessionId)}${retriedQuery}`,
     );
   }
 }

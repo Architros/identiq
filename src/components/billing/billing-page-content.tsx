@@ -5,9 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Coins01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AssetStorageMeter } from "@/components/billing/asset-storage-meter";
 import { BillingPlansSection } from "@/components/billing/billing-plans-section";
+import { BillingSummarySkeleton } from "@/components/billing/billing-skeleton";
 import { useCredits } from "@/contexts/credits-context";
-import type { SubscriptionSummary } from "@/lib/db/repositories/billing-account";
+import type { SubscriptionSummary } from "@/lib/billing/subscription-status";
+import { formatSubscriptionStatusLabel } from "@/lib/billing/subscription-status";
 import { AUTH_SIGNED_IN_EVENT } from "@/lib/auth/client-storage";
 import { formatBillingDate } from "@/lib/billing/format-billing";
 import { cn } from "@/lib/utils";
@@ -17,6 +20,7 @@ type BillingAccountResponse = {
   storage: { used: number; limit: number; remaining: number };
   subscription: SubscriptionSummary | null;
   hasBillingAccess: boolean;
+  stripeCustomerId?: string | null;
 };
 
 export function BillingPageContent() {
@@ -25,14 +29,14 @@ export function BillingPageContent() {
   const { refreshBalance } = useCredits();
   const [account, setAccount] = useState<BillingAccountResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [banner, setBanner] = useState<{
-    type: "success" | "error";
+    type: "success" | "error" | "info";
     message: string;
   } | null>(null);
 
-  const requiredFromUrl = searchParams.get("required") === "1";
   const onboarding =
-    requiredFromUrl || (account != null && !account.hasBillingAccess);
+    loading || account == null || !account.hasBillingAccess;
 
   const loadAccount = useCallback(async () => {
     try {
@@ -57,6 +61,10 @@ export function BillingPageContent() {
       await refreshBalance(data.balance);
     } catch {
       setAccount(null);
+      setBanner({
+        type: "error",
+        message: "Could not load billing data. Check your connection and refresh.",
+      });
     } finally {
       setLoading(false);
     }
@@ -87,21 +95,67 @@ export function BillingPageContent() {
       return;
     }
     if (checkout === "error") {
+      const session = searchParams.get("session");
+      const retried = searchParams.get("retried");
+      if (session && !retried) {
+        router.replace(
+          `/billing/complete?session=${encodeURIComponent(session)}&retried=1`,
+        );
+        return;
+      }
       const message =
         searchParams.get("message") ?? "Checkout could not be completed.";
       setBanner({ type: "error", message });
       router.replace("/billing", { scroll: false });
     }
+    if (searchParams.get("billing") === "cancelled") {
+      setBanner({
+        type: "info",
+        message: "Checkout was cancelled. No charges were made.",
+      });
+      router.replace("/billing", { scroll: false });
+    }
   }, [searchParams, router, loadAccount]);
+
+  const openPortal = useCallback(async () => {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/billing/portal", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setBanner({
+          type: "error",
+          message: data.error ?? "Could not open billing portal.",
+        });
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setBanner({
+        type: "error",
+        message: "Could not open billing portal.",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  }, []);
 
   const balance = account?.balance ?? 0;
   const storage = account?.storage;
   const sub = account?.subscription;
   const hasAccess = account?.hasBillingAccess ?? false;
+  const showPortalButton = Boolean(account?.stripeCustomerId);
 
-  const summaryCards = (
+  const summaryCards = loading ? (
+    <BillingSummarySkeleton />
+  ) : (
     <div className="mb-8 grid gap-4 lg:grid-cols-3">
-      <div className="rounded-2xl border border-border bg-surface p-6 lg:col-span-2">
+      <div
+        className="rounded-2xl border border-border bg-surface p-6 lg:col-span-2"
+      >
         <p className="text-xs font-medium uppercase tracking-wide text-muted">
           Remaining tokens
         </p>
@@ -113,12 +167,15 @@ export function BillingPageContent() {
             strokeWidth={1.75}
             className="text-amber-600"
           />
-          {loading ? "…" : balance.toLocaleString()}
+          {balance.toLocaleString()}
         </p>
-        <p className="mt-2 text-sm text-muted">
-          Library: {storage?.used.toLocaleString() ?? "…"} /{" "}
-          {storage?.limit.toLocaleString() ?? "…"} saved assets
-        </p>
+        {storage ? (
+          <AssetStorageMeter
+            used={storage.used}
+            limit={storage.limit}
+            variant="inline"
+          />
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-border bg-surface p-6">
@@ -130,57 +187,153 @@ export function BillingPageContent() {
             <p className="mt-2 text-lg font-semibold text-foreground">
               {sub.planName}
             </p>
-            <p className="mt-1 text-sm text-muted">
-              {sub.billingInterval === "annual"
-                ? "Annual"
-                : sub.billingInterval === "monthly"
-                  ? "Monthly"
-                  : "—"}{" "}
-              · {sub.status ? sub.status.replace(/_/g, " ") : "active"}
+            <p
+              className={cn(
+                "mt-1 text-sm font-medium",
+                sub.displayStatus === "active" ||
+                  sub.displayStatus === "trialing"
+                  ? "text-accent"
+                  : sub.displayStatus === "expired" ||
+                      sub.displayStatus === "past_due"
+                    ? "text-amber-700"
+                    : "text-muted",
+              )}
+            >
+              {[
+                sub.isSimulated ? "Dev purchase (simulated)" : null,
+                sub.displayStatus === "one_time"
+                  ? null
+                  : sub.billingInterval === "annual"
+                    ? "Annual"
+                    : sub.billingInterval === "monthly"
+                      ? "Monthly"
+                      : null,
+                formatSubscriptionStatusLabel(sub.displayStatus),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-            {sub.currentPeriodEnd ? (
+            {sub.displayStatus === "expired" && sub.currentPeriodEnd ? (
+              <p className="mt-2 text-sm text-amber-800">
+                Expired on {formatBillingDate(sub.currentPeriodEnd)}
+              </p>
+            ) : sub.currentPeriodEnd && sub.isRecurringActive ? (
               <p className="mt-2 text-xs text-muted">
-                Current period ends{" "}
-                {formatBillingDate(sub.currentPeriodEnd)}
+                Current period ends {formatBillingDate(sub.currentPeriodEnd)}
+              </p>
+            ) : sub.lastPurchaseAt && sub.displayStatus === "one_time" ? (
+              <p className="mt-2 text-xs text-muted">
+                Purchased {formatBillingDate(sub.lastPurchaseAt)}
               </p>
             ) : null}
-            {sub.status &&
-            !["active", "trialing", "past_due"].includes(sub.status) ? (
+            {storage && hasAccess ? (
+              <p className="mt-2 text-xs text-muted">
+                Pack includes {storage.limit.toLocaleString()} saved asset
+                slots in your library
+              </p>
+            ) : null}
+            {sub.syncNote ? (
+              <p className="mt-2 text-xs text-amber-700">{sub.syncNote}</p>
+            ) : null}
+            {sub.displayStatus === "expired" ? (
+              <p className="mt-2 text-xs text-muted">
+                Your remaining tokens stay available until they expire. Renew
+                below to start a new billing period.
+              </p>
+            ) : sub.displayStatus === "past_due" ? (
               <p className="mt-2 text-xs text-amber-700">
-                Subscription is not active in Stripe. Tokens already granted
-                remain until they expire.
+                Payment is past due. Update your payment method in Stripe to
+                keep your subscription active.
               </p>
             ) : null}
           </>
+        ) : hasAccess ? (
+          <p className="mt-2 text-sm text-muted">
+            You have an active token balance. Pick a subscription below to
+            manage recurring billing.
+          </p>
         ) : (
-          <p className="mt-2 text-sm text-muted">No subscription on file</p>
+          <p className="mt-2 text-sm text-muted">No purchase on file yet</p>
         )}
       </div>
     </div>
   );
 
+  if (onboarding) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
+        <header className="mb-3">
+          <h1 className="font-display text-xl font-normal tracking-tight text-foreground sm:text-2xl">
+            Choose your plan
+          </h1>
+          <p className="mt-0.5 max-w-2xl text-sm text-muted">
+            Purchase a pack to unlock Identiq. The rest of the app stays locked
+            until checkout completes.
+          </p>
+        </header>
+
+        {banner ? (
+          <div
+            className={cn(
+              "mb-4 rounded-xl border px-4 py-3 text-sm",
+              banner.type === "success"
+                ? "border-accent/30 bg-accent/10 text-foreground"
+                : banner.type === "info"
+                  ? "border-border bg-surface text-muted"
+                  : "border-destructive-border bg-destructive-muted text-destructive-text-subtle",
+            )}
+            role="status"
+          >
+            <div className="flex items-start gap-2">
+              {banner.type === "success" ? (
+                <HugeiconsIcon
+                  icon={Tick01Icon}
+                  size={18}
+                  className="mt-0.5 shrink-0 text-accent"
+                  color="currentColor"
+                  strokeWidth={2}
+                />
+              ) : null}
+              <span>{banner.message}</span>
+            </div>
+            {banner.type === "success" && hasAccess ? (
+              <Link
+                href="/"
+                className="mt-3 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+              >
+                Continue to Home
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        <BillingPlansSection onCheckoutStarted={() => setBanner(null)} compact />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10">
       <header className="mb-8">
         <h1 className="font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
-          {onboarding ? "Choose your plan" : "Billing"}
+          Billing
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          {onboarding
-            ? "Pick a plan to start using Identiq. You need an active pack before creating brands or generating assets."
-            : "Manage your subscription and token balance. Invoices and payment history live in your Stripe customer portal. Tokens are consumed when you generate images."}
+          Manage your subscription and token balance. Invoices and payment history
+          live in your Stripe customer portal. Tokens are consumed when you
+          generate images.
         </p>
+        {showPortalButton ? (
+          <button
+            type="button"
+            disabled={portalLoading}
+            onClick={() => void openPortal()}
+            className="mt-4 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-sidebar-active disabled:opacity-50"
+          >
+            {portalLoading ? "Opening…" : "Manage billing & invoices"}
+          </button>
+        ) : null}
       </header>
-
-      {onboarding && !banner ? (
-        <div
-          className="mb-6 rounded-xl border border-accent/35 bg-accent/[0.06] px-4 py-3 text-sm text-foreground"
-          role="status"
-        >
-          Choose a plan below to unlock the app. Other pages will stay available
-          after checkout completes.
-        </div>
-      ) : null}
 
       {banner ? (
         <div
@@ -188,7 +341,9 @@ export function BillingPageContent() {
             "mb-6 flex flex-col gap-3 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between",
             banner.type === "success"
               ? "border-accent/30 bg-accent/10 text-foreground"
-              : "border-destructive-border bg-destructive-muted text-destructive-text-subtle",
+              : banner.type === "info"
+                ? "border-border bg-surface text-muted"
+                : "border-destructive-border bg-destructive-muted text-destructive-text-subtle",
           )}
           role="status"
         >
@@ -215,19 +370,8 @@ export function BillingPageContent() {
         </div>
       ) : null}
 
-      {onboarding ? (
-        <>
-          <div className="mb-8">
-            <BillingPlansSection onCheckoutStarted={() => setBanner(null)} />
-          </div>
-          {!loading ? summaryCards : null}
-        </>
-      ) : (
-        <>
-          {summaryCards}
-          <BillingPlansSection onCheckoutStarted={() => setBanner(null)} />
-        </>
-      )}
+      {summaryCards}
+      <BillingPlansSection onCheckoutStarted={() => setBanner(null)} />
     </div>
   );
 }

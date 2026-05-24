@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import { deductTokens } from "@/lib/db/repositories/credits";
 
 const bodySchema = z.object({
@@ -37,5 +37,5 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(result);
-  });
+  }, requirePurchasedPlan);
 }

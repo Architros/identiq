@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import { deriveChatTitle } from "@/lib/generation/chat-history";
 import {
@@ -55,5 +55,5 @@ export async function PUT(request: Request, context: RouteContext) {
       deriveChatTitle(parsed.data.messages, parsed.data.title);
 
     return NextResponse.json({ ok: true, title });
-  });
+  }, requirePurchasedPlan);
 }

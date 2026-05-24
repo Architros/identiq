@@ -3,9 +3,8 @@ import {
   billingRequiredUrl,
   isBillingGateExemptApi,
   isBillingGateExemptPath,
-  isSubscriptionGateSkipped,
 } from "@/lib/billing/billing-gate";
-import { userHasBillingAccess } from "@/lib/db/repositories/billing";
+import { userHasBillingAccess } from "@/lib/billing/check-billing-access";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const PUBLIC_PATHS = [
@@ -67,9 +66,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const gateSkipped = isSubscriptionGateSkipped();
-  const hasAccess =
-    gateSkipped || (await userHasBillingAccess(user.id));
+  let hasAccess = false;
+  try {
+    hasAccess = await userHasBillingAccess(user.id);
+  } catch (err) {
+    console.error("[billing-gate] access check failed:", err);
+    hasAccess = false;
+  }
 
   if (pathname === "/login") {
     const dest = request.nextUrl.clone();

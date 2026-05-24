@@ -55,3 +55,16 @@ export function monthlyTokenBasisFromGrantedCustomTokens(
 export function mergeStorageLimits(current: number, purchased: number): number {
   return Math.max(current, purchased);
 }
+
+/** Catalog floor with optional DB override (uses the higher of the two). */
+export function resolvePlanStoredAssetLimit(
+  planId: StoragePackId,
+  dbLimit?: number | null,
+  options?: { customMonthlyTokenBasis?: number },
+): number {
+  const catalogLimit = resolveStorageLimitForPlan(planId, options);
+  if (dbLimit != null && dbLimit > 0) {
+    return mergeStorageLimits(catalogLimit, dbLimit);
+  }
+  return catalogLimit;
+}

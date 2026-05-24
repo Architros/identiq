@@ -133,7 +133,13 @@ function MenuItem({
   );
 }
 
-export function UserMenu() {
+type UserMenuProps = {
+  /** Sidebar footer (dropdown above) or billing header (dropdown below). */
+  variant?: "sidebar" | "header";
+};
+
+export function UserMenu({ variant = "sidebar" }: UserMenuProps) {
+  const isHeader = variant === "header";
   const router = useRouter();
   const { openBuyTokens } = useCredits();
   const { openHelp } = useSupportModals();
@@ -211,12 +217,16 @@ export function UserMenu() {
   const initials = profile ? initialsFromProfile(profile) : "?";
 
   return (
-    <div ref={rootRef} className="relative w-full">
+    <div
+      ref={rootRef}
+      className={cn("relative", !isHeader && "w-full")}
+    >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors",
+          "flex items-center gap-2 rounded-lg text-left transition-colors",
+          isHeader ? "px-2 py-1.5" : "w-full gap-3 px-2 py-2",
           "hover:bg-sidebar-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
           open && "bg-sidebar-active",
         )}
@@ -225,11 +235,13 @@ export function UserMenu() {
         aria-haspopup="menu"
       >
         <UserAvatar profile={profile} initials={initials} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-foreground">
+        <span className={cn("min-w-0", isHeader && "hidden sm:block")}>
+          <span className="block max-w-[140px] truncate text-sm font-medium text-foreground">
             {name}
           </span>
-          <span className="block truncate text-xs text-muted">{email}</span>
+          {!isHeader ? (
+            <span className="block truncate text-xs text-muted">{email}</span>
+          ) : null}
         </span>
         <HugeiconsIcon
           icon={UnfoldMoreIcon}
@@ -244,7 +256,12 @@ export function UserMenu() {
         <div
           role="menu"
           aria-label="Account menu"
-          className="absolute bottom-full left-0 z-50 mb-2 w-[272px] overflow-hidden rounded-xl border border-border bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+          className={cn(
+            "absolute z-50 w-[272px] overflow-hidden rounded-xl border border-border bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
+            isHeader
+              ? "right-0 top-full mt-2"
+              : "bottom-full left-0 mb-2",
+          )}
         >
           <div className="flex items-center gap-3 border-b border-border px-3 py-3">
             <UserAvatar profile={profile} initials={initials} size="lg" />

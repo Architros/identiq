@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon } from "@hugeicons/core-free-icons";
+import { Folder01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 type WelcomeOfferBannerProps = {
@@ -42,9 +42,18 @@ export function WelcomeOfferBanner({
           <p className="font-display text-2xl font-normal tracking-tight text-foreground">
             {priceLabel} for {tokenAmount} tokens
           </p>
-          <p className="mt-2 text-sm font-normal leading-snug text-muted">
-            2K output · ~25 on-brand images ·{" "}
-            {storedAssetLimit.toLocaleString()} stored assets
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-normal leading-snug text-muted">
+            <span>2K output · ~25 on-brand images</span>
+            <span className="inline-flex items-center gap-1 text-foreground/80">
+              <HugeiconsIcon
+                icon={Folder01Icon}
+                size={14}
+                color="currentColor"
+                strokeWidth={1.75}
+                className="text-accent"
+              />
+              {storedAssetLimit.toLocaleString()} saved assets
+            </span>
           </p>
           <p className="mt-1 text-xs font-medium tracking-wide text-foreground/70">
             {claimable ? "One-time welcome pack" : "Already claimed"}

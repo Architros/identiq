@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import {
   listAssetsForBrand,
   listReferencesForBrand,
@@ -28,12 +28,14 @@ export async function GET(_request: Request, context: RouteContext) {
       listReferencesForBrand(user.id, brandId),
     ]);
     return NextResponse.json({ assets, references });
-  });
+  }, requirePurchasedPlan);
 }
 
 export async function POST(request: Request, context: RouteContext) {
   const { brandId } = await context.params;
-  return withAuth("brand:create", async (user) => {
+  return withAuth(
+    "brand:create",
+    async (user) => {
     const owns = await userOwnsBrand(user.id, brandId);
     if (!owns) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -68,5 +70,5 @@ export async function POST(request: Request, context: RouteContext) {
       }
       throw err;
     }
-  });
+  }, requirePurchasedPlan);
 }

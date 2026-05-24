@@ -10,7 +10,10 @@ import {
   type PlanBadge,
   type ResolvedPack,
 } from "@/lib/billing/plan-catalog";
-import { PACK_STORED_ASSET_LIMITS } from "@/lib/billing/storage-entitlement";
+import {
+  PACK_STORED_ASSET_LIMITS,
+  resolvePlanStoredAssetLimit,
+} from "@/lib/billing/storage-entitlement";
 
 const ANNUAL_MONTHS_CHARGED = 10;
 const ANNUAL_MONTHS_GRANTED = 12;
@@ -106,10 +109,10 @@ export function toDisplayPackFromDb(
   if (!catalog) return null;
 
   const resolved = resolvePackFromDb(plan, interval);
-  const storedAssetLimit =
-    plan.asset_storage_limit ??
-    PACK_STORED_ASSET_LIMITS[planId as keyof typeof PACK_STORED_ASSET_LIMITS] ??
-    PACK_STORED_ASSET_LIMITS.starter;
+  const storedAssetLimit = resolvePlanStoredAssetLimit(
+    planId,
+    plan.asset_storage_limit,
+  );
 
   const billedLine =
     interval === "annual"
@@ -124,7 +127,9 @@ export function toDisplayPackFromDb(
   const features = [
     `${periodTokens} (~${estimateImages(resolved.tokenAmount)} images per ${interval === "annual" ? "year" : "period"})`,
     formatStoredAssetsLimit(storedAssetLimit),
-    ...catalog.features,
+    ...catalog.features.filter(
+      (line) => !line.toLowerCase().includes("unlimited brands"),
+    ),
     "Unused tokens do not roll over",
     "Unlimited brands",
   ];
@@ -170,8 +175,10 @@ export function welcomeDisplayFromDb(
 ): DisplayPack | null {
   if (!plan || plan.id !== "welcome") return null;
   const resolved = resolvePackFromDb(plan, "monthly");
-  const storedAssetLimit =
-    plan.asset_storage_limit ?? PACK_STORED_ASSET_LIMITS.welcome;
+  const storedAssetLimit = resolvePlanStoredAssetLimit(
+    "welcome",
+    plan.asset_storage_limit,
+  );
 
   return {
     id: "welcome",

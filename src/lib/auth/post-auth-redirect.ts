@@ -1,5 +1,5 @@
 import { isSubscriptionGateSkipped } from "@/lib/billing/billing-gate";
-import { userHasBillingAccess } from "@/lib/db/repositories/billing";
+import { userHasBillingAccess } from "@/lib/billing/check-billing-access";
 import {
   DASHBOARD_PATH,
   SUBSCRIPTION_PATH,

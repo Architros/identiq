@@ -2,6 +2,10 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
+import {
+  AssetStorageMeter,
+  isStoredAssetsFeatureLine,
+} from "@/components/billing/asset-storage-meter";
 import { Badge } from "@/components/ui/badge";
 import {
   formatPlanPrice,
@@ -57,19 +61,30 @@ export function PlanPackCard({
       </div>
 
       <ul className="mt-5 flex-1 space-y-2.5">
-        {pack.features.map((feature) => (
+        {pack.features.map((feature, index) => (
           <li
-            key={feature}
+            key={`${pack.id}-feature-${index}`}
             className="flex items-start gap-2 text-sm text-foreground"
           >
-            <HugeiconsIcon
-              icon={Tick01Icon}
-              size={16}
-              color="currentColor"
-              strokeWidth={2}
-              className="mt-0.5 shrink-0 text-accent"
-            />
-            <span>{feature}</span>
+            {isStoredAssetsFeatureLine(feature) ? (
+              <AssetStorageMeter
+                used={0}
+                limit={pack.storedAssetLimit}
+                variant="feature"
+                className="mt-0.5"
+              />
+            ) : (
+              <>
+                <HugeiconsIcon
+                  icon={Tick01Icon}
+                  size={16}
+                  color="currentColor"
+                  strokeWidth={2}
+                  className="mt-0.5 shrink-0 text-accent"
+                />
+                <span>{feature}</span>
+              </>
+            )}
           </li>
         ))}
       </ul>

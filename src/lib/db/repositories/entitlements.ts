@@ -3,6 +3,7 @@ import {
   DEFAULT_FREE_ASSET_STORAGE_LIMIT,
   mergeStorageLimits,
 } from "@/lib/billing/storage-entitlement";
+import { syncUserStorageLimitFromPurchases } from "@/lib/db/repositories/storage-sync";
 
 export type AssetStorageEntitlement = {
   limit: number;
@@ -38,12 +39,26 @@ export async function getUserAssetStorageLimit(
   return data.asset_storage_limit as number;
 }
 
+async function getUserAssetStorageLimitAdmin(userId: string): Promise<number> {
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin
+    .from("profiles")
+    .select("asset_storage_limit")
+    .eq("id", userId)
+    .single();
+
+  if (error || data?.asset_storage_limit == null) {
+    return DEFAULT_FREE_ASSET_STORAGE_LIMIT;
+  }
+  return data.asset_storage_limit as number;
+}
+
 export async function upgradeUserAssetStorageLimit(
   userId: string,
   purchasedLimit: number,
 ): Promise<number> {
   const admin = createServiceRoleClient();
-  const current = await getUserAssetStorageLimit(userId);
+  const current = await getUserAssetStorageLimitAdmin(userId);
   const next = mergeStorageLimits(current, purchasedLimit);
   if (next === current) return next;
 
@@ -58,11 +73,14 @@ export async function upgradeUserAssetStorageLimit(
 
 export async function getAssetStorageEntitlement(
   userId: string,
+  options?: { syncFromPurchases?: boolean },
 ): Promise<AssetStorageEntitlement> {
-  const [limit, used] = await Promise.all([
-    getUserAssetStorageLimit(userId),
-    countUserSavedAssets(userId),
-  ]);
+  const limit =
+    options?.syncFromPurchases === false
+      ? await getUserAssetStorageLimit(userId)
+      : await syncUserStorageLimitFromPurchases(userId);
+
+  const used = await countUserSavedAssets(userId);
   return {
     limit,
     used,

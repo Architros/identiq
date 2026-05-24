@@ -1,15 +1,15 @@
-import { getPackDefinition, type PackPlanId } from "@/lib/billing/plan-catalog";
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  resolveSubscriptionSummaryFromSnapshots,
+  type CheckoutSnapshot,
+  type SubscriptionSnapshot,
+} from "@/lib/billing/subscription-resolve";
+import type { SubscriptionSummary } from "@/lib/billing/subscription-status";
 import type { BillingInterval } from "@/lib/billing/plan-catalog";
 import { listActivePlans } from "@/lib/db/repositories/billing";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+import { getServerSupabaseEnv } from "@/lib/supabase/env";
 
-export type SubscriptionSummary = {
-  planId: string | null;
-  planName: string | null;
-  billingInterval: BillingInterval | null;
-  status: string | null;
-  currentPeriodEnd: string | null;
-};
+export type { SubscriptionSummary };
 
 async function planNameMap(): Promise<Map<string, string>> {
   const plans = await listActivePlans();
@@ -20,60 +20,58 @@ async function planNameMap(): Promise<Map<string, string>> {
   return map;
 }
 
-function planDisplayName(planId: string, names: Map<string, string>): string {
-  if (names.has(planId)) return names.get(planId)!;
-  if (planId === "welcome") return "Welcome offer";
-  if (planId === "custom") return "Scale";
-  const def = getPackDefinition(planId as PackPlanId);
-  return def?.name ?? planId;
-}
-
 export async function getSubscriptionSummary(
   userId: string,
 ): Promise<SubscriptionSummary | null> {
   const admin = createServiceRoleClient();
   const names = await planNameMap();
+  const { BILLING_MODE } = getServerSupabaseEnv();
 
-  const { data, error } = await admin
-    .from("subscriptions")
-    .select("plan_id, plan, billing_interval, status, current_period_end")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!error && data) {
-    const planId =
-      (data.plan_id as string | null) ?? (data.plan as string | null) ?? null;
-    if (planId) {
-      return {
-        planId,
-        planName: planDisplayName(planId, names),
-        billingInterval:
-          (data.billing_interval as BillingInterval | null) ?? null,
-        status: (data.status as string | null) ?? null,
-        currentPeriodEnd: (data.current_period_end as string | null) ?? null,
-      };
-    }
-  }
-
-  const { data: checkout } = await admin
+  const { data: lastCheckout } = await admin
     .from("billing_checkout_sessions")
-    .select("plan_id, billing_interval, completed_at")
+    .select("plan_id, billing_interval, completed_at, simulated")
     .eq("user_id", userId)
     .eq("status", "completed")
-    .neq("plan_id", "welcome")
     .order("completed_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!checkout?.plan_id) return null;
+  const { data: subRow } = await admin
+    .from("subscriptions")
+    .select(
+      "plan_id, plan, billing_interval, status, current_period_end, stripe_subscription_id",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  const planId = checkout.plan_id as string;
-  return {
-    planId,
-    planName: planDisplayName(planId, names),
-    billingInterval:
-      (checkout.billing_interval as BillingInterval | null) ?? "monthly",
-    status: "active",
-    currentPeriodEnd: null,
-  };
+  const checkout: CheckoutSnapshot | null = lastCheckout?.plan_id
+    ? {
+        planId: lastCheckout.plan_id as string,
+        billingInterval:
+          (lastCheckout.billing_interval as BillingInterval | null) ?? null,
+        completedAt: (lastCheckout.completed_at as string | null) ?? null,
+        simulated: Boolean(lastCheckout.simulated),
+      }
+    : null;
+
+  const subscription: SubscriptionSnapshot | null = subRow
+    ? {
+        planId: (subRow.plan_id as string | null) ?? null,
+        legacyPlan: (subRow.plan as string | null) ?? null,
+        billingInterval:
+          (subRow.billing_interval as BillingInterval | null) ?? null,
+        status: (subRow.status as string | null) ?? null,
+        currentPeriodEnd:
+          (subRow.current_period_end as string | null) ?? null,
+        stripeSubscriptionId:
+          (subRow.stripe_subscription_id as string | null) ?? null,
+      }
+    : null;
+
+  return resolveSubscriptionSummaryFromSnapshots({
+    checkout,
+    subscription,
+    billingMode: BILLING_MODE,
+    planNames: names,
+  });
 }

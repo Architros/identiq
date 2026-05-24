@@ -1,4 +1,9 @@
 import { resolveCheckoutPack } from "@/lib/billing/resolve-checkout";
+import {
+  ACTIVE_SUBSCRIPTION_STATUSES,
+  normalizeSubscriptionPlanId,
+} from "@/lib/billing/subscription-status";
+
 import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
 import {
   monthlyTokenBasisFromGrantedCustomTokens,
@@ -44,39 +49,34 @@ export async function userHasCompletedCheckout(userId: string): Promise<boolean>
   return (count ?? 0) > 0;
 }
 
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-]);
-
-/** True when the user may use the app (any completed purchase or active subscription). */
-export async function userHasBillingAccess(userId: string): Promise<boolean> {
+/** True when the user has a currently valid recurring subscription period. */
+export async function userHasActiveRecurringSubscription(
+  userId: string,
+): Promise<boolean> {
   const admin = createServiceRoleClient();
+  const { data } = await admin
+    .from("subscriptions")
+    .select("plan_id, plan, status, current_period_end")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  const [checkoutRes, subRes] = await Promise.all([
-    admin
-      .from("billing_checkout_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed"),
-    admin
-      .from("subscriptions")
-      .select("status")
-      .eq("user_id", userId)
-      .maybeSingle(),
-  ]);
+  const planId = normalizeSubscriptionPlanId(
+    data?.plan_id as string | null,
+    data?.plan as string | null,
+  );
+  if (!planId || planId === "welcome") return false;
 
-  if (!checkoutRes.error && (checkoutRes.count ?? 0) > 0) {
-    return true;
+  const status = data?.status as string | undefined;
+  if (!status || !ACTIVE_SUBSCRIPTION_STATUSES.has(status)) {
+    return false;
   }
 
-  const status = subRes.data?.status as string | undefined;
-  if (status && ACTIVE_SUBSCRIPTION_STATUSES.has(status)) {
-    return true;
+  const periodEnd = data?.current_period_end as string | null | undefined;
+  if (periodEnd) {
+    return new Date(periodEnd).getTime() > Date.now();
   }
 
-  return false;
+  return true;
 }
 
 export async function userHasRedeemedWelcomeOffer(

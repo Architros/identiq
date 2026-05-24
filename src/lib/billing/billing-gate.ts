@@ -9,7 +9,9 @@ const BILLING_API_EXACT = new Set([
   "/api/billing/checkout",
   "/api/billing/plans",
   "/api/billing/account",
+  "/api/billing/access",
   "/api/billing/checkout/complete",
+  "/api/billing/portal",
 ]);
 
 /** Paths that do not require a completed purchase (auth + billing checkout flow). */
@@ -23,6 +25,8 @@ export function isBillingGateExemptPath(pathname: string): boolean {
 /** API routes allowed before the user has billing access. */
 export function isBillingGateExemptApi(pathname: string): boolean {
   if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname === "/api/me") return true;
+  if (pathname === "/api/feedback") return true;
   return BILLING_API_EXACT.has(pathname);
 }
 

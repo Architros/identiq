@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withAuth } from "@/lib/api/with-auth";
+import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import {
   getBrandForUser,
   patchBrandForUser,
@@ -76,5 +76,5 @@ export async function PATCH(
     }
 
     return NextResponse.json({ kit });
-  });
+  }, requirePurchasedPlan);
 }

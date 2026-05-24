@@ -28,7 +28,11 @@ import {
   writeLastActiveBrandId,
 } from "@/lib/brand/active-brand-storage";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
-import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
+import {
+  isServiceUnavailableResponse,
+  isSubscriptionRequiredResponse,
+  redirectToBillingRequired,
+} from "@/lib/api/handle-api-response";
 import {
   AUTH_SIGNED_IN_EVENT,
   AUTH_SIGNED_OUT_EVENT,
@@ -73,6 +77,13 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const refreshBrands = useCallback(async () => {
     try {
       const res = await fetch("/api/brands", { credentials: "same-origin" });
+      if (await isSubscriptionRequiredResponse(res)) {
+        setUserKits({});
+        setUserSummaries([]);
+        setActiveBrandId(NO_BRAND_ID);
+        redirectToBillingRequired();
+        return;
+      }
       if (isServiceUnavailableResponse(res)) {
         connectivity?.reportServiceUnavailable();
       } else if (res.ok) {
@@ -228,27 +239,37 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
 
   const createBrand = useCallback(
     async (kit: BrandKit, summary: BrandSummary) => {
-      try {
-        const res = await fetch("/api/brands", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            kit,
-            summary,
-            references: kit.references?.map((r) => ({
-              id: r.id,
-              name: r.name,
-              type: r.type,
-              url: r.url,
-              source: r.source,
-            })),
-          }),
-        });
-        if (!res.ok) throw new Error("Failed to save brand");
-      } catch {
-        saveUserBrand(kit, summary);
+      const res = await fetch("/api/brands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          kit,
+          summary,
+          references: kit.references?.map((r) => ({
+            id: r.id,
+            name: r.name,
+            type: r.type,
+            url: r.url,
+            source: r.source,
+          })),
+        }),
+      });
+
+      if (await isSubscriptionRequiredResponse(res)) {
+        redirectToBillingRequired();
+        throw new Error("subscription_required");
       }
+
+      if (!res.ok) {
+        if (isServiceUnavailableResponse(res)) {
+          connectivity?.reportServiceUnavailable();
+          saveUserBrand(kit, summary);
+        } else {
+          throw new Error("Failed to save brand");
+        }
+      }
+
       setUserKits((prev) => ({ ...prev, [kit.id]: kit }));
       setUserSummaries((prev) => [
         summary,
@@ -257,7 +278,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       setActiveBrandId(kit.id);
       writeLastActiveBrandId(kit.id);
     },
-    [],
+    [connectivity],
   );
 
   const value = useMemo(

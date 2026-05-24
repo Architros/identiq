@@ -8,6 +8,7 @@ import {
   monthlyTokenBasisFromGrantedCustomTokens,
   PACK_STORED_ASSET_LIMITS,
   resolveCustomPackStorageLimit,
+  resolvePlanStoredAssetLimit,
   resolveStorageLimitForPlan,
 } from "./storage-entitlement.js";
 
@@ -131,6 +132,12 @@ describe("storage entitlements", () => {
   it("merges storage limits upward only", () => {
     assert.equal(mergeStorageLimits(150, 500), 500);
     assert.equal(mergeStorageLimits(500, 150), 500);
+  });
+
+  it("uses catalog floor when DB plan limit is stale", () => {
+    assert.equal(resolvePlanStoredAssetLimit("starter", 25), 150);
+    assert.equal(resolvePlanStoredAssetLimit("starter", 150), 150);
+    assert.equal(resolvePlanStoredAssetLimit("starter", 200), 200);
   });
 });
 
