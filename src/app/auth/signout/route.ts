@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { clearBillingAccessCookie } from "@/lib/billing/billing-access-cookie";
 import { createClient } from "@/lib/supabase/server";
 
 function clearSupabaseAuthCookies(
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   const loginUrl = new URL("/login", request.url);
   const response = NextResponse.redirect(loginUrl, { status: 302 });
   clearSupabaseAuthCookies(response, cookieStore.getAll());
+  clearBillingAccessCookie(response);
   return response;
 }
 

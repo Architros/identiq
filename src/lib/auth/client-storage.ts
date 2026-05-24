@@ -22,6 +22,32 @@ export function clearIdentiqClientStorage(): void {
 
 export const AUTH_SIGNED_OUT_EVENT = "identiq:auth-signed-out";
 export const AUTH_SIGNED_IN_EVENT = "identiq:auth-signed-in";
+/** Fired when checkout completes or billing access is confirmed. */
+export const BILLING_ACCESS_GRANTED_EVENT = "identiq:billing-access-granted";
+
+const BILLING_ACCESS_CACHE_KEY = "identiq_billing_access";
+
+/** Optimistic client hint (session); httpOnly cookie is authoritative for middleware. */
+export function readCachedBillingAccess(): boolean | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = sessionStorage.getItem(BILLING_ACCESS_CACHE_KEY);
+    if (value === "1") return true;
+    if (value === "0") return false;
+  } catch {
+    // Private mode
+  }
+  return null;
+}
+
+export function writeCachedBillingAccess(hasAccess: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(BILLING_ACCESS_CACHE_KEY, hasAccess ? "1" : "0");
+  } catch {
+    // Private mode
+  }
+}
 
 export function dispatchAuthSignedOut(): void {
   window.dispatchEvent(new Event(AUTH_SIGNED_OUT_EVENT));
@@ -29,4 +55,9 @@ export function dispatchAuthSignedOut(): void {
 
 export function dispatchAuthSignedIn(): void {
   window.dispatchEvent(new Event(AUTH_SIGNED_IN_EVENT));
+}
+
+export function dispatchBillingAccessGranted(): void {
+  writeCachedBillingAccess(true);
+  window.dispatchEvent(new Event(BILLING_ACCESS_GRANTED_EVENT));
 }

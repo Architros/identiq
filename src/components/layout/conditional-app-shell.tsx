@@ -1,12 +1,23 @@
 "use client";
 
 import { Suspense } from "react";
+import { BillingAccessProvider } from "@/contexts/billing-access-context";
 import { BillingGateShell } from "@/components/layout/billing-gate-shell";
 
-export function ConditionalAppShell({ children }: { children: React.ReactNode }) {
+type ConditionalAppShellProps = {
+  children: React.ReactNode;
+  initialHasBillingAccess?: boolean | null;
+};
+
+export function ConditionalAppShell({
+  children,
+  initialHasBillingAccess = null,
+}: ConditionalAppShellProps) {
   return (
-    <Suspense fallback={null}>
-      <BillingGateShell>{children}</BillingGateShell>
-    </Suspense>
+    <BillingAccessProvider initialHasBillingAccess={initialHasBillingAccess}>
+      <Suspense fallback={null}>
+        <BillingGateShell>{children}</BillingGateShell>
+      </Suspense>
+    </BillingAccessProvider>
   );
 }

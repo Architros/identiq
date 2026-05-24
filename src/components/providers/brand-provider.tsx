@@ -31,7 +31,6 @@ import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import {
   isServiceUnavailableResponse,
   isSubscriptionRequiredResponse,
-  redirectToBillingRequired,
 } from "@/lib/api/handle-api-response";
 import {
   AUTH_SIGNED_IN_EVENT,
@@ -81,7 +80,6 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         setUserKits({});
         setUserSummaries([]);
         setActiveBrandId(NO_BRAND_ID);
-        redirectToBillingRequired();
         return;
       }
       if (isServiceUnavailableResponse(res)) {
@@ -257,7 +255,6 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (await isSubscriptionRequiredResponse(res)) {
-        redirectToBillingRequired();
         throw new Error("subscription_required");
       }
 

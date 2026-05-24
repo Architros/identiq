@@ -11,8 +11,12 @@ import { BillingSummarySkeleton } from "@/components/billing/billing-skeleton";
 import { useCredits } from "@/contexts/credits-context";
 import type { SubscriptionSummary } from "@/lib/billing/subscription-status";
 import { formatSubscriptionStatusLabel } from "@/lib/billing/subscription-status";
-import { AUTH_SIGNED_IN_EVENT } from "@/lib/auth/client-storage";
+import {
+  AUTH_SIGNED_IN_EVENT,
+  dispatchBillingAccessGranted,
+} from "@/lib/auth/client-storage";
 import { formatBillingDate } from "@/lib/billing/format-billing";
+import { useBillingAccess } from "@/contexts/billing-access-context";
 import { cn } from "@/lib/utils";
 
 type BillingAccountResponse = {
@@ -27,6 +31,7 @@ export function BillingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { refreshBalance } = useCredits();
+  const { hasBillingAccess: gateAccess } = useBillingAccess();
   const [account, setAccount] = useState<BillingAccountResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -36,7 +41,8 @@ export function BillingPageContent() {
   } | null>(null);
 
   const onboarding =
-    loading || account == null || !account.hasBillingAccess;
+    gateAccess === false &&
+    (loading || account == null || !account.hasBillingAccess);
 
   const loadAccount = useCallback(async () => {
     try {
@@ -90,6 +96,7 @@ export function BillingPageContent() {
           ? `Payment successful. Your balance is now ${Number(balance).toLocaleString()} tokens.`
           : "Payment successful. Your tokens have been updated.",
       });
+      dispatchBillingAccessGranted();
       void loadAccount();
       router.replace("/billing", { scroll: false });
       return;
@@ -146,7 +153,7 @@ export function BillingPageContent() {
   const balance = account?.balance ?? 0;
   const storage = account?.storage;
   const sub = account?.subscription;
-  const hasAccess = account?.hasBillingAccess ?? false;
+  const hasAccess = gateAccess === true || (account?.hasBillingAccess ?? false);
   const showPortalButton = Boolean(account?.stripeCustomerId);
 
   const summaryCards = loading ? (

@@ -1,3 +1,5 @@
+"use client";
+
 import { AdLibraryFeature } from "@/components/home/ad-library-feature";
 import { CreateImageCard } from "@/components/home/create-image-card";
 import { ActionCardsGrid } from "@/components/home/action-cards-grid";

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingProvider } from "@/lib/billing";
+import { persistBillingAccessCookie } from "@/lib/billing/billing-access-cookie";
 import { getAuthUser } from "@/lib/auth/session";
 
 type PageProps = {
@@ -22,6 +23,7 @@ export default async function BillingCompletePage({ searchParams }: PageProps) {
   try {
     const billing = getBillingProvider();
     const { balance } = await billing.fulfillCheckout(sessionId, user.id);
+    await persistBillingAccessCookie();
     redirect(
       `/billing?checkout=success&balance=${balance}&session=${encodeURIComponent(sessionId)}`,
     );

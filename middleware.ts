@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  applyBillingAccessCookie,
+  hasBillingAccessCookie,
+} from "@/lib/billing/billing-access-cookie";
+import {
   billingRequiredUrl,
   isBillingGateExemptApi,
   isBillingGateExemptPath,
@@ -66,25 +70,61 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  let hasAccess = false;
-  try {
-    hasAccess = await userHasBillingAccess(user.id);
-  } catch (err) {
-    console.error("[billing-gate] access check failed:", err);
-    hasAccess = false;
+  let hasAccess = hasBillingAccessCookie(request);
+  let accessCheckFailed = false;
+
+  if (!hasAccess) {
+    try {
+      hasAccess = await userHasBillingAccess(user.id);
+      if (hasAccess) {
+        applyBillingAccessCookie(response);
+      }
+    } catch (err) {
+      console.error("[billing-gate] access check failed:", err);
+      accessCheckFailed = true;
+      hasAccess = hasBillingAccessCookie(request);
+    }
   }
 
   if (pathname === "/login") {
     const dest = request.nextUrl.clone();
-    dest.pathname = hasAccess ? "/" : "/billing";
-    dest.search = hasAccess ? "" : "required=1";
-    return NextResponse.redirect(dest);
+    if (hasAccess) {
+      dest.pathname = "/";
+      dest.search = "";
+    } else {
+      dest.pathname = "/billing";
+      dest.searchParams.set("required", "1");
+    }
+    const loginRedirect = NextResponse.redirect(dest);
+    if (hasAccess) {
+      applyBillingAccessCookie(loginRedirect);
+    }
+    return loginRedirect;
+  }
+
+  if (
+    hasAccess &&
+    pathname === "/billing" &&
+    request.nextUrl.searchParams.get("required") === "1" &&
+    !request.nextUrl.searchParams.get("checkout")
+  ) {
+    const dest = request.nextUrl.clone();
+    dest.searchParams.delete("required");
+    const billingRedirect = NextResponse.redirect(dest);
+    applyBillingAccessCookie(billingRedirect);
+    return billingRedirect;
   }
 
   if (!hasAccess) {
     if (pathname.startsWith("/api/")) {
       if (isBillingGateExemptApi(pathname)) {
         return response;
+      }
+      if (accessCheckFailed) {
+        return NextResponse.json(
+          { error: "service_unavailable" },
+          { status: 503 },
+        );
       }
       return NextResponse.json(
         { error: "subscription_required" },
@@ -93,8 +133,15 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isBillingGateExemptPath(pathname)) {
+      if (accessCheckFailed) {
+        return response;
+      }
       return NextResponse.redirect(billingRequiredUrl(request.nextUrl.origin));
     }
+  }
+
+  if (hasAccess) {
+    applyBillingAccessCookie(response);
   }
 
   return response;
