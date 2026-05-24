@@ -127,7 +127,7 @@ export function ColorPalettePicker({
             role="accent"
             label="Accent"
             optional
-            value={hasAccent ? accent! : "#E879F9"}
+            value={hasAccent ? accent! : "#FF9B4D"}
             displayValue={hasAccent ? accent : ""}
             emptySwatch={!hasAccent}
             onChange={(v) =>

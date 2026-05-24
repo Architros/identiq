@@ -3,9 +3,9 @@ import { getDefaultAssetSelections } from "@/lib/brand/asset-catalog";
 
 /** Default palette on a brand-new wizard draft (not treated as user input). */
 export const EMPTY_DRAFT_COLORS = {
-  primary: "#C46DFD",
+  primary: "#F86E29",
   secondary: "#111827",
-  accent: "#E879F9",
+  accent: "#FF9B4D",
 } as const;
 
 function selectionsDifferFromDefault(

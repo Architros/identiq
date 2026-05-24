@@ -10,6 +10,7 @@ import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { ConnectivityProvider } from "@/contexts/connectivity-context";
 import { ConnectivityBanner } from "@/components/shared/connectivity-banner";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ToastContainer } from "@/components/shared/toast-container";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <main className="relative flex-1 overflow-y-auto">
                       {children}
                     </main>
+                    <SiteFooter />
                     <FloatingSupportWrapper />
                   </div>
                 </div>

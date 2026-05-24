@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FloatingSupportWrapper } from "@/components/home/floating-support-wrapper";
 import { UserMenu } from "@/components/layout/user-menu";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ToastContainer } from "@/components/shared/toast-container";
 import { CreditsProvider } from "@/contexts/credits-context";
 import { SupportModalsProvider } from "@/contexts/support-modals-context";
@@ -27,6 +28,7 @@ export function BillingOnboardingShell({
               <UserMenu variant="header" />
             </header>
             <main className="relative flex-1 overflow-y-auto">{children}</main>
+            <SiteFooter />
             <FloatingSupportWrapper />
             <ToastContainer />
           </div>

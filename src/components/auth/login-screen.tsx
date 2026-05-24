@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { EmailOtpStep } from "@/components/auth/email-otp-step";
 import { normalizeEmail } from "@/lib/auth/email-otp";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { createClient } from "@/lib/supabase/client";
 
 const HERO_IMAGE = "/Hiker in Misty Mountains.png";
@@ -243,8 +245,9 @@ function LoginForm() {
 
 export function LoginScreen() {
   return (
-    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
-      <div className="relative h-[38vh] min-h-[220px] shrink-0 p-3 pb-0 lg:h-auto lg:min-h-screen lg:w-1/2 lg:p-4 lg:pr-2">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex flex-1 flex-col lg:flex-row">
+      <div className="relative h-[38vh] min-h-[220px] shrink-0 p-3 pb-0 lg:h-auto lg:min-h-0 lg:w-1/2 lg:p-4 lg:pr-2">
         <div className="relative h-full w-full overflow-hidden rounded-2xl lg:rounded-3xl lg:rounded-r-[1.75rem]">
           <Image
             src={HERO_IMAGE}
@@ -266,6 +269,8 @@ export function LoginScreen() {
           <LoginForm />
         </Suspense>
       </div>
+      </div>
+      <SiteFooter />
     </div>
   );
 }

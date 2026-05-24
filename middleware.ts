@@ -15,6 +15,8 @@ const PUBLIC_PATHS = [
   "/login",
   "/auth/callback",
   "/auth/signout",
+  "/privacy",
+  "/terms",
 ];
 
 function isPublicPath(pathname: string): boolean {

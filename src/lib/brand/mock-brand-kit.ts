@@ -6,7 +6,7 @@ export const mockBrandKit: BrandKit = {
   displayName: "B KREATIVE",
   memory: {
     brand_style: "minimal creative agency",
-    primary_color: "#C46DFD",
+    primary_color: "#F86E29",
     secondary_color: "#111827",
     font_pairing: "Varela + Geist",
     visual_language: "soft gradients, rounded cards",

@@ -4,6 +4,7 @@ export function isSubscriptionGateSkipped(): boolean {
 }
 
 const BILLING_PAGE_PREFIXES = ["/billing"];
+const LEGAL_PAGE_PREFIXES = ["/privacy", "/terms"];
 
 const BILLING_API_EXACT = new Set([
   "/api/billing/checkout",
@@ -17,6 +18,13 @@ const BILLING_API_EXACT = new Set([
 /** Paths that do not require a completed purchase (auth + billing checkout flow). */
 export function isBillingGateExemptPath(pathname: string): boolean {
   if (pathname === "/api/billing/webhook") return true;
+  if (
+    LEGAL_PAGE_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  ) {
+    return true;
+  }
   return BILLING_PAGE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

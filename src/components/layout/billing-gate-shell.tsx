@@ -7,7 +7,13 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { useBillingAccess } from "@/contexts/billing-access-context";
 import { readCachedBillingAccess } from "@/lib/auth/client-storage";
 
-const BARE_PATH_PREFIXES = ["/login", "/auth/", "/billing/simulated/"];
+const BARE_PATH_PREFIXES = [
+  "/login",
+  "/auth/",
+  "/billing/simulated/",
+  "/privacy",
+  "/terms",
+];
 
 function isBarePath(pathname: string): boolean {
   return BARE_PATH_PREFIXES.some(

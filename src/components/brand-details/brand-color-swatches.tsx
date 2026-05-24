@@ -56,13 +56,13 @@ function ColorSwatchCard({
   onSave: (hex: string) => Promise<void>;
   onDiscard: () => void;
 }) {
-  const [draft, setDraft] = useState(swatch.hex ?? "#E879F9");
+  const [draft, setDraft] = useState(swatch.hex ?? "#FF9B4D");
   const [saving, setSaving] = useState(false);
   const hasColor = Boolean(swatch.hex);
 
   useEffect(() => {
     if (isEditing) {
-      setDraft(swatch.hex ?? "#E879F9");
+      setDraft(swatch.hex ?? "#FF9B4D");
     }
   }, [isEditing, swatch.hex]);
 

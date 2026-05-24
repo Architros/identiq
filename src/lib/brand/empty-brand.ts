@@ -18,7 +18,7 @@ export const emptyBrandKit: BrandKit = {
   displayName: "Create a brand",
   memory: {
     brand_style: "",
-    primary_color: "#C46DFD",
+    primary_color: "#F86E29",
     secondary_color: "#111827",
     font_pairing: "",
     visual_language: "",

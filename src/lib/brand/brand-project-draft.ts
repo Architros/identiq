@@ -141,10 +141,10 @@ export const COLOR_PRESETS: {
 }[] = [
   {
     id: "identiq",
-    label: "Identiq Purple",
-    primary: "#C46DFD",
+    label: "Identiq Orange",
+    primary: "#F86E29",
     secondary: "#111827",
-    accent: "#E879F9",
+    accent: "#FF9B4D",
   },
   {
     id: "ocean",
@@ -193,7 +193,7 @@ export function createEmptyDraft(): BrandProjectDraft {
     description: "",
     sector: "",
     feelings: [],
-    colors: { primary: "#C46DFD", secondary: "#111827", accent: "#E879F9" },
+    colors: { primary: "#F86E29", secondary: "#111827", accent: "#FF9B4D" },
     typography: {
       hasCustomFont: false,
       fontPrimary: "",

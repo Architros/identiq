@@ -59,7 +59,7 @@ function normalizeTypography(
 }
 
 export function normalizeBrandDraft(draft: BrandProjectDraft): BrandProjectDraft {
-  const primary = draft.colors?.primary ?? "#C46DFD";
+  const primary = draft.colors?.primary ?? "#F86E29";
   const secondary = draft.colors?.secondary ?? "#111827";
 
   const logo =
