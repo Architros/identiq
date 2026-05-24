@@ -1,3 +1,4 @@
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import {
   applyBillingAccessCookie,
@@ -9,67 +10,93 @@ import {
   isBillingGateExemptPath,
 } from "@/lib/billing/billing-gate";
 import { userHasBillingAccess } from "@/lib/billing/check-billing-access";
-import { updateSession } from "@/lib/supabase/middleware";
+import {
+  isPublicAppPath,
+  loginPathWithNext,
+} from "@/lib/auth/protected-paths";
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/auth/callback",
-  "/auth/signout",
-  "/privacy",
-  "/terms",
-];
-
-function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return true;
-  }
-  if (pathname.startsWith("/_next")) return true;
-  if (pathname.startsWith("/favicon")) return true;
-  if (pathname === "/api/billing/webhook") return true;
-  if (pathname === "/api/auth/otp/send") return true;
-  return false;
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie.name, cookie.value);
+  });
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const search = request.nextUrl.search;
 
-  if (isPublicPath(pathname)) {
-    return updateSession(request);
-  }
+  let supabaseResponse = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   if (!url || !key) {
-    return updateSession(request);
+    if (!isPublicAppPath(pathname) && !pathname.startsWith("/api/")) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "";
+      return NextResponse.redirect(loginUrl);
+    }
+    return supabaseResponse;
   }
 
-  const response = await updateSession(request);
-
-  const supabase = await import("@supabase/ssr").then(({ createServerClient }) =>
-    createServerClient(url, key, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll() {},
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }),
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => {
+          supabaseResponse.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (isPublicAppPath(pathname)) {
+    if (pathname === "/login" && user) {
+      let hasAccess = hasBillingAccessCookie(request);
+      if (!hasAccess) {
+        try {
+          hasAccess = await userHasBillingAccess(user.id);
+        } catch {
+          hasAccess = false;
+        }
+      }
+      const dest = request.nextUrl.clone();
+      dest.pathname = hasAccess ? "/" : "/billing";
+      if (!hasAccess) {
+        dest.searchParams.set("required", "1");
+      } else {
+        dest.search = "";
+      }
+      const loginRedirect = NextResponse.redirect(dest);
+      if (hasAccess) {
+        applyBillingAccessCookie(loginRedirect);
+      }
+      copyCookies(supabaseResponse, loginRedirect);
+      return loginRedirect;
+    }
+    return supabaseResponse;
+  }
+
   if (!user) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    const next =
-      pathname === "/" || pathname === "/login" ? "/" : pathname;
-    loginUrl.searchParams.set("next", next);
-    return NextResponse.redirect(loginUrl);
+    const loginRedirect = NextResponse.redirect(
+      new URL(loginPathWithNext(pathname, search), request.url),
+    );
+    copyCookies(supabaseResponse, loginRedirect);
+    return loginRedirect;
   }
 
   let hasAccess = hasBillingAccessCookie(request);
@@ -79,29 +106,13 @@ export async function middleware(request: NextRequest) {
     try {
       hasAccess = await userHasBillingAccess(user.id);
       if (hasAccess) {
-        applyBillingAccessCookie(response);
+        applyBillingAccessCookie(supabaseResponse);
       }
     } catch (err) {
       console.error("[billing-gate] access check failed:", err);
       accessCheckFailed = true;
       hasAccess = hasBillingAccessCookie(request);
     }
-  }
-
-  if (pathname === "/login") {
-    const dest = request.nextUrl.clone();
-    if (hasAccess) {
-      dest.pathname = "/";
-      dest.search = "";
-    } else {
-      dest.pathname = "/billing";
-      dest.searchParams.set("required", "1");
-    }
-    const loginRedirect = NextResponse.redirect(dest);
-    if (hasAccess) {
-      applyBillingAccessCookie(loginRedirect);
-    }
-    return loginRedirect;
   }
 
   if (
@@ -114,13 +125,14 @@ export async function middleware(request: NextRequest) {
     dest.searchParams.delete("required");
     const billingRedirect = NextResponse.redirect(dest);
     applyBillingAccessCookie(billingRedirect);
+    copyCookies(supabaseResponse, billingRedirect);
     return billingRedirect;
   }
 
   if (!hasAccess) {
     if (pathname.startsWith("/api/")) {
       if (isBillingGateExemptApi(pathname)) {
-        return response;
+        return supabaseResponse;
       }
       if (accessCheckFailed) {
         return NextResponse.json(
@@ -136,17 +148,21 @@ export async function middleware(request: NextRequest) {
 
     if (!isBillingGateExemptPath(pathname)) {
       if (accessCheckFailed) {
-        return response;
+        return supabaseResponse;
       }
-      return NextResponse.redirect(billingRequiredUrl(request.nextUrl.origin));
+      const billingRedirect = NextResponse.redirect(
+        billingRequiredUrl(request.nextUrl.origin),
+      );
+      copyCookies(supabaseResponse, billingRedirect);
+      return billingRedirect;
     }
   }
 
   if (hasAccess) {
-    applyBillingAccessCookie(response);
+    applyBillingAccessCookie(supabaseResponse);
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {

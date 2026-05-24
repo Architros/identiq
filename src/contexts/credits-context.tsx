@@ -10,7 +10,11 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useConnectivityOptional } from "@/contexts/connectivity-context";
-import { isServiceUnavailableResponse } from "@/lib/api/handle-api-response";
+import {
+  isServiceUnavailableResponse,
+  isUnauthorizedResponse,
+  redirectToLogin,
+} from "@/lib/api/handle-api-response";
 import {
   AUTH_SIGNED_IN_EVENT,
   AUTH_SIGNED_OUT_EVENT,
@@ -59,6 +63,10 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const res = await fetch("/api/credits", { credentials: "same-origin" });
+      if (isUnauthorizedResponse(res)) {
+        redirectToLogin();
+        return;
+      }
       if (isServiceUnavailableResponse(res)) {
         connectivity?.reportServiceUnavailable();
         return;

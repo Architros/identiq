@@ -8,6 +8,9 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
+import { redirectToLogin } from "@/lib/api/handle-api-response";
+import { isPublicAppPath } from "@/lib/auth/protected-paths";
 import {
   AUTH_SIGNED_IN_EVENT,
   AUTH_SIGNED_OUT_EVENT,
@@ -38,17 +41,28 @@ export function BillingAccessProvider({
   /** From httpOnly cookie (server) — avoids false "no access" flash. */
   initialHasBillingAccess?: boolean | null;
 }) {
+  const pathname = usePathname();
+  const onPublicRoute = isPublicAppPath(pathname);
+
   const [hasBillingAccess, setHasBillingAccess] = useState<boolean | null>(
     () => {
       if (initialHasBillingAccess === true) return true;
       return readCachedBillingAccess();
     },
   );
-  const [loading, setLoading] = useState(
-    () => initialHasBillingAccess !== true && readCachedBillingAccess() !== true,
-  );
+  const [loading, setLoading] = useState(() => {
+    if (onPublicRoute) return false;
+    return (
+      initialHasBillingAccess !== true && readCachedBillingAccess() !== true
+    );
+  });
 
   const refresh = useCallback(async () => {
+    if (isPublicAppPath(pathname)) {
+      setLoading(false);
+      return;
+    }
+
     setLoading((currentLoading) => {
       const cached = readCachedBillingAccess();
       return cached === true ? false : currentLoading;
@@ -65,6 +79,10 @@ export function BillingAccessProvider({
       if (res.status === 401) {
         writeCachedBillingAccess(false);
         setHasBillingAccess(false);
+        setLoading(false);
+        if (!isPublicAppPath(pathname)) {
+          redirectToLogin();
+        }
         return;
       }
       if (!res.ok) {
@@ -84,11 +102,15 @@ export function BillingAccessProvider({
     } finally {
       setLoading(false);
     }
-  }, [initialHasBillingAccess]);
+  }, [initialHasBillingAccess, pathname]);
 
   useEffect(() => {
+    if (onPublicRoute) {
+      setLoading(false);
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [onPublicRoute, refresh]);
 
   useEffect(() => {
     const onSignedIn = () => void refresh();

@@ -6,20 +6,7 @@ import { BillingOnboardingShell } from "@/components/billing/billing-onboarding-
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { useBillingAccess } from "@/contexts/billing-access-context";
 import { readCachedBillingAccess } from "@/lib/auth/client-storage";
-
-const BARE_PATH_PREFIXES = [
-  "/login",
-  "/auth/",
-  "/billing/simulated/",
-  "/privacy",
-  "/terms",
-];
-
-function isBarePath(pathname: string): boolean {
-  return BARE_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(prefix),
-  );
-}
+import { isPublicAppPath } from "@/lib/auth/protected-paths";
 
 function isBillingPath(pathname: string): boolean {
   return pathname === "/billing" || pathname.startsWith("/billing/");
@@ -55,7 +42,7 @@ export function BillingGateShell({ children }: { children: React.ReactNode }) {
     router.replace("/billing", { scroll: false });
   }, [hasAccess, pathname, router, searchParams]);
 
-  if (isBarePath(pathname)) {
+  if (isPublicAppPath(pathname)) {
     return <>{children}</>;
   }
 

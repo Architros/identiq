@@ -31,6 +31,8 @@ import { useConnectivityOptional } from "@/contexts/connectivity-context";
 import {
   isServiceUnavailableResponse,
   isSubscriptionRequiredResponse,
+  isUnauthorizedResponse,
+  redirectToLogin,
 } from "@/lib/api/handle-api-response";
 import {
   AUTH_SIGNED_IN_EVENT,
@@ -76,6 +78,10 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const refreshBrands = useCallback(async () => {
     try {
       const res = await fetch("/api/brands", { credentials: "same-origin" });
+      if (isUnauthorizedResponse(res)) {
+        redirectToLogin();
+        return;
+      }
       if (await isSubscriptionRequiredResponse(res)) {
         setUserKits({});
         setUserSummaries([]);
@@ -102,7 +108,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         return;
       }
     } catch {
-      // Fall back to local storage.
+      // Fall back to local storage when the network request fails.
     }
     const localKits = loadUserBrandKits();
     const localSummaries = loadUserBrandSummaries();

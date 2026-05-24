@@ -1,22 +1,7 @@
-import { redirect } from "next/navigation";
 import { HomePage } from "@/components/home/home-page";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { requirePageSession } from "@/lib/auth/require-page-session";
 
 export default async function RootPage() {
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-      }
-    } catch {
-      redirect("/login");
-    }
-  }
-
+  await requirePageSession("/");
   return <HomePage />;
 }

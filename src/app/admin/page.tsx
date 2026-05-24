@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
+import { requirePageSession } from "@/lib/auth/require-page-session";
 import { ROLES } from "@/lib/auth/roles";
 import { requireRole } from "@/lib/auth/session";
 
 export default async function AdminPage() {
+  await requirePageSession("/admin");
   try {
     await requireRole(ROLES.ADMIN);
   } catch {
-    redirect("/");
+    redirect("/login");
   }
 
   return (
