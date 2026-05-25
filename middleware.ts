@@ -14,6 +14,7 @@ import {
   isPublicAppPath,
   loginPathWithNext,
 } from "@/lib/auth/protected-paths";
+import { userMustSetPassword } from "@/lib/auth/password";
 
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((cookie) => {
@@ -63,6 +64,10 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicAppPath(pathname)) {
     if (pathname === "/login" && user) {
+      if (userMustSetPassword(user)) {
+        return supabaseResponse;
+      }
+
       let hasAccess = hasBillingAccessCookie(request);
       if (!hasAccess) {
         try {
@@ -91,6 +96,20 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const loginRedirect = NextResponse.redirect(
+      new URL(loginPathWithNext(pathname, search), request.url),
+    );
+    copyCookies(supabaseResponse, loginRedirect);
+    return loginRedirect;
+  }
+
+  if (userMustSetPassword(user)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "password_setup_required" },
+        { status: 403 },
+      );
     }
     const loginRedirect = NextResponse.redirect(
       new URL(loginPathWithNext(pathname, search), request.url),

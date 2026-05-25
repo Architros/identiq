@@ -104,15 +104,44 @@ export function BillingPageContent() {
     if (checkout === "error") {
       const session = searchParams.get("session");
       const retried = searchParams.get("retried");
+      const fallbackMessage =
+        searchParams.get("message") ?? "Checkout could not be completed.";
+
       if (session && !retried) {
-        router.replace(
-          `/billing/complete?session=${encodeURIComponent(session)}&retried=1`,
-        );
+        void (async () => {
+          try {
+            const res = await fetch("/api/billing/checkout/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ sessionId: session }),
+            });
+            const data = (await res.json().catch(() => ({}))) as {
+              balance?: number;
+              error?: string;
+            };
+            if (res.ok && data.balance != null) {
+              setBanner({
+                type: "success",
+                message: `Payment successful. Your balance is now ${Number(data.balance).toLocaleString()} tokens.`,
+              });
+              dispatchBillingAccessGranted();
+              void loadAccount();
+            } else {
+              setBanner({
+                type: "error",
+                message: data.error ?? fallbackMessage,
+              });
+            }
+          } catch {
+            setBanner({ type: "error", message: fallbackMessage });
+          }
+          router.replace("/billing", { scroll: false });
+        })();
         return;
       }
-      const message =
-        searchParams.get("message") ?? "Checkout could not be completed.";
-      setBanner({ type: "error", message });
+
+      setBanner({ type: "error", message: fallbackMessage });
       router.replace("/billing", { scroll: false });
     }
     if (searchParams.get("billing") === "cancelled") {

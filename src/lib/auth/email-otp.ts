@@ -27,6 +27,13 @@ export function mapOtpSendError(message: string): {
   error: string;
 } {
   const lower = message.toLowerCase();
+  if (lower.includes("email logins are disabled")) {
+    return {
+      status: 400,
+      error:
+        "Email sign-in is disabled in Supabase. Enable the Email provider under Authentication → Providers.",
+    };
+  }
   if (
     lower.includes("rate") ||
     lower.includes("too many") ||

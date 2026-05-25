@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OtpInput } from "@/components/auth/otp-input";
+import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { ctaPrimary } from "@/components/ui/cta-styles";
 import {
   mapOtpVerifyError,
   normalizeEmail,
   OTP_LENGTH,
 } from "@/lib/auth/email-otp";
+import { userMustSetPassword } from "@/lib/auth/password";
 import { dispatchAuthSignedIn } from "@/lib/auth/client-storage";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,6 +20,7 @@ type EmailOtpStepProps = {
   email: string;
   next: string;
   onBack: () => void;
+  onNeedsPassword: () => void;
   onError: (message: string | null) => void;
   disabled?: boolean;
   setDisabled: (value: boolean) => void;
@@ -26,6 +30,7 @@ export function EmailOtpStep({
   email,
   next,
   onBack,
+  onNeedsPassword,
   onError,
   disabled = false,
   setDisabled,
@@ -35,11 +40,6 @@ export function EmailOtpStep({
   const [resendSeconds, setResendSeconds] = useState(RESEND_COOLDOWN_SEC);
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -61,58 +61,76 @@ export function EmailOtpStep({
     }
   }, [email]);
 
-  const handleVerify = async () => {
-    const code = token.replace(/\D/g, "");
-    if (code.length !== OTP_LENGTH) {
-      onError(`Enter the ${OTP_LENGTH}-digit code from your email.`);
-      return;
-    }
-
-    setVerifying(true);
-    setDisabled(true);
-    onError(null);
-
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.verifyOtp({
-        email: normalizeEmail(email),
-        token: code,
-        type: "email",
-      });
-
-      if (error) {
-        onError(mapOtpVerifyError(error.message));
+  const handleVerify = useCallback(
+    async (codeOverride?: string) => {
+      const code = (codeOverride ?? token).replace(/\D/g, "");
+      if (code.length !== OTP_LENGTH) {
+        onError(`Enter the ${OTP_LENGTH}-digit code from your email.`);
         return;
       }
 
-      dispatchAuthSignedIn();
+      setVerifying(true);
+      setDisabled(true);
+      onError(null);
 
-      const completeRes = await fetch("/api/auth/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ next }),
-      });
+      try {
+        const supabase = createClient();
+        const { error } = await supabase.auth.verifyOtp({
+          email: normalizeEmail(email),
+          token: code,
+          type: "email",
+        });
 
-      if (!completeRes.ok) {
-        const data = (await completeRes.json().catch(() => ({}))) as {
-          error?: string;
+        if (error) {
+          onError(mapOtpVerifyError(error.message));
+          return;
+        }
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          throw new Error("Could not load your account. Try again.");
+        }
+
+        if (userMustSetPassword(user)) {
+          dispatchAuthSignedIn();
+          onNeedsPassword();
+          return;
+        }
+
+        dispatchAuthSignedIn();
+
+        const completeRes = await fetch("/api/auth/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ next }),
+        });
+
+        if (!completeRes.ok) {
+          const data = (await completeRes.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(data.error ?? "Could not finish sign in.");
+        }
+
+        const { redirectTo } = (await completeRes.json()) as {
+          redirectTo: string;
         };
-        throw new Error(data.error ?? "Could not finish sign in.");
+
+        router.replace(redirectTo);
+        router.refresh();
+      } catch (e) {
+        onError(e instanceof Error ? e.message : "Verification failed.");
+      } finally {
+        setVerifying(false);
+        setDisabled(false);
       }
-
-      const { redirectTo } = (await completeRes.json()) as {
-        redirectTo: string;
-      };
-
-      router.replace(redirectTo);
-      router.refresh();
-    } catch (e) {
-      onError(e instanceof Error ? e.message : "Verification failed.");
-    } finally {
-      setVerifying(false);
-      setDisabled(false);
-    }
-  };
+    },
+    [email, next, onError, onNeedsPassword, router, setDisabled, token],
+  );
 
   const handleResend = async () => {
     if (resendSeconds > 0 || resending) return;
@@ -137,25 +155,16 @@ export function EmailOtpStep({
         <span className="font-medium text-foreground">{email}</span>
       </p>
 
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={OTP_LENGTH}
+      <OtpInput
         value={token}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+        disabled={busy}
+        onChange={(digits) => {
           setToken(digits);
           onError(null);
         }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !busy) void handleVerify();
+        onComplete={(code) => {
+          if (!busy) void handleVerify(code);
         }}
-        disabled={busy}
-        placeholder="000000"
-        className="w-full rounded-lg border-0 bg-input px-4 py-3 text-center text-lg tracking-[0.35em] text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-60"
-        aria-label="Verification code"
       />
 
       <button
@@ -163,10 +172,17 @@ export function EmailOtpStep({
         disabled={busy}
         onClick={() => void handleVerify()}
         className={ctaPrimary(
-          "flex w-full cursor-pointer items-center justify-center rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
+          "flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
         )}
       >
-        {verifying ? "Verifying…" : "Verify"}
+        {verifying ? (
+          <>
+            <ButtonSpinner />
+            <span>Verifying…</span>
+          </>
+        ) : (
+          "Verify"
+        )}
       </button>
 
       <div className="flex flex-col items-center gap-2 text-sm">
@@ -176,11 +192,16 @@ export function EmailOtpStep({
           onClick={() => void handleResend()}
           className="text-foreground underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
         >
-          {resendSeconds > 0
-            ? `Resend code in ${resendSeconds}s`
-            : resending
-              ? "Sending…"
-              : "Resend code"}
+          {resendSeconds > 0 ? (
+            `Resend code in ${resendSeconds}s`
+          ) : resending ? (
+            <span className="inline-flex items-center gap-2">
+              <ButtonSpinner className="h-3.5 w-3.5" />
+              Sending…
+            </span>
+          ) : (
+            "Resend code"
+          )}
         </button>
         <button
           type="button"

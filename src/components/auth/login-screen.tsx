@@ -2,11 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { EmailOtpStep } from "@/components/auth/email-otp-step";
+import { SetPasswordStep } from "@/components/auth/set-password-step";
 import { normalizeEmail } from "@/lib/auth/email-otp";
+import { userMustSetPassword } from "@/lib/auth/password";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { ctaPrimary } from "@/components/ui/cta-styles";
 import { createClient } from "@/lib/supabase/client";
 
@@ -77,7 +80,7 @@ function OrDivider() {
   );
 }
 
-type LoginStep = "providers" | "otp";
+type LoginStep = "providers" | "otp" | "password";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -95,6 +98,18 @@ function LoginForm() {
   );
 
   const busy = loading !== null || emailBusy;
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user || !userMustSetPassword(user)) return;
+      setStep("password");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const signIn = async (provider: "google" | "github") => {
     setLoading(provider);
@@ -170,11 +185,14 @@ function LoginForm() {
         </p>
       ) : null}
 
-      {step === "otp" ? (
+      {step === "password" ? (
+        <SetPasswordStep next={next} onError={setError} />
+      ) : step === "otp" ? (
         <EmailOtpStep
           email={otpEmail}
           next={next}
           onBack={backToProviders}
+          onNeedsPassword={() => setStep("password")}
           onError={setError}
           disabled={busy}
           setDisabled={setEmailBusy}
@@ -191,7 +209,14 @@ function LoginForm() {
               <ProviderIcon>
                 <GoogleIcon className="h-5 w-5" />
               </ProviderIcon>
-              {loading === "google" ? "Redirecting…" : "Continue with Google"}
+              {loading === "google" ? (
+                <>
+                  <ButtonSpinner />
+                  <span>Redirecting…</span>
+                </>
+              ) : (
+                "Continue with Google"
+              )}
             </button>
             <button
               type="button"
@@ -202,7 +227,14 @@ function LoginForm() {
               <ProviderIcon>
                 <GitHubIcon />
               </ProviderIcon>
-              {loading === "github" ? "Redirecting…" : "Continue with GitHub"}
+              {loading === "github" ? (
+                <>
+                  <ButtonSpinner />
+                  <span>Redirecting…</span>
+                </>
+              ) : (
+                "Continue with GitHub"
+              )}
             </button>
           </div>
 
@@ -229,10 +261,17 @@ function LoginForm() {
               disabled={busy}
               onClick={() => void sendEmailOtp()}
               className={ctaPrimary(
-                "flex w-full cursor-pointer items-center justify-center rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
+                "flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
               )}
             >
-              {emailBusy ? "Sending…" : "Continue with email"}
+              {emailBusy ? (
+                <>
+                  <ButtonSpinner />
+                  <span>Sending…</span>
+                </>
+              ) : (
+                "Continue with email"
+              )}
             </button>
           </div>
         </>

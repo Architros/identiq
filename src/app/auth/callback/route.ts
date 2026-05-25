@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { resolvePostAuthPath } from "@/lib/auth/post-auth-redirect";
-import { createClient } from "@/lib/supabase/server";
+import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next");
+  const { supabase, withCookies } = createRouteHandlerSupabase(request);
 
   if (code) {
-    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       const {
@@ -17,10 +17,12 @@ export async function GET(request: Request) {
 
       if (user) {
         const path = await resolvePostAuthPath(user.id, next);
-        return NextResponse.redirect(`${origin}${path}`);
+        return withCookies(NextResponse.redirect(`${origin}${path}`));
       }
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  return withCookies(
+    NextResponse.redirect(`${origin}/login?error=auth_callback_failed`),
+  );
 }

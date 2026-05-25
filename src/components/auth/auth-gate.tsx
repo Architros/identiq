@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { isPublicAppPath, loginPathWithNext } from "@/lib/auth/protected-paths";
+import { userMustSetPassword } from "@/lib/auth/password";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthGateProps = {
@@ -38,6 +39,10 @@ export function AuthGate({ children }: AuthGateProps) {
     void supabase.auth.getUser().then(({ data: { user }, error }) => {
       if (cancelled) return;
       if (error || !user) {
+        deny();
+        return;
+      }
+      if (userMustSetPassword(user)) {
         deny();
         return;
       }

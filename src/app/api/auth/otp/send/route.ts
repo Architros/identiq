@@ -34,9 +34,15 @@ export async function POST(request: Request) {
 
   try {
     const supabase = createAnonClient();
+    // Supabase sends a 6-digit code only when the Magic Link email template
+    // includes {{ .Token }} (not {{ .ConfirmationURL }}). See Supabase Dashboard
+    // → Authentication → Email Templates → Magic Link.
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        // No emailRedirectTo — avoids pushing link-only signup emails for OTP flow.
+      },
     });
 
     if (error) {

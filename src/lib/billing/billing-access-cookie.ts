@@ -25,9 +25,3 @@ export function clearBillingAccessCookie(response: NextResponse): void {
   });
 }
 
-/** Set after successful checkout fulfillment (server page / action). */
-export async function persistBillingAccessCookie(): Promise<void> {
-  const { cookies } = await import("next/headers");
-  const store = await cookies();
-  store.set(BILLING_ACCESS_COOKIE, "1", COOKIE_OPTS);
-}
