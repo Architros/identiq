@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/password-field";
 import { PasswordRequirementsList } from "@/components/auth/password-requirements-list";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { dispatchAuthSignedIn } from "@/lib/auth/client-storage";
 import {
   getPasswordRequirementStatus,
@@ -153,13 +153,14 @@ export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
         />
       </div>
 
-      <button
+      <TextureButton
         type="button"
+        variant="accent"
+        shape="lg"
+        fullWidth
         disabled={saving || !requirementsMet}
         onClick={() => void handleSubmit()}
-        className={ctaPrimary(
-          "flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
-        )}
+        innerClassName="w-full gap-2 px-4 py-3 font-medium disabled:opacity-60"
       >
         {saving ? (
           <>
@@ -169,7 +170,7 @@ export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
         ) : (
           "Continue"
         )}
-      </button>
+      </TextureButton>
     </div>
   );
 }

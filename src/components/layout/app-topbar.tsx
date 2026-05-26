@@ -10,7 +10,7 @@ import {
   getGenerationChromeCompact,
   subscribeGenerationChrome,
 } from "@/lib/generation/chrome-store";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar() {
@@ -34,11 +34,11 @@ export function AppTopbar() {
 
         {!compact ? (
           <>
-            <Link
+            <TextureButton
               href="/new-brand"
-              className={ctaPrimary(
-                "inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-button)] px-3 text-sm font-medium",
-              )}
+              variant="accent"
+              shape="default"
+              innerClassName="h-8 gap-2 px-3 font-medium"
             >
               <HugeiconsIcon
                 icon={Add01Icon}
@@ -47,7 +47,7 @@ export function AppTopbar() {
                 strokeWidth={1.75}
               />
               New Brand
-            </Link>
+            </TextureButton>
           </>
         ) : null}
       </div>

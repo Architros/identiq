@@ -10,7 +10,7 @@ import { normalizeEmail } from "@/lib/auth/email-otp";
 import { userMustSetPassword } from "@/lib/auth/password";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { createClient } from "@/lib/supabase/client";
 
 const HERO_IMAGE = "/Hiker in Misty Mountains.png";
@@ -256,13 +256,14 @@ function LoginForm() {
               disabled={busy}
               className={emailInputClass}
             />
-            <button
+            <TextureButton
               type="button"
+              variant="accent"
+              shape="lg"
+              fullWidth
               disabled={busy}
               onClick={() => void sendEmailOtp()}
-              className={ctaPrimary(
-                "flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
-              )}
+              innerClassName="w-full gap-2 px-4 py-3 font-medium disabled:opacity-60"
             >
               {emailBusy ? (
                 <>
@@ -272,7 +273,7 @@ function LoginForm() {
               ) : (
                 "Continue with email"
               )}
-            </button>
+            </TextureButton>
           </div>
         </>
       )}

@@ -4,7 +4,7 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
 import { useGeneration } from "@/contexts/generation-context";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
-import { ctaPrimaryClasses, ctaPrimaryFocusClasses } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 export function DockCreateButton() {
@@ -59,19 +59,16 @@ export function DockCreateButton() {
   }
 
   return (
-    <button
+    <TextureButton
       type="button"
+      variant="accent"
+      shape="card"
       disabled={!canSubmit}
       onClick={() => submitGeneration()}
-      className={cn(
-        "ml-2 h-9 shrink-0 rounded-xl px-5 text-sm font-semibold transition-colors",
-        canSubmit ? "cursor-pointer" : "cursor-not-allowed",
-        ctaPrimaryClasses,
-        "disabled:opacity-50",
-        ctaPrimaryFocusClasses,
-      )}
+      className="ml-2 shrink-0"
+      innerClassName="h-9 px-5"
     >
       Create
-    </button>
+    </TextureButton>
   );
 }

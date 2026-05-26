@@ -11,7 +11,7 @@ import {
   libraryCategories,
   libraryTemplates,
 } from "@/lib/library/templates";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 export function LibraryPageContent() {
@@ -44,14 +44,15 @@ export function LibraryPageContent() {
           <p className="mt-1">
             Recreate attaches the template to your prompt on Brand assets.
           </p>
-          <Link
+          <TextureButton
             href="/new-brand"
-            className={ctaPrimary(
-              "mt-4 inline-flex rounded-xl px-4 py-2 text-sm font-medium",
-            )}
+            variant="accent"
+            shape="card"
+            className="mt-4"
+            innerClassName="px-4 py-2 font-medium"
           >
             New brand
-          </Link>
+          </TextureButton>
         </div>
       ) : null}
 

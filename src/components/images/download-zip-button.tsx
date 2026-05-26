@@ -6,7 +6,8 @@ import { Download04Icon } from "@hugeicons/core-free-icons";
 import type { AssetZipEntry } from "@/lib/download/asset-filename";
 import { downloadAssetsZip } from "@/lib/download/build-assets-zip";
 import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
-import { ctaPrimaryClasses, ctaPrimaryFocusClasses } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
+import { ctaPrimaryFocusClasses } from "@/components/ui/cta-styles";
 import { cn } from "@/lib/utils";
 
 type DownloadZipButtonProps = {
@@ -65,21 +66,8 @@ export function DownloadZipButton({
 
   const isDisabled = disabled || entries.length === 0 || loading;
 
-  return (
-    <button
-      type="button"
-      disabled={isDisabled}
-      onClick={() => void handleClick()}
-      className={cn(
-        "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-        ctaPrimaryFocusClasses,
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        variant === "primary"
-          ? cn("border-accent", ctaPrimaryClasses)
-          : "border-border bg-surface text-foreground hover:bg-sidebar-active",
-        className,
-      )}
-    >
+  const content = (
+    <>
       <HugeiconsIcon
         icon={Download04Icon}
         size={14}
@@ -94,6 +82,38 @@ export function DownloadZipButton({
             : "Preparing ZIP…"
           : label}
       </span>
+    </>
+  );
+
+  if (variant === "primary") {
+    return (
+      <TextureButton
+        type="button"
+        variant="accent"
+        shape="lg"
+        disabled={isDisabled}
+        onClick={() => void handleClick()}
+        className={cn("shrink-0", className)}
+        innerClassName="gap-1.5 px-3 py-1.5 text-xs font-medium"
+      >
+        {content}
+      </TextureButton>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={isDisabled}
+      onClick={() => void handleClick()}
+      className={cn(
+        "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-sidebar-active",
+        ctaPrimaryFocusClasses,
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+    >
+      {content}
     </button>
   );
 }

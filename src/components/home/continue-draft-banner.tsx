@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
 import { loadDraftsMerged } from "@/lib/brand/brand-storage";
 
@@ -33,14 +32,15 @@ export function ContinueDraftBanner() {
         Pick up where you left off — references and uploads are saved to your
         account.
       </p>
-      <Link
+      <TextureButton
         href={`/new-brand?draftId=${encodeURIComponent(draft.id)}`}
-        className={ctaPrimary(
-          "mt-3 inline-flex rounded-lg px-3 py-1.5 text-sm font-medium",
-        )}
+        variant="accent"
+        shape="lg"
+        className="mt-3"
+        innerClassName="px-3 py-1.5 font-medium"
       >
         Resume wizard
-      </Link>
+      </TextureButton>
     </div>
   );
 }

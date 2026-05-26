@@ -1,6 +1,9 @@
 import { cn } from "@/lib/utils";
 
-/** Primary CTA — theme accent (`--accent`, #F86E29). */
+/**
+ * Flat accent classes for legacy / non-texture controls (e.g. filter chips).
+ * Prefer `TextureButton` for primary CTAs.
+ */
 export const ctaPrimaryClasses = "bg-accent text-on-accent hover:bg-accent/90";
 
 export const ctaPrimaryFocusClasses =

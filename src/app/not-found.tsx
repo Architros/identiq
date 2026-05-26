@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 const linkButtonClass =
@@ -19,9 +19,14 @@ export default function NotFound() {
         continue.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link href="/" className={ctaPrimary(linkButtonClass)}>
+        <TextureButton
+          href="/"
+          variant="accent"
+          shape="default"
+          innerClassName="h-9 px-4 font-medium"
+        >
           Go home
-        </Link>
+        </TextureButton>
         <Link
           href="/login"
           className={cn(

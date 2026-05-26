@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OtpInput } from "@/components/auth/otp-input";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
-import { ctaPrimary } from "@/components/ui/cta-styles";
+import { TextureButton } from "@/components/ui/texture-button";
 import {
   mapOtpVerifyError,
   normalizeEmail,
@@ -167,13 +167,14 @@ export function EmailOtpStep({
         }}
       />
 
-      <button
+      <TextureButton
         type="button"
+        variant="accent"
+        shape="lg"
+        fullWidth
         disabled={busy}
         onClick={() => void handleVerify()}
-        className={ctaPrimary(
-          "flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60",
-        )}
+        innerClassName="w-full gap-2 px-4 py-3 font-medium disabled:opacity-60"
       >
         {verifying ? (
           <>
@@ -183,7 +184,7 @@ export function EmailOtpStep({
         ) : (
           "Verify"
         )}
-      </button>
+      </TextureButton>
 
       <div className="flex flex-col items-center gap-2 text-sm">
         <button
