@@ -11,6 +11,7 @@ import {
 } from "@/lib/billing/billing-gate";
 import { userHasBillingAccess } from "@/lib/billing/check-billing-access";
 import {
+  isPublicApiPath,
   isPublicAppPath,
   loginPathWithNext,
 } from "@/lib/auth/protected-paths";
@@ -95,6 +96,9 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     if (pathname.startsWith("/api/")) {
+      if (isPublicApiPath(pathname)) {
+        return supabaseResponse;
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const loginRedirect = NextResponse.redirect(

@@ -1,3 +1,8 @@
+/** API routes callable without a signed-in session (marketing site, etc.). */
+export function isPublicApiPath(pathname: string): boolean {
+  return pathname === "/api/billing/plans/public";
+}
+
 /** Routes that do not require a signed-in Supabase session. */
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname === "/login") return true;
