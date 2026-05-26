@@ -184,7 +184,7 @@ export function BillingPlansSection({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border bg-surface",
+        "overflow-visible rounded-2xl border border-border bg-surface",
         compact ? "p-4 sm:p-5" : "p-6 sm:p-8",
       )}
     >
@@ -243,7 +243,7 @@ export function BillingPlansSection({
       ) : view === "plans" ? (
         <div
           className={cn(
-            "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4",
+            "grid grid-cols-1 gap-4 overflow-visible pt-3 sm:grid-cols-2 sm:gap-y-6 xl:grid-cols-4",
             compact ? "mt-3" : "mt-6",
           )}
         >

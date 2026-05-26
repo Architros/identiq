@@ -48,7 +48,7 @@ function PlanCardSkeleton() {
 export function BillingPlansGridSkeleton() {
   return (
     <div
-      className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      className="mt-6 grid grid-cols-1 gap-4 overflow-visible pt-3 sm:grid-cols-2 sm:gap-y-6 xl:grid-cols-4"
       aria-busy="true"
       aria-label="Loading plans"
     >
@@ -72,7 +72,7 @@ export function BillingPageSkeleton() {
       <div className="mt-8">
         <BillingSummarySkeleton />
       </div>
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-6 sm:p-8">
+      <div className="mt-8 overflow-visible rounded-2xl border border-border bg-surface p-6 sm:p-8">
         <SkeletonBlock className="h-7 w-20" />
         <SkeletonBlock className="mt-2 h-4 w-72" />
         <div className="mt-8 flex justify-center">

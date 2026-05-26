@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
+import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { useGeneration } from "@/contexts/generation-context";
 import type { GenerationPhase } from "@/lib/generation/chat-message-types";
-import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
+import { generationProgressTexts } from "@/lib/generation/generation-progress-texts";
 
 type ChatGenerationProgressProps = {
   phase?: GenerationPhase | null;
@@ -12,12 +14,12 @@ type ChatGenerationProgressProps = {
 export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
   const {
     isGenerating,
-    generationActivity,
     generationStartedAt,
     libraryTemplateId,
     aspectRatio,
     quantity,
     generationPhase,
+    generationPresetTitle,
     generationError,
     submitGeneration,
   } = useGeneration();
@@ -40,12 +42,15 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
   const isRenderingEffective =
     !isFailed && effectivePhase === "generating-image";
 
-  const activity =
-    generationActivity ??
-    generationActivityLabel({
-      phase: effectivePhase ?? undefined,
-      isLibraryRemix,
-    });
+  const progressTexts = useMemo(
+    () =>
+      generationProgressTexts({
+        phase: effectivePhase ?? undefined,
+        presetTitle: generationPresetTitle ?? undefined,
+        isLibraryRemix,
+      }),
+    [effectivePhase, generationPresetTitle, isLibraryRemix],
+  );
 
   if (isFailed) {
     return (
@@ -68,11 +73,12 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
   return (
     <div className="w-full space-y-3">
       {isComposingEffective ? (
-        <p className="text-sm text-muted">
-          {isLibraryRemix && (isGenerating || pendingLibraryStart)
-            ? activity || "Thinking…"
-            : "Thinking…"}
-        </p>
+        <AITextLoading
+          texts={progressTexts}
+          size="sm"
+          compact
+          interval={1400}
+        />
       ) : null}
 
       {isRenderingEffective ? (
@@ -80,10 +86,15 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           aspectRatio={aspectRatio}
           quantity={quantity}
           elapsedStartedAt={generationStartedAt}
-          activityLabel={activity}
+          progressTexts={progressTexts}
         />
       ) : !isComposingEffective && !isRenderingEffective ? (
-        <p className="text-sm font-medium text-foreground">{activity}</p>
+        <AITextLoading
+          texts={progressTexts}
+          size="sm"
+          compact
+          interval={1400}
+        />
       ) : null}
     </div>
   );

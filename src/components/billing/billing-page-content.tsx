@@ -297,7 +297,7 @@ export function BillingPageContent() {
 
   if (onboarding) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
+      <div className="mx-auto max-w-6xl overflow-visible px-4 py-3 sm:px-6">
         <header className="mb-3">
           <h1 className="font-display text-xl font-normal tracking-tight text-foreground sm:text-2xl">
             Choose your plan
@@ -349,7 +349,7 @@ export function BillingPageContent() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10">
+    <div className="mx-auto max-w-6xl overflow-visible px-6 py-8 sm:py-10">
       <header className="mb-8">
         <h1 className="font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
           Billing

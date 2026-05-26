@@ -1,12 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message";
 import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { GeneratedImageCard } from "@/components/generation/chat/generated-image-card";
+import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGeneration } from "@/contexts/generation-context";
-import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
+import { generationProgressTexts } from "@/lib/generation/generation-progress-texts";
 
 type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
@@ -24,7 +26,6 @@ export function ChatAssistantTurn({
     isGenerating,
     generationStartedAt,
     libraryTemplateId,
-    generationActivity,
     aspectRatio: sessionAspectRatio,
     quantity: sessionQuantity,
     submitGeneration,
@@ -53,6 +54,25 @@ export function ChatAssistantTurn({
     errorText ?? generationStatus?.errorMessage,
   );
 
+  const thinkingTexts = useMemo(
+    () =>
+      generationProgressTexts({
+        phase: phase ?? "orchestrating",
+        presetTitle: generationStatus?.presetTitle,
+        isLibraryRemix,
+      }),
+    [phase, generationStatus?.presetTitle, isLibraryRemix],
+  );
+  const renderingTexts = useMemo(
+    () =>
+      generationProgressTexts({
+        phase: "generating-image",
+        presetTitle: generationStatus?.presetTitle,
+        isLibraryRemix,
+      }),
+    [generationStatus?.presetTitle, isLibraryRemix],
+  );
+
   return (
     <div className="group flex w-full justify-start">
       <div className="w-full space-y-3">
@@ -68,10 +88,12 @@ export function ChatAssistantTurn({
         </div>
 
         {showThinking ? (
-          <p className="text-sm text-muted">
-            {generationActivity ??
-              (isLibraryRemix ? "Adapting layout to your brand…" : "Thinking…")}
-          </p>
+          <AITextLoading
+            texts={thinkingTexts}
+            size="sm"
+            compact
+            interval={1400}
+          />
         ) : null}
 
         {showSkeleton ? (
@@ -88,15 +110,7 @@ export function ChatAssistantTurn({
               animated={!isFailed}
               failed={isFailed}
               onRetry={isFailed ? () => void submitGeneration() : undefined}
-              activityLabel={
-                isFailed
-                  ? undefined
-                  : generationActivityLabel({
-                      phase: "generating-image",
-                      presetTitle: generationStatus?.presetTitle,
-                      isLibraryRemix,
-                    })
-              }
+              progressTexts={isFailed ? undefined : renderingTexts}
             />
           </div>
         ) : null}
@@ -112,9 +126,12 @@ export function ChatAssistantTurn({
         !imageResult &&
         !showStopped &&
         isStreaming ? (
-          <p className="text-sm text-muted">
-            {generationActivity ?? "Working…"}
-          </p>
+          <AITextLoading
+            texts={thinkingTexts}
+            size="sm"
+            compact
+            interval={1400}
+          />
         ) : null}
       </div>
     </div>

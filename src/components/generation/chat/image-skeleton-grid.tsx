@@ -2,6 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowReloadHorizontalIcon } from "@hugeicons/core-free-icons";
+import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import {
   aspectRatioCSSValue,
@@ -23,6 +24,9 @@ type ImageSkeletonGridProps = {
   imageModel?: string;
   displayDimensions?: string;
   elapsedStartedAt?: number | null;
+  /** Rotating status lines shown while rendering. */
+  progressTexts?: string[];
+  /** @deprecated Use progressTexts */
   activityLabel?: string;
   /** When false, skeleton is static (e.g. after a failed generation). */
   animated?: boolean;
@@ -36,6 +40,7 @@ export function ImageSkeletonGrid({
   imageModel,
   displayDimensions,
   elapsedStartedAt = null,
+  progressTexts,
   activityLabel,
   animated = true,
   failed = false,
@@ -45,14 +50,25 @@ export function ImageSkeletonGrid({
   const count = Math.max(1, Math.min(quantity, 4));
   const elapsed = useGenerationElapsed(failed ? null : elapsedStartedAt);
 
+  const statusTexts =
+    progressTexts ??
+    (activityLabel ? [activityLabel] : undefined) ?? [
+      `Creating image with ${formatImageModelLabel(imageModel)}…`,
+      "Applying brand style…",
+      "Enhancing details…",
+      "Almost done…",
+    ];
+
   return (
     <div className="space-y-2">
       {!failed ? (
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            {activityLabel ??
-              `Creating image with ${formatImageModelLabel(imageModel)}…`}
-          </p>
+        <div className="space-y-1">
+          <AITextLoading
+            texts={statusTexts}
+            size="sm"
+            compact
+            interval={1500}
+          />
           <p className="text-xs text-muted">
             {displayDimensions ? `${displayDimensions} · ` : null}
             {formatImageModelLabel(imageModel)}

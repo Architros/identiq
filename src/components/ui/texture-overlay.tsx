@@ -18,8 +18,22 @@ export type TextureType =
 type TextureOverlayProps = {
   texture: TextureType;
   opacity?: number;
+  /** Pixel gap between diagonal lines (default 14). */
+  diagonalStep?: number;
+  /** Fade pattern out toward the top of the container. */
+  fadeToTop?: boolean;
   className?: string;
 };
+
+function diagonalBackground(stepPx: number): string {
+  return `repeating-linear-gradient(
+    -45deg,
+    currentColor 0,
+    currentColor 1px,
+    transparent 1px,
+    transparent ${stepPx}px
+  )`;
+}
 
 const DEFAULT_OPACITIES: Partial<Record<TextureType, number>> = {
   dots: 0.35,
@@ -154,20 +168,31 @@ const TEXTURE_STYLES: Record<
 export function TextureOverlay({
   texture,
   opacity,
+  diagonalStep,
+  fadeToTop = false,
   className,
 }: TextureOverlayProps) {
   if (texture === "none") return null;
 
   const style = TEXTURE_STYLES[texture];
   const resolvedOpacity = opacity ?? DEFAULT_OPACITIES[texture] ?? 0.3;
+  const backgroundImage =
+    texture === "diagonal" && diagonalStep != null
+      ? diagonalBackground(diagonalStep)
+      : style.backgroundImage;
 
   return (
     <div
       aria-hidden
-      className={cn("pointer-events-none absolute inset-0", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0",
+        fadeToTop &&
+          "[mask-image:linear-gradient(to_top,transparent_0%,rgba(0,0,0,0.15)_18%,black_52%)]",
+        className,
+      )}
       style={{
         opacity: resolvedOpacity,
-        backgroundImage: style.backgroundImage,
+        backgroundImage,
         backgroundSize: style.backgroundSize,
       }}
     />

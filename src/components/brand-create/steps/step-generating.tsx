@@ -13,6 +13,7 @@ import { BrandSystemPanel } from "@/components/brand-create/generation/brand-sys
 import { GenerationActivityList } from "@/components/brand-create/generation/generation-activity-list";
 import { GenerationPhaseBar } from "@/components/brand-create/generation/generation-phase-bar";
 import { StarterPackGenerationView } from "@/components/brand-create/generation/starter-pack-generation-view";
+import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import {
@@ -389,7 +390,17 @@ export function StepGenerating() {
         />
 
         {!brandMemory && isOrchestrating ? (
-          <p className="text-sm text-muted">Thinking…</p>
+          <AITextLoading
+            texts={[
+              "Analyzing your brand inputs…",
+              "Planning asset prompts…",
+              "Applying your visual identity…",
+              "Almost ready…",
+            ]}
+            size="sm"
+            compact
+            interval={1400}
+          />
         ) : null}
 
         {brandMemory ? <BrandSystemPanel data={brandMemory} /> : null}
