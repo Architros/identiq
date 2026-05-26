@@ -97,19 +97,9 @@ body {
   }
 }
 
-/* Bloom-style volume slider for Scale / custom pack */
-.custom-pack-slider {
-  background: linear-gradient(
-    to right,
-    var(--foreground) 0%,
-    var(--foreground) var(--slider-fill, 0%),
-    var(--border) var(--slider-fill, 0%),
-    var(--border) 100%
-  );
-}
-
+/* Scale / custom pack volume slider — track fill is rendered in React; thumb uses accent */
 .custom-pack-slider::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 8px;
   border-radius: 9999px;
   background: transparent;
 }
@@ -117,36 +107,51 @@ body {
 .custom-pack-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
   border-radius: 9999px;
-  border: 1.5px solid var(--foreground);
+  border: 2px solid var(--accent);
   background: var(--surface);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 12%, transparent);
-  cursor: pointer;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 1px 4px color-mix(in srgb, var(--accent) 28%, transparent);
+  cursor: grab;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.custom-pack-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.06);
 }
 
 .custom-pack-slider::-moz-range-track {
-  height: 4px;
+  height: 8px;
   border-radius: 9999px;
   background: transparent;
 }
 
 .custom-pack-slider::-moz-range-progress {
-  height: 4px;
-  border-radius: 9999px;
-  background: var(--foreground);
+  background: transparent;
 }
 
 .custom-pack-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 9999px;
-  border: 1.5px solid var(--foreground);
+  border: 2px solid var(--accent);
   background: var(--surface);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 12%, transparent);
-  cursor: pointer;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 1px 4px color-mix(in srgb, var(--accent) 28%, transparent);
+  cursor: grab;
+}
+
+.custom-pack-slider:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.06);
 }
 
 /* Thin custom scrollbars (brand switcher, modals, panels) */

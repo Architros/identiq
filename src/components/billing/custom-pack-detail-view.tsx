@@ -20,6 +20,8 @@ import {
   type ScaleTier,
 } from "@/lib/billing/scale-tiers";
 import { CUSTOM_PACK_TIERS } from "@/lib/billing/custom-pack-pricing";
+import { TextureButton } from "@/components/ui/texture-button";
+import { TextureOverlay } from "@/components/ui/texture-overlay";
 import { cn } from "@/lib/utils";
 
 const CUSTOM_FEATURES = [
@@ -145,7 +147,23 @@ export function CustomPackDetailView({
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-border bg-background/60 p-6 sm:p-8">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-2xl border bg-surface p-6 sm:p-8",
+            "border-accent/40 shadow-md ring-1 ring-accent/25",
+            "shadow-[0px_1px_0px_0px_hsla(0,0%,0%,0.02)_inset,0px_0px_0px_1px_hsla(0,0%,0%,0.02)_inset,0px_0px_0px_1px_rgba(255,255,255,0.25)]",
+          )}
+        >
+          <TextureOverlay
+            texture="diagonal"
+            diagonalStep={4}
+            lineAngle={45}
+            fadeToRight
+            opacity={0.88}
+            className="text-[#f0f1f4]"
+          />
+
+          <div className="relative z-10">
           <div className="flex flex-wrap items-baseline gap-2">
             <p className="font-display text-4xl font-normal tracking-tight text-foreground">
               {headlinePrice}
@@ -181,17 +199,18 @@ export function CustomPackDetailView({
             className="mt-6"
           />
 
-          <button
+          <TextureButton
             type="button"
+            variant="accent"
+            shape="card"
+            fullWidth
             disabled={loading}
             onClick={() => onBuy(monthlyTokens)}
-            className={cn(
-              "mt-8 w-full cursor-pointer rounded-xl bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="mt-8"
+            innerClassName="flex w-full py-3 text-sm font-semibold"
           >
             {loading ? "…" : "Upgrade"}
-          </button>
+          </TextureButton>
 
           <p className="mt-4 text-center text-xs text-muted">
             <button
@@ -204,6 +223,7 @@ export function CustomPackDetailView({
             <span className="mx-1.5">·</span>
             <span>Contact us for more credits</span>
           </p>
+          </div>
         </div>
       </div>
     </div>

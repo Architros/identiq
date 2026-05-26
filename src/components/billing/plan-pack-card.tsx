@@ -56,8 +56,9 @@ export function PlanPackCard({
           <TextureOverlay
             texture="diagonal"
             diagonalStep={4}
-            fadeToTop
-            opacity={0.7}
+            lineAngle={45}
+            fadeToRight
+            opacity={0.88}
             className="text-[#f0f1f4]"
           />
         ) : null}

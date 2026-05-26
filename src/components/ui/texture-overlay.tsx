@@ -18,16 +18,24 @@ export type TextureType =
 type TextureOverlayProps = {
   texture: TextureType;
   opacity?: number;
-  /** Pixel gap between diagonal lines (default 14). */
+  /** Pixel gap between stripe lines (default 14). */
   diagonalStep?: number;
-  /** Fade pattern out toward the top of the container. */
+  /**
+   * Stripe angle in degrees. Default -45 (↗). Use 0 for horizontal (left→right).
+   */
+  lineAngle?: number;
+  /** Fade pattern out toward the top (stronger at bottom). */
   fadeToTop?: boolean;
+  /** Fade pattern out toward the bottom (stronger at top). */
+  fadeToBottom?: boolean;
+  /** Fade pattern out toward the right (stronger at left). */
+  fadeToRight?: boolean;
   className?: string;
 };
 
-function diagonalBackground(stepPx: number): string {
+function stripeBackground(stepPx: number, angleDeg: number): string {
   return `repeating-linear-gradient(
-    -45deg,
+    ${angleDeg}deg,
     currentColor 0,
     currentColor 1px,
     transparent 1px,
@@ -169,7 +177,10 @@ export function TextureOverlay({
   texture,
   opacity,
   diagonalStep,
+  lineAngle = -45,
   fadeToTop = false,
+  fadeToBottom = false,
+  fadeToRight = false,
   className,
 }: TextureOverlayProps) {
   if (texture === "none") return null;
@@ -177,8 +188,8 @@ export function TextureOverlay({
   const style = TEXTURE_STYLES[texture];
   const resolvedOpacity = opacity ?? DEFAULT_OPACITIES[texture] ?? 0.3;
   const backgroundImage =
-    texture === "diagonal" && diagonalStep != null
-      ? diagonalBackground(diagonalStep)
+    texture === "diagonal"
+      ? stripeBackground(diagonalStep ?? 14, lineAngle)
       : style.backgroundImage;
 
   return (
@@ -188,6 +199,10 @@ export function TextureOverlay({
         "pointer-events-none absolute inset-0",
         fadeToTop &&
           "[mask-image:linear-gradient(to_top,transparent_0%,rgba(0,0,0,0.15)_18%,black_52%)]",
+        fadeToBottom &&
+          "[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.15)_18%,black_52%)]",
+        fadeToRight &&
+          "[mask-image:linear-gradient(to_right,black_0%,rgba(0,0,0,0.25)_58%,transparent_90%)]",
         className,
       )}
       style={{
