@@ -51,4 +51,4 @@ next-env.d.ts
 !/catalog/manifest.json
 
 # Separate landing site — keep its own repo; do not commit here
-/identiq-landing/
+/identiq-landing/                           

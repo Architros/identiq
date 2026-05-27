@@ -49,7 +49,7 @@ export function CustomPackTeaserCard({
         {TEASER_FEATURES.map((feature) => (
           <li
             key={feature}
-            className="flex items-start gap-2 text-sm text-foreground"
+            className="flex items-start gap-2 text-sm text-foreground/70"
           >
             <HugeiconsIcon
               icon={Tick01Icon}
@@ -61,7 +61,7 @@ export function CustomPackTeaserCard({
             <span>{feature}</span>
           </li>
         ))}
-        <li className="flex items-start gap-2 text-sm text-muted">
+        <li className="flex items-start gap-2 text-sm text-foreground/70">
           <span className="mt-0.5 shrink-0 text-xs">·</span>
           <span>
             {minTokens.toLocaleString()}–

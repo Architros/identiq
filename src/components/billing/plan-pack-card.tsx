@@ -104,7 +104,7 @@ export function PlanPackCard({
           {pack.features.map((feature, index) => (
             <li
               key={`${pack.id}-feature-${index}`}
-              className="flex items-start gap-2 text-sm text-foreground"
+              className="flex items-start gap-2 text-sm text-foreground/70"
             >
               {isStoredAssetsFeatureLine(feature) ? (
                 <AssetStorageMeter
