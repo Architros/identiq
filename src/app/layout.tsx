@@ -8,6 +8,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "identiq — AI Brand System",
   description: "Generate cohesive brand assets with AI.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default async function RootLayout({
