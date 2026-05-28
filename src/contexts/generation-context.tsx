@@ -699,7 +699,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const submitGeneration = useCallback(async () => {
     if (isLoading) return;
     if (!hasActiveBrand) {
-      showErrorToast("Create a brand first to generate images.");
+      showErrorToast("Create a brand first to generate images.", {
+        title: "Brand required",
+        mapAsGeneration: false,
+      });
       return;
     }
     const remixingLibrary = Boolean(libraryTemplateIdRef.current);

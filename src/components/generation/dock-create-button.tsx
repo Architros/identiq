@@ -8,7 +8,7 @@ import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 export function DockCreateButton() {
-  const { hasActiveBrand, isLoading } = useBrand();
+  const { isLoading } = useBrand();
   const { availableTokens } = useCredits();
   const {
     selectedPresets,
@@ -23,6 +23,8 @@ export function DockCreateButton() {
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
+  const hasGenerationInput =
+    selectedPresets.length > 0 || prompt.trim().length > 0 || isLibraryRemix;
 
   const tokenCost = calculateGenerationTokenCost({
     presetCount: selectedPresets.length,
@@ -37,8 +39,7 @@ export function DockCreateButton() {
 
   const canSubmit =
     !isLoading &&
-    hasActiveBrand &&
-    (selectedPresets.length > 0 || prompt.trim().length > 0 || isLibraryRemix) &&
+    hasGenerationInput &&
     !isGenerating &&
     !insufficient;
 

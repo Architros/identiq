@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AuthGate } from "@/components/auth/auth-gate";
 import { BillingAccessProvider } from "@/contexts/billing-access-context";
 import { BillingGateShell } from "@/components/layout/billing-gate-shell";
+import { BrandPageLoader } from "@/components/ui/brand-page-loader";
 
 type ConditionalAppShellProps = {
   children: React.ReactNode;
@@ -17,11 +18,7 @@ export function ConditionalAppShell({
   return (
     <BillingAccessProvider initialHasBillingAccess={initialHasBillingAccess}>
       <Suspense
-        fallback={
-          <div className="flex min-h-screen items-center justify-center bg-background">
-            <p className="text-sm text-muted">Loading…</p>
-          </div>
-        }
+        fallback={<BrandPageLoader />}
       >
         <AuthGate>
           <BillingGateShell>{children}</BillingGateShell>

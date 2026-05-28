@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Separate landing site — keep its own repo; do not commit here
 /identiq-landing/                           
+
+
+/Brand Assets Posts/
