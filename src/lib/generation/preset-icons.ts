@@ -85,6 +85,7 @@ export const PRESET_ICONS = {
   comparisonChart: LeftToRightListDashIcon,
   statHighlight: Calculator01Icon,
   socialHeader: ImageUpload01Icon,
+  heroImage: ImageUpload01Icon,
   channelArt: VideoReplayIcon,
   productHero: Package01Icon,
   lifestyleScene: Home09Icon,

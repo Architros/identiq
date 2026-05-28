@@ -64,6 +64,7 @@ type GenerationContextValue = {
   chatTitle: string;
   generationStartedAt: number | null;
   generationPhase: GenerationPhase | null;
+  generationPresetTitle: string | undefined;
   generationActivity: string | null;
   generationError: string | null;
   libraryTemplateId: string | null;
@@ -794,6 +795,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       chatTitle,
       generationStartedAt,
       generationPhase,
+      generationPresetTitle,
       generationActivity,
       generationError,
       libraryTemplateId,
@@ -836,6 +838,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       chatTitle,
       generationStartedAt,
       generationPhase,
+      generationPresetTitle,
       generationActivity,
       generationError,
       libraryTemplateId,

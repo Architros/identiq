@@ -11,18 +11,26 @@ export function showErrorToast(
     title?: string;
     durationMs?: number;
     dedupeKey?: string;
+    /** Skip generation-specific error mapping for general app errors. */
+    mapAsGeneration?: boolean;
     /** Replace any visible error toasts (e.g. one generation failure at a time). */
     replaceErrors?: boolean;
   },
 ) {
   const cleaned = stripErrorTitlePrefix(raw);
-  const facing = toUserFacingGenerationError(cleaned);
-  const message = appendSupportHintOnce(facing.message, facing.supportHint);
-  const dedupeKey =
-    options?.dedupeKey ?? `error|${facing.title}|${message}`;
+  const mapAsGeneration = options?.mapAsGeneration ?? true;
+  const facing = mapAsGeneration
+    ? toUserFacingGenerationError(cleaned)
+    : null;
+  const fallbackMessage = cleaned || "Something went wrong. Please try again.";
+  const message = facing
+    ? appendSupportHintOnce(facing.message, facing.supportHint)
+    : fallbackMessage;
+  const title = options?.title ?? facing?.title ?? "Error";
+  const dedupeKey = options?.dedupeKey ?? `error|${title}|${message}`;
   return showToast({
     type: "error",
-    title: options?.title ?? facing.title,
+    title,
     message,
     durationMs: options?.durationMs,
     dedupeKey,

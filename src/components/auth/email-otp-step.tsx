@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { OtpInput } from "@/components/auth/otp-input";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { TextureButton } from "@/components/ui/texture-button";
@@ -9,18 +8,17 @@ import {
   mapOtpVerifyError,
   normalizeEmail,
   OTP_LENGTH,
+  type OtpPurpose,
 } from "@/lib/auth/email-otp";
-import { userMustSetPassword } from "@/lib/auth/password";
-import { dispatchAuthSignedIn } from "@/lib/auth/client-storage";
 import { createClient } from "@/lib/supabase/client";
 
 const RESEND_COOLDOWN_SEC = 60;
 
 type EmailOtpStepProps = {
   email: string;
-  next: string;
+  purpose: OtpPurpose;
   onBack: () => void;
-  onNeedsPassword: () => void;
+  onVerified: () => void;
   onError: (message: string | null) => void;
   disabled?: boolean;
   setDisabled: (value: boolean) => void;
@@ -28,14 +26,13 @@ type EmailOtpStepProps = {
 
 export function EmailOtpStep({
   email,
-  next,
+  purpose,
   onBack,
-  onNeedsPassword,
+  onVerified,
   onError,
   disabled = false,
   setDisabled,
 }: EmailOtpStepProps) {
-  const router = useRouter();
   const [token, setToken] = useState("");
   const [resendSeconds, setResendSeconds] = useState(RESEND_COOLDOWN_SEC);
   const [verifying, setVerifying] = useState(false);
@@ -53,13 +50,13 @@ export function EmailOtpStep({
     const res = await fetch("/api/auth/otp/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalizeEmail(email) }),
+      body: JSON.stringify({ email: normalizeEmail(email), purpose }),
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(data.error ?? "Could not send a verification code.");
     }
-  }, [email]);
+  }, [email, purpose]);
 
   const handleVerify = useCallback(
     async (codeOverride?: string) => {
@@ -75,10 +72,11 @@ export function EmailOtpStep({
 
       try {
         const supabase = createClient();
+        const otpType = purpose === "recovery" ? "recovery" : "email";
         const { error } = await supabase.auth.verifyOtp({
           email: normalizeEmail(email),
           token: code,
-          type: "email",
+          type: otpType,
         });
 
         if (error) {
@@ -86,42 +84,7 @@ export function EmailOtpStep({
           return;
         }
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-          throw new Error("Could not load your account. Try again.");
-        }
-
-        if (userMustSetPassword(user)) {
-          dispatchAuthSignedIn();
-          onNeedsPassword();
-          return;
-        }
-
-        dispatchAuthSignedIn();
-
-        const completeRes = await fetch("/api/auth/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ next }),
-        });
-
-        if (!completeRes.ok) {
-          const data = (await completeRes.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(data.error ?? "Could not finish sign in.");
-        }
-
-        const { redirectTo } = (await completeRes.json()) as {
-          redirectTo: string;
-        };
-
-        router.replace(redirectTo);
-        router.refresh();
+        onVerified();
       } catch (e) {
         onError(e instanceof Error ? e.message : "Verification failed.");
       } finally {
@@ -129,7 +92,7 @@ export function EmailOtpStep({
         setDisabled(false);
       }
     },
-    [email, next, onError, onNeedsPassword, router, setDisabled, token],
+    [email, onError, onVerified, purpose, setDisabled, token],
   );
 
   const handleResend = async () => {
@@ -191,7 +154,7 @@ export function EmailOtpStep({
           type="button"
           disabled={busy || resendSeconds > 0}
           onClick={() => void handleResend()}
-          className="text-foreground underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
+          className="cursor-pointer text-foreground underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
         >
           {resendSeconds > 0 ? (
             `Resend code in ${resendSeconds}s`
@@ -208,7 +171,7 @@ export function EmailOtpStep({
           type="button"
           disabled={busy}
           onClick={onBack}
-          className="text-muted underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer text-muted underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-60"
         >
           Use a different email
         </button>

@@ -120,7 +120,7 @@ export function OtpInput({
       role="group"
       aria-label="Verification code"
       className={cn(
-        "flex overflow-hidden rounded-xl border border-border bg-input",
+        "flex overflow-hidden rounded-xl border border-border/90 bg-input",
         disabled && "opacity-60",
         className,
       )}
@@ -130,7 +130,8 @@ export function OtpInput({
           key={index}
           className={cn(
             "relative flex min-w-0 flex-1",
-            index > 0 && "before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-border",
+            index > 0 &&
+              "before:absolute before:inset-y-1 before:left-0 before:w-[1.5px] before:bg-foreground/20",
           )}
         >
           <input

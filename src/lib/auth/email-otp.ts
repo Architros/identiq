@@ -14,6 +14,10 @@ export const otpTokenSchema = z
   .trim()
   .regex(/^\d{6}$/, `Enter the ${OTP_LENGTH}-digit code from your email.`);
 
+export const otpPurposeSchema = z.enum(["signup", "recovery"]);
+
+export type OtpPurpose = z.infer<typeof otpPurposeSchema>;
+
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -51,6 +55,20 @@ export function mapOtpSendError(message: string): {
     status: 400,
     error: "Could not send a verification code. Try again shortly.",
   };
+}
+
+export function mapPasswordSignInError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+    return "Incorrect email or password.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Confirm your email first, or use Forgot password.";
+  }
+  if (lower.includes("email logins are disabled")) {
+    return "Email sign-in is disabled. Enable the Email provider in Supabase.";
+  }
+  return "Could not sign in. Try again.";
 }
 
 export function mapOtpVerifyError(message: string): string {

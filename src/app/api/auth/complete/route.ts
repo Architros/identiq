@@ -6,7 +6,16 @@ import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 
 const bodySchema = z.object({
   next: z.string().optional(),
+  intent: z.enum(["signin", "signup", "recovery"]).optional(),
 });
+
+function isLikelyExistingAccount(createdAtRaw: string | null | undefined): boolean {
+  if (!createdAtRaw) return false;
+  const createdAtMs = Date.parse(createdAtRaw);
+  if (!Number.isFinite(createdAtMs)) return false;
+  // If account creation is older than this window, treat as existing.
+  return Date.now() - createdAtMs > 15 * 60 * 1000;
+}
 
 export async function POST(request: Request) {
   const { supabase, withCookies } = createRouteHandlerSupabase(request);
@@ -20,16 +29,25 @@ export async function POST(request: Request) {
   }
 
   let next: string | undefined;
+  let intent: "signin" | "signup" | "recovery" | undefined;
   try {
     const json = await request.json().catch(() => ({}));
     const parsed = bodySchema.safeParse(json);
     next = parsed.success ? parsed.data.next : undefined;
+    intent = parsed.success ? parsed.data.intent : undefined;
   } catch {
     next = undefined;
+    intent = undefined;
   }
 
   await ensureProfileForUser(user);
-  const redirectTo = await resolvePostAuthPath(user.id, next);
+  const nextPath =
+    intent === "signup" &&
+    next === "/new-brand" &&
+    isLikelyExistingAccount(user.created_at)
+      ? "/"
+      : next;
+  const redirectTo = await resolvePostAuthPath(user.id, nextPath);
 
   return withCookies(NextResponse.json({ redirectTo }));
 }

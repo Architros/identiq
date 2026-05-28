@@ -20,7 +20,7 @@ type TextureButtonProps = {
   innerClassName?: string;
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 };
 
 const shapeRadius: Record<TextureButtonShape, string> = {
@@ -39,9 +39,9 @@ const outerVariant: Record<TextureButtonVariant, string> = {
 
 const innerVariant: Record<TextureButtonVariant, string> = {
   accent:
-    "relative inline-flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#f97a32] to-[#e8641c] text-on-accent transition-[filter] duration-300 hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50",
+    "relative inline-flex cursor-pointer items-center justify-center overflow-hidden bg-gradient-to-b from-[#f97a32] to-[#e8641c] text-on-accent transition-all duration-200 hover:-translate-y-px hover:brightness-110 hover:shadow-[0_10px_20px_rgba(248,110,41,0.25)] active:translate-y-0 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50",
   primary:
-    "relative inline-flex items-center justify-center overflow-hidden bg-gradient-to-b from-neutral-700 to-neutral-900 text-white transition-[filter] duration-300 hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50",
+    "relative inline-flex cursor-pointer items-center justify-center overflow-hidden bg-gradient-to-b from-neutral-700 to-neutral-900 text-white transition-all duration-200 hover:-translate-y-px hover:brightness-110 hover:shadow-[0_8px_16px_rgba(0,0,0,0.3)] active:translate-y-0 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50",
 };
 
 const defaultInnerSize = "px-6 py-2.5 text-sm font-semibold";

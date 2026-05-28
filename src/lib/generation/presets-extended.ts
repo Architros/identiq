@@ -560,6 +560,26 @@ export const extendedGenerationPresets: GenerationPreset[] = [
     platformPixelHint: "Channel cover · 16:9",
     lockAspectRatio: true,
   },
+  {
+    id: "hero-image",
+    category: "headers",
+    categoryLabel: "Brand Headers & Covers",
+    title: "Hero Image",
+    description: "Landing and website hero visuals",
+    platformIcon: PRESET_ICONS.heroImage,
+    defaultPrompt: presetBrief({
+      deliverable:
+        "Website hero image for a landing page or homepage header, fully aligned with the brand identity.",
+      composition:
+        "Premium visual storytelling with strong focal point, clean negative space for headline/CTA overlays, and cohesive use of brand colors, tone, and style.",
+      aspectRatio: "16:9",
+      platformHint: "Web hero section · 16:9",
+    }),
+    aspectRatio: "16:9",
+    suggestedResolution: "2K",
+    platformPixelHint: "Website hero banner · 16:9",
+    lockAspectRatio: true,
+  },
 
   // Product presentation
   {

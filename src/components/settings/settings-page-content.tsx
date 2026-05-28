@@ -18,6 +18,10 @@ export function SettingsPageContent() {
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const currentName = (profile?.full_name ?? "").trim();
+  const trimmedDraft = nameDraft.trim();
+  const isNameDirty = trimmedDraft !== currentName;
+  const canSaveName = !saving && trimmedDraft.length > 0 && isNameDirty;
 
   const loadProfile = useCallback(async () => {
     try {
@@ -41,10 +45,13 @@ export function SettingsPageContent() {
   const saveName = async () => {
     const trimmed = nameDraft.trim();
     if (!trimmed) {
-      showErrorToast("Name cannot be empty.");
+      showErrorToast("Name cannot be empty.", {
+        title: "Invalid name",
+        mapAsGeneration: false,
+      });
       return;
     }
-    if (trimmed === (profile?.full_name ?? "").trim()) return;
+    if (trimmed === currentName) return;
 
     setSaving(true);
     try {
@@ -72,6 +79,10 @@ export function SettingsPageContent() {
     } catch (error) {
       showErrorToast(
         error instanceof Error ? error.message : "Could not update name",
+        {
+          title: "Update failed",
+          mapAsGeneration: false,
+        },
       );
     } finally {
       setSaving(false);
@@ -119,7 +130,6 @@ export function SettingsPageContent() {
                   type="text"
                   value={nameDraft}
                   onChange={(e) => setNameDraft(e.target.value)}
-                  onBlur={() => void saveName()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -130,9 +140,25 @@ export function SettingsPageContent() {
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
                   aria-label="Full name"
                 />
-                <p className="text-xs text-muted">
-                  Press Enter or click away to save.
-                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!canSaveName}
+                    onClick={() => void saveName()}
+                    className="inline-flex cursor-pointer items-center rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving || !isNameDirty}
+                    onClick={() => setNameDraft(profile?.full_name ?? "")}
+                    className="inline-flex cursor-pointer items-center rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <p className="text-xs text-muted">Press Enter to save.</p>
+                </div>
               </dd>
             </div>
             <div>

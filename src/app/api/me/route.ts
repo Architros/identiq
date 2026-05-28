@@ -75,6 +75,19 @@ export async function PATCH(request: Request) {
       .single();
 
     if (profileError) {
+      const lower = profileError.message.toLowerCase();
+      if (
+        lower.includes("infinite recursion detected in policy") &&
+        lower.includes("profiles")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Profile updates are blocked by a Supabase RLS policy loop on profiles. Fix the policy, then try again.",
+          },
+          { status: 400 },
+        );
+      }
       return NextResponse.json(
         { error: profileError.message },
         { status: 400 },

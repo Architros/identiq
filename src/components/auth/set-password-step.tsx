@@ -14,13 +14,38 @@ import {
 } from "@/lib/auth/password";
 import { createClient } from "@/lib/supabase/client";
 
+export type SetPasswordVariant = "signup" | "recovery";
+
 type SetPasswordStepProps = {
   next: string;
+  variant?: SetPasswordVariant;
   onError: (message: string | null) => void;
 };
 
-export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
+const COPY: Record<
+  SetPasswordVariant,
+  { title: string; description: string; submit: string }
+> = {
+  signup: {
+    title: "Create your password",
+    description:
+      "You'll use this password to sign in with your email next time.",
+    submit: "Continue",
+  },
+  recovery: {
+    title: "Set a new password",
+    description: "Choose a new password for your account.",
+    submit: "Update password",
+  },
+};
+
+export function SetPasswordStep({
+  next,
+  variant = "signup",
+  onError,
+}: SetPasswordStepProps) {
   const router = useRouter();
+  const copy = COPY[variant];
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,7 +63,10 @@ export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
     const completeRes = await fetch("/api/auth/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ next }),
+      body: JSON.stringify({
+        next,
+        intent: variant === "signup" ? "signup" : "recovery",
+      }),
     });
 
     if (!completeRes.ok) {
@@ -102,11 +130,9 @@ export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
     <div className="w-full space-y-5">
       <div className="text-center">
         <h2 className="font-display text-lg font-semibold text-foreground">
-          Create your password
+          {copy.title}
         </h2>
-        <p className="mt-2 text-sm text-muted">
-          You&apos;ll use this password to sign in with your email next time.
-        </p>
+        <p className="mt-2 text-sm text-muted">{copy.description}</p>
       </div>
 
       <PasswordRequirementsList
@@ -168,7 +194,7 @@ export function SetPasswordStep({ next, onError }: SetPasswordStepProps) {
             <span>Saving…</span>
           </>
         ) : (
-          "Continue"
+          copy.submit
         )}
       </TextureButton>
     </div>
