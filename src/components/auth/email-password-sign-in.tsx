@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/password-field";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { TextureButton } from "@/components/ui/texture-button";
+import { completeSignIn } from "@/lib/auth/complete-sign-in";
 import { dispatchAuthSignedIn } from "@/lib/auth/client-storage";
 import { mapPasswordSignInError, normalizeEmail } from "@/lib/auth/email-otp";
 import { createClient } from "@/lib/supabase/client";
@@ -59,25 +60,17 @@ export function EmailPasswordSignIn({
       }
 
       dispatchAuthSignedIn();
+      await supabase.auth.refreshSession();
 
-      const completeRes = await fetch("/api/auth/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ next, intent: "signin" }),
+      const result = await completeSignIn(supabase, {
+        next,
+        intent: "signin",
       });
-
-      if (!completeRes.ok) {
-        const data = (await completeRes.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        throw new Error(data.error ?? "Could not finish sign in.");
+      if (!result.ok) {
+        throw new Error(result.error);
       }
 
-      const { redirectTo } = (await completeRes.json()) as {
-        redirectTo: string;
-      };
-
-      router.replace(redirectTo);
+      router.replace(result.redirectTo);
       router.refresh();
     } catch (e) {
       onError(e instanceof Error ? e.message : "Could not sign in.");

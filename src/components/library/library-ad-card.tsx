@@ -25,6 +25,7 @@ function hasStoredDimensions(
 }
 
 export function LibraryAdCard({ template, onOpen }: LibraryAdCardProps) {
+  const title = template.title ?? "Template";
   const stored = hasStoredDimensions(template);
   const [loadedRatio, setLoadedRatio] = useState<number | null>(
     stored ? template.width / template.height : null,
@@ -51,7 +52,8 @@ export function LibraryAdCard({ template, onOpen }: LibraryAdCardProps) {
           "relative block h-full w-full cursor-pointer",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset",
         )}
-        aria-label="View template"
+        aria-label={`View ${title}`}
+        title={title}
       >
         <Image
           src={template.imageUrl}
@@ -76,6 +78,15 @@ export function LibraryAdCard({ template, onOpen }: LibraryAdCardProps) {
           )}
           aria-hidden
         />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-6 text-left opacity-0 transition-opacity duration-200",
+            "group-hover:opacity-100",
+          )}
+          aria-hidden
+        >
+          <p className="truncate text-xs font-medium text-white">{title}</p>
+        </div>
       </button>
 
       <Link

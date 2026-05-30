@@ -11,6 +11,7 @@ import {
 } from "@/lib/billing/billing-gate";
 import { userHasBillingAccess } from "@/lib/billing/check-billing-access";
 import {
+  isAuthCompletionApiPath,
   isPublicApiPath,
   isPublicAppPath,
   loginPathWithNext,
@@ -109,7 +110,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (userMustSetPassword(user)) {
-    if (pathname.startsWith("/api/")) {
+    if (
+      pathname.startsWith("/api/") &&
+      !isAuthCompletionApiPath(pathname) &&
+      !pathname.startsWith("/api/auth/")
+    ) {
       return NextResponse.json(
         { error: "password_setup_required" },
         { status: 403 },

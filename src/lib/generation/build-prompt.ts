@@ -67,11 +67,17 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     });
   }
 
-  return assembleIdeasGenerationPrompt({
+  const composed = assembleIdeasGenerationPrompt({
     brand,
     userDirection: input.userPrompt,
     presetLines,
     brandAssetRefs,
     referenceImageUrls: input.referenceImageUrls,
   });
+
+  if ((input.referenceImageUrls?.length ?? 0) > 0) {
+    return `${composed}\n\nStyle guidance: Use the attached references as inspiration for composition and visual language while preserving a classic, distinctive, and original result.`;
+  }
+
+  return composed;
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { OtpPurpose } from "@/lib/auth/email-otp";
 import { normalizeEmail } from "@/lib/auth/email-otp";
+import { sendEmailOtp } from "@/lib/auth/send-email-otp";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { TextureButton } from "@/components/ui/texture-button";
 
@@ -44,18 +45,9 @@ export function EmailCollectStep({
     onError(null);
 
     try {
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: normalizeEmail(trimmed),
-          purpose,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        onError(data.error ?? "Could not send a verification code.");
+      const result = await sendEmailOtp(trimmed, purpose);
+      if (!result.ok) {
+        onError(result.error);
         return;
       }
 

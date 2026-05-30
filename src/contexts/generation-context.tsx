@@ -34,6 +34,7 @@ import {
   deriveChatTitle,
   isMeaningfulChatHistory,
 } from "@/lib/generation/chat-history";
+import { selectCategoryMatchedLibraryReferences } from "@/lib/library/reference-selection";
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -205,9 +206,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     ],
   );
 
-  const buildGenerationBody = useCallback((): GenerationRequestBody & {
-    chatId?: string;
-  } => {
+  const buildGenerationBody = useCallback(
+    (composerReferences?: Array<{ url: string; name?: string }>): GenerationRequestBody & {
+      chatId?: string;
+    } => {
+      const mergedComposerReferences =
+        composerReferences ??
+        referenceImagesRef.current.map((img) => ({
+          url: img.previewUrl,
+          name: img.name,
+        }));
     return {
       chatId: activeChatId ?? undefined,
       brandId: brandKit.id,
@@ -222,26 +230,24 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       })),
       userPrompt: prompt,
       imageAssist: true,
-      referenceImageCount: referenceImagesRef.current.length,
-      composerReferenceImages: referenceImagesRef.current.map((img) => ({
-        url: img.previewUrl,
-        name: img.name,
-      })),
+      referenceImageCount: mergedComposerReferences.length,
+      composerReferenceImages: mergedComposerReferences,
       libraryTemplateId: libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
       settings: { aspectRatio, resolution, quantity },
     };
-  }, [
-    activeChatId,
-    brandKit,
-    brandMemory,
-    selectedPresets,
-    prompt,
-    referenceImages,
-    libraryTemplateId,
-    aspectRatio,
-    resolution,
-    quantity,
-  ]);
+    },
+    [
+      activeChatId,
+      brandKit,
+      brandMemory,
+      selectedPresets,
+      prompt,
+      libraryTemplateId,
+      aspectRatio,
+      resolution,
+      quantity,
+    ],
+  );
 
   const transport = useMemo(
     () =>
@@ -710,13 +716,26 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
+    const userReferences = referenceImagesRef.current.map((img) => ({
+      url: img.previewUrl,
+      name: img.name,
+    }));
+    const autoReferences = remixingLibrary
+      ? []
+      : selectCategoryMatchedLibraryReferences({
+          presets: selectedPresets,
+          maxCount: Math.max(0, 2 - userReferences.length),
+          excludeUrls: userReferences.map((img) => img.url),
+        });
+    const composerReferences = [...userReferences, ...autoReferences].slice(0, 4);
+
     const tokenCost = calculateGenerationTokenCost({
       presetCount: selectedPresets.length,
       hasPrompt: prompt.trim().length > 0,
       isLibraryRemix: remixingLibrary,
       quantity,
       resolution,
-      referenceImageCount: referenceImagesRef.current.length,
+      referenceImageCount: composerReferences.length,
     });
 
     if (tokenCost > availableTokens) {
@@ -748,19 +767,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           presetIds: selectedPresets.map((p) => p.id),
         },
       },
-      { body: buildGenerationBody() },
+      { body: buildGenerationBody(composerReferences) },
     );
   }, [
     selectedPresets,
     prompt,
     quantity,
     resolution,
-    referenceImages.length,
     availableTokens,
     buildGenerationBody,
     sendMessage,
     hasActiveBrand,
     isLoading,
+    selectedPresets,
   ]);
 
   const stopGeneration = useCallback(() => {

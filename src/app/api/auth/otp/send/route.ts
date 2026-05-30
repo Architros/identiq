@@ -7,7 +7,6 @@ import {
   normalizeEmail,
   otpPurposeSchema,
 } from "@/lib/auth/email-otp";
-import { getServerSiteUrl } from "@/lib/auth/site-url";
 import { createAnonClient } from "@/lib/supabase/anon";
 
 const bodySchema = z.object({
@@ -39,45 +38,28 @@ export async function POST(request: Request) {
 
   try {
     const supabase = createAnonClient();
-    const site = getServerSiteUrl();
-    const redirectTo = `${site}/auth/callback`;
 
-    if (purpose === "signup") {
-      // Supabase sends a 6-digit code when the Magic Link template uses {{ .Token }}.
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-        },
+    // Both signup and recovery use signInWithOtp so Supabase sends the same
+    // Magic Link email template (with {{ .Token }} for a 6-digit code).
+    // resetPasswordForEmail uses a separate "Reset password" template that
+    // defaults to {{ .ConfirmationURL }} — a link, not an OTP.
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: purpose === "signup",
+      },
+    });
+
+    if (error) {
+      const forwarded = request.headers.get("x-forwarded-for");
+      const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
+      console.warn(`[auth/otp/send] ${purpose} failed`, {
+        email_hash: emailHash(email),
+        ip,
+        message: error.message,
       });
-
-      if (error) {
-        const forwarded = request.headers.get("x-forwarded-for");
-        const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
-        console.warn("[auth/otp/send] signup failed", {
-          email_hash: emailHash(email),
-          ip,
-          message: error.message,
-        });
-        const mapped = mapOtpSendError(error.message);
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-    } else {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
-
-      if (error) {
-        const forwarded = request.headers.get("x-forwarded-for");
-        const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
-        console.warn("[auth/otp/send] recovery failed", {
-          email_hash: emailHash(email),
-          ip,
-          message: error.message,
-        });
-        const mapped = mapOtpSendError(error.message);
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
+      const mapped = mapOtpSendError(error.message);
+      return NextResponse.json({ error: mapped.error }, { status: mapped.status });
     }
 
     return NextResponse.json({ ok: true });

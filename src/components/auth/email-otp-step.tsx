@@ -10,6 +10,7 @@ import {
   OTP_LENGTH,
   type OtpPurpose,
 } from "@/lib/auth/email-otp";
+import { sendEmailOtp } from "@/lib/auth/send-email-otp";
 import { createClient } from "@/lib/supabase/client";
 
 const RESEND_COOLDOWN_SEC = 60;
@@ -47,14 +48,9 @@ export function EmailOtpStep({
   }, [resendSeconds]);
 
   const sendOtp = useCallback(async () => {
-    const res = await fetch("/api/auth/otp/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalizeEmail(email), purpose }),
-    });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(data.error ?? "Could not send a verification code.");
+    const result = await sendEmailOtp(email, purpose);
+    if (!result.ok) {
+      throw new Error(result.error);
     }
   }, [email, purpose]);
 
@@ -72,11 +68,11 @@ export function EmailOtpStep({
 
       try {
         const supabase = createClient();
-        const otpType = purpose === "recovery" ? "recovery" : "email";
+        // Recovery codes are sent via signInWithOtp (Magic Link template), same as signup.
         const { error } = await supabase.auth.verifyOtp({
           email: normalizeEmail(email),
           token: code,
-          type: otpType,
+          type: "email",
         });
 
         if (error) {

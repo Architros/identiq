@@ -143,6 +143,18 @@ function LoginForm() {
     setError(null);
   };
 
+  const goForgotPassword = () => {
+    setMode("forgot-email");
+    setOtpEmail("");
+    setError(null);
+  };
+
+  const goSignUp = () => {
+    setMode("sign-up-email");
+    setOtpEmail("");
+    setError(null);
+  };
+
   const otpPurpose: OtpPurpose | null =
     mode === "sign-up-otp"
       ? "signup"
@@ -324,8 +336,8 @@ function LoginForm() {
           <EmailPasswordSignIn
             next={next}
             onError={setError}
-            onForgotPassword={() => setMode("forgot-email")}
-            onCreateAccount={() => setMode("sign-up-email")}
+            onForgotPassword={goForgotPassword}
+            onCreateAccount={goSignUp}
             disabled={busy}
           />
         </>

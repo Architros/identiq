@@ -6,6 +6,7 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { LibraryTemplate } from "@/lib/library/types";
+import { libraryCategories } from "@/lib/library/templates";
 
 type LibraryTemplateModalProps = {
   template: LibraryTemplate | null;
@@ -31,6 +32,10 @@ export function LibraryTemplateModal({
   }, [template, onClose]);
 
   if (!template) return null;
+  const title = template.title ?? "Template";
+  const categoryLabel =
+    libraryCategories.find((cat) => cat.id === template.category)?.label ??
+    template.category;
 
   const remixHref = `/images?libraryId=${encodeURIComponent(template.id)}`;
 
@@ -75,6 +80,10 @@ export function LibraryTemplateModal({
         </div>
 
         <div className="border-t border-border bg-surface px-4 py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            {categoryLabel}
+          </p>
+          <p className="mt-1 mb-3 text-sm font-medium text-foreground">{title}</p>
           <Link
             href={remixHref}
             className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90"

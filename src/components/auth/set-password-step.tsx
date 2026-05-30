@@ -6,6 +6,7 @@ import { PasswordField } from "@/components/auth/password-field";
 import { PasswordRequirementsList } from "@/components/auth/password-requirements-list";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { TextureButton } from "@/components/ui/texture-button";
+import { completeSignIn } from "@/lib/auth/complete-sign-in";
 import { dispatchAuthSignedIn } from "@/lib/auth/client-storage";
 import {
   getPasswordRequirementStatus,
@@ -59,28 +60,17 @@ export function SetPasswordStep({
     return status.min_length && status.passwords_match;
   }, [password, confirmPassword]);
 
-  const finishSignIn = async () => {
-    const completeRes = await fetch("/api/auth/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        next,
-        intent: variant === "signup" ? "signup" : "recovery",
-      }),
+  const finishSignIn = async (supabase: ReturnType<typeof createClient>) => {
+    const result = await completeSignIn(supabase, {
+      next,
+      intent: variant === "signup" ? "signup" : "recovery",
     });
 
-    if (!completeRes.ok) {
-      const data = (await completeRes.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      throw new Error(data.error ?? "Could not finish sign in.");
+    if (!result.ok) {
+      throw new Error(result.error);
     }
 
-    const { redirectTo } = (await completeRes.json()) as {
-      redirectTo: string;
-    };
-
-    router.replace(redirectTo);
+    router.replace(result.redirectTo);
     router.refresh();
   };
 
@@ -118,7 +108,8 @@ export function SetPasswordStep({
       }
 
       dispatchAuthSignedIn();
-      await finishSignIn();
+      await supabase.auth.refreshSession();
+      await finishSignIn(supabase);
     } catch (e) {
       onError(e instanceof Error ? e.message : "Could not save your password.");
     } finally {

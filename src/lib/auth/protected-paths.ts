@@ -1,6 +1,18 @@
+const PUBLIC_API_PREFIXES = [
+  "/api/billing/plans/public",
+] as const;
+
 /** API routes callable without a signed-in session (marketing site, etc.). */
 export function isPublicApiPath(pathname: string): boolean {
-  return pathname === "/api/billing/plans/public";
+  if (pathname.startsWith("/api/auth/")) return true;
+  return PUBLIC_API_PREFIXES.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
+/** Auth completion runs while cookies may still be syncing from the browser client. */
+export function isAuthCompletionApiPath(pathname: string): boolean {
+  return pathname === "/api/auth/complete";
 }
 
 /** Routes that do not require a signed-in Supabase session. */
