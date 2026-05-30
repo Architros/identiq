@@ -6,6 +6,7 @@ import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGenerationElapsed } from "@/hooks/use-generation-elapsed";
 import {
   aspectRatioCSSValue,
+  aspectRatioGenerationCenteredTileClass,
   aspectRatioGenerationLeftWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
@@ -32,6 +33,8 @@ type ImageSkeletonGridProps = {
   animated?: boolean;
   failed?: boolean;
   onRetry?: () => void;
+  /** Center skeleton tiles (library remix welcome layout). */
+  centered?: boolean;
 };
 
 export function ImageSkeletonGrid({
@@ -45,6 +48,7 @@ export function ImageSkeletonGrid({
   animated = true,
   failed = false,
   onRetry,
+  centered = false,
 }: ImageSkeletonGridProps) {
   const ratio = parseAspectRatio(aspectRatio);
   const count = Math.max(1, Math.min(quantity, 4));
@@ -60,7 +64,7 @@ export function ImageSkeletonGrid({
     ];
 
   return (
-    <div className="space-y-2">
+    <div className={cn("w-full space-y-2", centered && "text-center")}>
       {!failed ? (
         <div className="space-y-1">
           <AITextLoading
@@ -77,12 +81,19 @@ export function ImageSkeletonGrid({
         </div>
       ) : null}
 
-      <div className="flex flex-col items-start gap-3">
+      <div
+        className={cn(
+          "flex w-full flex-col gap-3",
+          centered ? "items-center" : "items-start",
+        )}
+      >
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
             className={cn(
-              aspectRatioGenerationLeftWrapperClass(ratio),
+              centered
+                ? aspectRatioGenerationCenteredTileClass(ratio)
+                : aspectRatioGenerationLeftWrapperClass(ratio),
               "relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active",
               animated && !failed && "animate-pulse",
               failed && "opacity-70",

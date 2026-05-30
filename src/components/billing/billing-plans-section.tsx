@@ -225,7 +225,7 @@ export function BillingPlansSection({
 
       <div
         className={cn(
-          "flex justify-center sm:justify-start",
+          "flex justify-center",
           compact ? "mt-3" : showInternalHeader || welcomeEligible ? "mt-8" : "mt-4",
         )}
       >

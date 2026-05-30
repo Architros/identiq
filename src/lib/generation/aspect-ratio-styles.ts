@@ -96,6 +96,21 @@ export function aspectRatioGenerationLeftWrapperClass(ratio: AspectRatio): strin
   return cn("relative w-full shrink-0", aspectRatioGenerationClass[ratio]);
 }
 
+/** Centered generation skeleton tile (fixed max width, no w-full stretch). */
+export function aspectRatioGenerationCenteredTileClass(
+  ratio: AspectRatio,
+): string {
+  const centeredSize: Record<AspectRatio, string> = {
+    "1:1": "aspect-square w-[min(100%,320px)] max-w-[320px]",
+    "9:16": "aspect-[9/16] w-[min(100%,220px)] max-w-[220px]",
+    "16:9": "aspect-video w-full max-w-xl",
+    "4:5": "aspect-[4/5] w-[min(100%,280px)] max-w-[280px]",
+    "2:3": "aspect-[2/3] w-[min(100%,260px)] max-w-[260px]",
+    "21:9": "aspect-[21/9] w-full max-w-full",
+  };
+  return cn("relative mx-auto shrink-0", centeredSize[ratio]);
+}
+
 /** Target display width for gallery thumbnails (height derived from ratio). */
 export function galleryImageDimensions(ratio: AspectRatio): {
   width: number;

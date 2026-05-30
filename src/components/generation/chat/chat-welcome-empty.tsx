@@ -11,63 +11,72 @@ const DEFAULT_SUGGESTIONS = [
   "Seasonal promo with clear call to action",
 ] as const;
 
-const LIBRARY_SUGGESTIONS = [
-  "Swap in our brand colors and logo",
-  "Make the headline shorter and punchier",
-  "Use a cleaner, more premium layout",
-] as const;
-
 export function ChatWelcomeEmpty() {
   const { selectedPresets, libraryTemplateId, setPrompt } = useGeneration();
   const { activeBrand, hasActiveBrand } = useBrand();
 
+  const isLibraryRemix = libraryTemplateId != null;
   const brandName = hasActiveBrand
     ? brandDisplayLabel(activeBrand)
     : "your brand";
 
-  const presetLine =
-    libraryTemplateId != null
-      ? "Adapt this library layout with a short brief — colors, copy, and mood will follow your brand."
-      : selectedPresets.length > 0
-        ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Describe what you want and generate when you're ready.`
-        : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";
-
-  const suggestions =
-    libraryTemplateId != null ? LIBRARY_SUGGESTIONS : DEFAULT_SUGGESTIONS;
+  const presetLine = isLibraryRemix
+    ? "Adapt this library layout with a short brief — colors, copy, and mood will follow your brand."
+    : selectedPresets.length > 0
+      ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Describe what you want and generate when you're ready.`
+      : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";
 
   return (
-    <header className="mx-auto w-full space-y-5 pb-2 pt-1 text-center">
-      <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted">
-          Welcome
-        </p>
-        <h2 className="font-display text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
-          Create on-brand visuals for {brandName}
+    <header
+      className={cn(
+        "mx-auto w-full pb-2 pt-1 text-center",
+        isLibraryRemix ? "space-y-3" : "space-y-5",
+      )}
+    >
+      <div className="space-y-2">
+        {!isLibraryRemix ? (
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">
+            Welcome
+          </p>
+        ) : null}
+        <h2
+          className={cn(
+            "font-display font-normal tracking-tight text-foreground",
+            isLibraryRemix
+              ? "text-xl sm:text-2xl"
+              : "text-2xl sm:text-3xl",
+          )}
+        >
+          {isLibraryRemix
+            ? `Remix for ${brandName}`
+            : `Create on-brand visuals for ${brandName}`}
         </h2>
-        <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted">
+        <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
           {presetLine}
         </p>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted">Try a prompt</p>
-        <ul className="flex flex-wrap justify-center gap-2">
-          {suggestions.map((suggestion) => (
-            <li key={suggestion}>
-              <button
-                type="button"
-                onClick={() => setPrompt(suggestion)}
-                className={cn(
-                  "cursor-pointer rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-foreground transition-colors",
-                  "hover:border-accent/30 hover:bg-accent/6",
-                )}
-              >
-                {suggestion}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {!isLibraryRemix ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted">Try a prompt</p>
+          <ul className="flex flex-wrap justify-center gap-2">
+            {DEFAULT_SUGGESTIONS.map((suggestion) => (
+              <li key={suggestion}>
+                <button
+                  type="button"
+                  onClick={() => setPrompt(suggestion)}
+                  className={cn(
+                    "cursor-pointer rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-foreground transition-colors",
+                    "hover:border-accent/30 hover:bg-accent/6",
+                  )}
+                >
+                  {suggestion}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </header>
   );
 }

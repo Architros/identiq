@@ -4,12 +4,14 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { useCredits } from "@/contexts/credits-context";
 import { useGeneration } from "@/contexts/generation-context";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
+import { showErrorToast } from "@/lib/toast/show-toast";
 import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 export function DockCreateButton() {
   const { isLoading } = useBrand();
-  const { availableTokens } = useCredits();
+  const { availableTokens, isLoading: creditsLoading, openBuyTokens } =
+    useCredits();
   const {
     selectedPresets,
     prompt,
@@ -35,13 +37,34 @@ export function DockCreateButton() {
     referenceImageCount: referenceImages.length,
   });
 
-  const insufficient = tokenCost > 0 && tokenCost > availableTokens;
+  const insufficient =
+    !creditsLoading && tokenCost > 0 && tokenCost > availableTokens;
 
   const canSubmit =
     !isLoading &&
+    !creditsLoading &&
     hasGenerationInput &&
     !isGenerating &&
     !insufficient;
+
+  const handleCreate = () => {
+    if (isGenerating) return;
+    if (isLoading || creditsLoading) {
+      showErrorToast("Still loading your account. Try again in a moment.", {
+        mapAsGeneration: false,
+      });
+      return;
+    }
+    if (!hasGenerationInput) return;
+    if (insufficient) {
+      showErrorToast("Insufficient tokens", {
+        dedupeKey: "insufficient-tokens",
+      });
+      openBuyTokens();
+      return;
+    }
+    void submitGeneration();
+  };
 
   if (isGenerating) {
     return (
@@ -64,9 +87,9 @@ export function DockCreateButton() {
       type="button"
       variant="accent"
       shape="card"
-      disabled={!canSubmit}
-      onClick={() => submitGeneration()}
-      className="ml-2 shrink-0"
+      disabled={!hasGenerationInput}
+      onClick={handleCreate}
+      className={cn("ml-2 shrink-0", !canSubmit && hasGenerationInput && "opacity-60")}
       innerClassName="h-9 px-5"
     >
       Create

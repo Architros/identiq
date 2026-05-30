@@ -109,6 +109,7 @@ export function ChatAssistantTurn({
               elapsedStartedAt={isFailed ? null : generationStartedAt}
               animated={!isFailed}
               failed={isFailed}
+              centered={isLibraryRemix}
               onRetry={isFailed ? () => void submitGeneration() : undefined}
               progressTexts={isFailed ? undefined : renderingTexts}
             />

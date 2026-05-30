@@ -38,6 +38,7 @@ import { selectCategoryMatchedLibraryReferences } from "@/lib/library/reference-
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const LIBRARY_REMIX_DEFAULT_PROMPT = "Remix this layout for my brand";
 
 export type IdeasView = "grid" | "chat";
 
@@ -703,7 +704,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const submitGeneration = useCallback(async () => {
-    if (isLoading) return;
+    if (isLoading) {
+      showErrorToast("Still loading your brand. Try again in a moment.", {
+        mapAsGeneration: false,
+      });
+      return;
+    }
     if (!hasActiveBrand) {
       showErrorToast("Create a brand first to generate images.", {
         title: "Brand required",
@@ -755,7 +761,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
     const messageText =
       prompt.trim() ||
-      (remixingLibrary ? " " : "") ||
+      (remixingLibrary ? LIBRARY_REMIX_DEFAULT_PROMPT : "") ||
       presetSummary ||
       "Generate on-brand assets";
 

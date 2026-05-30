@@ -6,6 +6,7 @@ import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-g
 import { useGeneration } from "@/contexts/generation-context";
 import type { GenerationPhase } from "@/lib/generation/chat-message-types";
 import { generationProgressTexts } from "@/lib/generation/generation-progress-texts";
+import { cn } from "@/lib/utils";
 
 type ChatGenerationProgressProps = {
   phase?: GenerationPhase | null;
@@ -54,16 +55,34 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
 
   if (isFailed) {
     return (
-      <div className="w-full space-y-2">
-        <p className="text-sm text-muted">
-          {generationError ??
-            "Something went wrong while creating your image. Please try again."}
-        </p>
+      <div
+        className={cn(
+          "w-full space-y-4",
+          isLibraryRemix && "flex flex-col items-center text-center",
+        )}
+      >
+        {isLibraryRemix ? (
+          <header className="space-y-2">
+            <h2 className="font-display text-xl font-normal tracking-tight text-foreground sm:text-2xl">
+              Remix failed
+            </h2>
+            <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
+              {generationError ??
+                "Something went wrong while creating your image. Please try again."}
+            </p>
+          </header>
+        ) : (
+          <p className="text-sm text-muted">
+            {generationError ??
+              "Something went wrong while creating your image. Please try again."}
+          </p>
+        )}
         <ImageSkeletonGrid
           aspectRatio={aspectRatio}
           quantity={quantity}
           animated={false}
           failed
+          centered={isLibraryRemix}
           onRetry={() => void submitGeneration()}
         />
       </div>
@@ -71,7 +90,12 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
   }
 
   return (
-    <div className="w-full space-y-3">
+    <div
+      className={cn(
+        "w-full space-y-3",
+        isLibraryRemix && "flex flex-col items-center text-center",
+      )}
+    >
       {isComposingEffective ? (
         <AITextLoading
           texts={progressTexts}
@@ -87,6 +111,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           quantity={quantity}
           elapsedStartedAt={generationStartedAt}
           progressTexts={progressTexts}
+          centered={isLibraryRemix}
         />
       ) : !isComposingEffective && !isRenderingEffective ? (
         <AITextLoading

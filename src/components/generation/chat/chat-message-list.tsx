@@ -14,14 +14,16 @@ export function ChatMessageList({
   /** Slimmer footer (library remix) — less scroll padding. */
   compactFooter?: boolean;
 }) {
-  const { messages, isGenerating, generationPhase, generationError } =
-    useGeneration();
+  const {
+    messages,
+    isGenerating,
+    generationPhase,
+    generationError,
+    libraryTemplateId,
+  } = useGeneration();
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isGenerating, generationPhase]);
-
+  const isLibraryRemix = Boolean(libraryTemplateId);
   const lastMessage = messages[messages.length - 1];
   const showInlineProgress =
     isGenerating && (!lastMessage || lastMessage.role === "user");
@@ -29,25 +31,38 @@ export function ChatMessageList({
     !isGenerating &&
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
     (!lastMessage || lastMessage.role === "user");
+  const showWelcome =
+    messages.length === 0 && !showInlineProgress && !showInlineFailure;
 
-  const showWelcome = messages.length === 0 && !showInlineProgress;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isGenerating, generationPhase, showInlineFailure]);
 
   const scrollPadding = compactFooter
     ? "pb-44 scroll-pb-44"
     : "pb-28 scroll-pb-28";
+
+  const centerEmptyState =
+    showWelcome && !isLibraryRemix && !showInlineFailure;
+  const libraryRemixStatus =
+    isLibraryRemix && (showInlineProgress || showInlineFailure);
 
   return (
     <div
       className={cn(
         "min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
         scrollPadding,
-        showWelcome && "flex flex-col justify-center",
+        centerEmptyState && "flex flex-col justify-center",
+        libraryRemixStatus && "pt-6 sm:pt-10",
       )}
     >
       <div
         className={cn(
           "mx-auto w-full space-y-6",
-          showWelcome ? "max-w-xl text-center" : "mr-auto max-w-2xl",
+          isLibraryRemix || showWelcome
+            ? "max-w-xl text-center"
+            : "mr-auto max-w-2xl",
+          libraryRemixStatus && "flex flex-col items-center",
         )}
       >
         {showWelcome ? <ChatWelcomeEmpty /> : null}
