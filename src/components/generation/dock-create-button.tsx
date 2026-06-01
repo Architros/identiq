@@ -8,7 +8,11 @@ import { showErrorToast } from "@/lib/toast/show-toast";
 import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
-export function DockCreateButton() {
+type DockCreateButtonProps = {
+  compact?: boolean;
+};
+
+export function DockCreateButton({ compact = false }: DockCreateButtonProps) {
   const { isLoading } = useBrand();
   const { availableTokens, isLoading: creditsLoading, openBuyTokens } =
     useCredits();
@@ -72,7 +76,8 @@ export function DockCreateButton() {
         type="button"
         onClick={() => stopGeneration()}
         className={cn(
-          "ml-2 h-9 shrink-0 cursor-pointer rounded-xl px-5 text-sm font-semibold transition-colors",
+          "shrink-0 cursor-pointer rounded-xl text-sm font-semibold transition-colors",
+          compact ? "h-8 px-4 max-md:ml-0 md:ml-2" : "ml-2 h-9 px-5",
           "border border-border bg-surface text-foreground hover:bg-sidebar-active",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
         )}
@@ -89,8 +94,12 @@ export function DockCreateButton() {
       shape="card"
       disabled={!hasGenerationInput}
       onClick={handleCreate}
-      className={cn("ml-2 shrink-0", !canSubmit && hasGenerationInput && "opacity-60")}
-      innerClassName="h-9 px-5"
+      className={cn(
+        "shrink-0",
+        compact ? "max-md:ml-0 md:ml-2" : "ml-2",
+        !canSubmit && hasGenerationInput && "opacity-60",
+      )}
+      innerClassName={cn(compact ? "h-8 px-4 text-sm" : "h-9 px-5")}
     >
       Create
     </TextureButton>

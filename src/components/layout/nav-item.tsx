@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { NavItem as NavItemConfig } from "@/lib/navigation";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useSupportModals } from "@/contexts/support-modals-context";
+import { useSidebarNav } from "@/contexts/sidebar-nav-context";
 
 type NavItemProps = {
   item: NavItemConfig;
@@ -17,6 +18,7 @@ export function NavItem({ item }: NavItemProps) {
   const pathname = usePathname();
   const { activeBrandId, hasActiveBrand, isLoading } = useBrand();
   const { openHelp, openFeedback } = useSupportModals();
+  const { closeMobileNav } = useSidebarNav();
   const href =
     item.href === "/brands/current"
       ? isLoading
@@ -56,7 +58,10 @@ export function NavItem({ item }: NavItemProps) {
     return (
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => {
+          onOpen();
+          closeMobileNav();
+        }}
         className={cn(
           className,
           "cursor-pointer appearance-none border-0 bg-transparent",
@@ -80,6 +85,7 @@ export function NavItem({ item }: NavItemProps) {
       href={href}
       className={className}
       aria-current={isActive ? "page" : undefined}
+      onClick={closeMobileNav}
     >
       {content}
     </Link>

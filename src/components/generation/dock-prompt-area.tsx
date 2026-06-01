@@ -43,20 +43,32 @@ export function DockPromptArea({
   const isCompactRemix = compact && isLibraryRemix && view === "chat";
   const submitOnEnter = view === "chat";
 
-  const refThumbSize = isImages ? "h-24 w-24" : "h-14 w-14";
-  const chromeButtonSize = isImages ? "h-10 w-10" : "h-14 w-14";
-  const refIconSize = isImages ? 28 : 22;
-  const chromeIconSize = isImages ? 20 : 20;
-  const removeIconSize = isImages ? 20 : 16;
+  const refThumbSize = isImages
+    ? "h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24"
+    : "h-14 w-14";
+  const chromeButtonSize = isImages
+    ? "h-9 w-9 md:h-10 md:w-10"
+    : "h-14 w-14";
+  const refIconSize = isImages ? 20 : 22;
+  const chromeIconSize = isImages ? 18 : 20;
+  const removeIconSize = isImages ? 16 : 16;
 
   return (
     <div
       className={cn(
-        isImages && (isCompactRemix ? "space-y-1.5 py-1" : "space-y-2 py-2"),
+        isImages &&
+          (isCompactRemix
+            ? "space-y-1.5 py-1"
+            : "space-y-1.5 py-1.5 max-md:py-1 md:space-y-2 md:py-2"),
         isIdeasGrid && "space-y-3 pb-4 pt-3",
       )}
     >
-      <div className={cn("space-y-2", isIdeasGrid ? "space-y-3 px-4" : "px-3")}>
+      <div
+        className={cn(
+          "space-y-2",
+          isIdeasGrid ? "space-y-3 px-4" : "space-y-1.5 px-2.5 max-md:px-2 md:space-y-2 md:px-3",
+        )}
+      >
         <div className="flex items-center gap-2">
           <div
             className={cn(
@@ -156,6 +168,7 @@ export function DockPromptArea({
           className={cn(
             "rounded-xl border border-border/80 bg-background px-3 py-2",
             isIdeasGrid && "relative px-4 pb-12 pt-3",
+            isImages && "max-md:px-2.5 max-md:py-1.5",
           )}
         >
           <textarea
@@ -172,7 +185,7 @@ export function DockPromptArea({
             className={cn(
               "w-full resize-none bg-transparent text-foreground placeholder:text-muted focus-visible:outline-none",
               isImages
-                ? "min-h-9 py-0.5 text-sm leading-snug"
+                ? "min-h-8 max-md:min-h-7 py-0 text-sm leading-snug md:min-h-9 md:py-0.5"
                 : "text-sm leading-relaxed",
             )}
             onKeyDown={(e) => {
@@ -189,15 +202,16 @@ export function DockPromptArea({
           />
           <div
             className={cn(
-              "flex flex-wrap items-center gap-1.5",
-              isImages && "mt-1.5 justify-end",
-              isIdeasGrid && "absolute bottom-2 right-2",
+              "flex items-center gap-1.5",
+              isImages && "mt-1 max-md:mt-0.5 md:mt-1.5",
+              isImages && "justify-end",
+              isIdeasGrid && "absolute bottom-2 right-2 flex-wrap",
             )}
           >
             {!isCompactRemix && (isImages || isIdeasGrid) ? (
               <DockSettingsRow compact={isImages} />
             ) : null}
-            <DockCreateButton />
+            <DockCreateButton compact={isImages} />
           </div>
         </div>
       </div>

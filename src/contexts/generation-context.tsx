@@ -197,6 +197,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       resolution,
       quantity,
       userPrompt: prompt,
+      libraryTemplateId:
+        libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
     }),
     [
       selectedPresets,
@@ -204,6 +206,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       resolution,
       quantity,
       prompt,
+      libraryTemplateId,
     ],
   );
 

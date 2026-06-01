@@ -19,6 +19,7 @@ type DockSelectProps<T extends string | number> = {
   onChange: (value: T) => void;
   className?: string;
   disabled?: boolean;
+  fullWidth?: boolean;
   /** Opens above the trigger (recommended for bottom dock). */
   placement?: "above" | "below";
 };
@@ -63,6 +64,7 @@ export function DockSelect<T extends string | number>({
   onChange,
   className,
   disabled = false,
+  fullWidth = false,
   placement = "above",
 }: DockSelectProps<T>) {
   const [open, setOpen] = useState(false);
@@ -178,7 +180,7 @@ export function DockSelect<T extends string | number>({
     ) : null;
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative", fullWidth && "w-full", className)}>
       <button
         ref={buttonRef}
         type="button"
@@ -190,6 +192,7 @@ export function DockSelect<T extends string | number>({
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={cn(
           "flex h-8 items-center gap-1 rounded-lg border px-2.5 text-xs font-medium transition-all",
+          fullWidth && "w-full justify-between",
           "border-border/50 bg-white/90 text-foreground shadow-sm backdrop-blur-sm",
           disabled
             ? "cursor-not-allowed opacity-60"

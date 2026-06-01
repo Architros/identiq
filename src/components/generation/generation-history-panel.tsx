@@ -3,8 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGeneration } from "@/contexts/generation-context";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
+import { dedupeHistoryChatSummaries } from "@/lib/generation/chat-history";
 import { formatRelativeTime } from "@/lib/generation/format-elapsed";
 import { cn } from "@/lib/utils";
+
+const SKELETON_ROW_COUNT = 5;
+
+const skeletonBar =
+  "animate-pulse rounded-md bg-gradient-to-r from-sidebar-active via-border/40 to-sidebar-active";
+
+function HistoryRowSkeleton() {
+  return (
+    <li className="rounded-lg px-3 py-2.5" aria-hidden>
+      <div className="space-y-2">
+        <div className={cn(skeletonBar, "h-4 w-[58%] max-w-[220px]")} />
+        <div className={cn(skeletonBar, "h-3 w-[36%] max-w-[140px]")} />
+      </div>
+    </li>
+  );
+}
 
 type GenerationHistoryPanelProps = {
   open: boolean;
@@ -27,7 +44,7 @@ export function GenerationHistoryPanel({
   const load = useCallback(async () => {
     setLoading(true);
     const list = await refreshChatHistory();
-    setChats(list);
+    setChats(dedupeHistoryChatSummaries(list));
     setLoading(false);
   }, [refreshChatHistory]);
 
@@ -78,7 +95,15 @@ export function GenerationHistoryPanel({
 
         <div className="flex-1 overflow-y-auto p-2">
           {loading ? (
-            <p className="px-2 py-4 text-sm text-muted">Loading…</p>
+            <ul
+              className="space-y-1"
+              aria-busy="true"
+              aria-label="Loading generation history"
+            >
+              {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+                <HistoryRowSkeleton key={index} />
+              ))}
+            </ul>
           ) : chats.length === 0 ? (
             <p className="px-2 py-4 text-sm text-muted">
               No saved generations yet. Complete a generation to see it here.
@@ -98,8 +123,10 @@ export function GenerationHistoryPanel({
                     <p className="truncate text-sm font-medium text-foreground">
                       {chat.title}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {formatRelativeTime(chat.updatedAt)}
+                    <p className="mt-0.5 truncate text-xs text-muted">
+                      {chat.subtitle
+                        ? `${chat.subtitle} · ${formatRelativeTime(chat.updatedAt)}`
+                        : formatRelativeTime(chat.updatedAt)}
                     </p>
                   </button>
                 </li>

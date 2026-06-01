@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { isPublicAppPath, loginPathWithNext } from "@/lib/auth/protected-paths";
 import { userMustSetPassword } from "@/lib/auth/password";
 import { createClient } from "@/lib/supabase/client";
+import { BrandPageLoader } from "@/components/ui/brand-page-loader";
 
 type AuthGateProps = {
   children: React.ReactNode;
@@ -70,7 +71,7 @@ export function AuthGate({ children }: AuthGateProps) {
   if (!allowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted">Checking sign-in…</p>
+        <BrandPageLoader />
       </div>
     );
   }

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { BillingCancelledNotice } from "@/components/billing/billing-cancelled-notice";
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { AppTopbar } from "@/components/layout/app-topbar";
+import { AppShellLayout } from "@/components/layout/app-shell-layout";
 import { FloatingSupportWrapper } from "@/components/home/floating-support-wrapper";
 import { BrandProvider } from "@/components/providers/brand-provider";
 import { CreditsProvider } from "@/contexts/credits-context";
@@ -21,21 +20,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <CreditsProvider>
             <SupportModalsProvider>
               <BrandAssetsProvider>
-                <div className="flex h-screen overflow-hidden bg-background">
-                  <AppSidebar />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <ConnectivityBanner />
-                    <Suspense fallback={null}>
-                      <BillingCancelledNotice />
-                    </Suspense>
-                    <AppTopbar />
-                    <main className="relative flex-1 overflow-y-auto">
-                      {children}
-                    </main>
-                    <SiteFooter />
-                    <FloatingSupportWrapper />
-                  </div>
-                </div>
+                <AppShellLayout
+                  banner={<ConnectivityBanner />}
+                  footer={<SiteFooter />}
+                  floatingSupport={<FloatingSupportWrapper />}
+                >
+                  {children}
+                </AppShellLayout>
+                <Suspense fallback={null}>
+                  <BillingCancelledNotice />
+                </Suspense>
                 <ToastContainer />
               </BrandAssetsProvider>
             </SupportModalsProvider>

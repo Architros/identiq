@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import {
+  dedupeHistoryChatSummaries,
   deriveChatTitle,
+  deriveHistoryChatDisplay,
   isMeaningfulChatHistory,
 } from "@/lib/generation/chat-history";
 import {
@@ -47,7 +49,7 @@ export async function listIdeasChatsForBrand(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ideas_chats")
-    .select("id, brand_id, title, created_at, updated_at")
+    .select("id, brand_id, title, created_at, updated_at, settings_snapshot")
     .eq("user_id", userId)
     .eq("brand_id", brandId)
     .order("updated_at", { ascending: false });
@@ -100,7 +102,11 @@ export async function listIdeasChatsForBrand(
     meaningful.push({
       id: row.id,
       brandId: row.brand_id,
-      title: deriveChatTitle(messages, row.title),
+      ...deriveHistoryChatDisplay(
+        messages,
+        row.title,
+        row.settings_snapshot,
+      ),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
@@ -119,7 +125,7 @@ export async function listIdeasChatsForBrand(
       .in("id", emptyChatIds);
   }
 
-  return meaningful;
+  return dedupeHistoryChatSummaries(meaningful);
 }
 
 export async function getIdeasChatForUser(

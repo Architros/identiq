@@ -32,7 +32,7 @@ export function GenerationComposer({
     <div
       className={cn(
         "relative mx-auto flex w-full max-w-2xl justify-center px-2",
-        compact ? "py-2" : "pb-4 pt-14",
+        compact ? "py-2" : "pb-3 pt-6 max-md:pb-2 max-md:pt-4 md:pb-4 md:pt-14",
       )}
     >
       <GenerationDock variant="images" compact={compact} />
