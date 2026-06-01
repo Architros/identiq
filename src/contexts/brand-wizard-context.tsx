@@ -74,6 +74,7 @@ function touchDraft(draft: BrandProjectDraft): BrandProjectDraft {
 
 async function resolveInitialDraft(
   draftIdParam: string | null,
+  brandNameParam: string | null,
 ): Promise<{ draft: BrandProjectDraft; persisted: boolean }> {
   if (draftIdParam) {
     const session = takeWizardSession(draftIdParam);
@@ -88,7 +89,12 @@ async function resolveInitialDraft(
       return { draft: normalizeBrandDraft(existing), persisted: true };
     }
   }
-  return { draft: createEmptyDraft(), persisted: false };
+  const draft = createEmptyDraft();
+  const name = brandNameParam?.trim();
+  if (name) {
+    draft.name = name;
+  }
+  return { draft: normalizeBrandDraft(draft), persisted: false };
 }
 
 export function validateWizardStep(
@@ -137,6 +143,7 @@ export function BrandWizardProvider({
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftIdParam = searchParams.get("draftId");
+  const brandNameParam = searchParams.get("name");
 
   const [draft, setDraft] = useState<BrandProjectDraft>(createEmptyDraft);
   const [isReady, setIsReady] = useState(false);
@@ -152,7 +159,7 @@ export function BrandWizardProvider({
     let cancelled = false;
     void (async () => {
       const { draft: initial, persisted } =
-        await resolveInitialDraft(draftIdParam);
+        await resolveInitialDraft(draftIdParam, brandNameParam);
       if (!cancelled) {
         draftPersistedRef.current = persisted;
         setDraft(initial);
@@ -163,7 +170,7 @@ export function BrandWizardProvider({
     return () => {
       cancelled = true;
     };
-  }, [draftIdParam]);
+  }, [draftIdParam, brandNameParam]);
 
   useEffect(() => {
     pendingUploadStartedRef.current = null;
