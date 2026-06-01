@@ -62,8 +62,12 @@ export function DraftsSection() {
   };
 
   useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  useEffect(() => {
     const onFocus = () => {
-      if (isOpenRef.current && hasLoaded) {
+      if (hasLoaded) {
         void reload();
       }
     };
@@ -71,12 +75,13 @@ export function DraftsSection() {
     return () => window.removeEventListener("focus", onFocus);
   }, [hasLoaded, reload]);
 
-  if (hasLoaded && !loading && drafts.length === 0) {
-    return null;
-  }
-
-  const countLabel =
-    drafts.length === 1 ? "1 draft" : `${drafts.length} drafts`;
+  const countLabel = !hasLoaded
+    ? null
+    : drafts.length === 0
+      ? "No drafts"
+      : drafts.length === 1
+        ? "1 draft"
+        : `${drafts.length} drafts`;
 
   return (
     <details
@@ -129,6 +134,20 @@ export function DraftsSection() {
               <DraftRowSkeleton key={i} />
             ))}
           </ul>
+        ) : drafts.length === 0 ? (
+          <div className="border-t border-border px-4 py-6 text-center">
+            <p className="text-sm text-muted">No drafts yet.</p>
+            <p className="mt-1 text-xs text-muted">
+              Start a brand and use Save &amp; exit to pick up where you left off.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/new-brand")}
+              className="mt-4 text-xs font-medium text-accent hover:underline"
+            >
+              Start a new brand
+            </button>
+          </div>
         ) : (
           <>
             <p className="border-t border-border px-4 pt-2 text-xs text-muted">

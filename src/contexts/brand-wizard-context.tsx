@@ -21,6 +21,7 @@ import {
 import {
   deleteDraft,
   getDraftByIdMerged,
+  saveDraft,
   saveDraftAndWait,
 } from "@/lib/brand/brand-storage";
 import {
@@ -56,8 +57,14 @@ type BrandWizardContextValue = {
   exitWithoutSaving: () => void;
   isSaving: boolean;
   saveError: string | null;
+  generationError: string | null;
+  setGenerationError: (message: string | null) => void;
+  clearGenerationError: () => void;
+  persistDraft: (
+    overrides?: Partial<BrandProjectDraft>,
+  ) => Promise<{ ok: boolean; error?: string }>;
   startGenerating: () => void;
-  cancelGenerating: () => void;
+  cancelGenerating: () => Promise<void>;
   toOrchestrateInput: () => WizardOrchestrateInput;
   resetWizard: () => void;
 };
@@ -151,9 +158,15 @@ export function BrandWizardProvider({
   const [returnToReview, setReturnToReview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [generationError, setGenerationErrorState] = useState<string | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
   const pendingUploadStartedRef = useRef<string | null>(null);
   const draftPersistedRef = useRef(false);
+  const draftRef = useRef(draft);
+  const viewRef = useRef(view);
+
+  draftRef.current = draft;
+  viewRef.current = view;
 
   useEffect(() => {
     let cancelled = false;
@@ -217,6 +230,68 @@ export function BrandWizardProvider({
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
+
+  const persistDraft = useCallback(
+    async (
+      overrides?: Partial<BrandProjectDraft>,
+    ): Promise<{ ok: boolean; error?: string }> => {
+      const current = draftRef.current;
+      const reviewStep = WIZARD_STEP_COUNT - 1;
+      const toSave = normalizeBrandDraft(
+        touchDraft({
+          ...current,
+          ...overrides,
+          status: "draft",
+          step:
+            overrides?.step ??
+            (viewRef.current === "generating" ? reviewStep : current.step),
+        }),
+      );
+      setDraft(toSave);
+      if (!draftHasUserContent(toSave)) {
+        return { ok: true };
+      }
+      const result = await saveDraftAndWait(toSave);
+      lastSavedSnapshotRef.current = draftSnapshot(toSave);
+      draftPersistedRef.current = true;
+      if (!result.ok) {
+        setSaveError(
+          result.error ??
+            "Saved on this device, but cloud sync failed. Try again when online.",
+        );
+      }
+      return result;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isReady || !hasUserContent || !isDirty) return;
+    const timer = window.setTimeout(() => {
+      const current = draftRef.current;
+      const reviewStep = WIZARD_STEP_COUNT - 1;
+      const toSave = normalizeBrandDraft(
+        touchDraft({
+          ...current,
+          status: "draft",
+          step:
+            viewRef.current === "generating" ? reviewStep : current.step,
+        }),
+      );
+      saveDraft(toSave);
+      lastSavedSnapshotRef.current = draftSnapshot(toSave);
+      draftPersistedRef.current = true;
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [draft, isReady, hasUserContent, isDirty]);
+
+  const clearGenerationError = useCallback(() => {
+    setGenerationErrorState(null);
+  }, []);
+
+  const setGenerationError = useCallback((message: string | null) => {
+    setGenerationErrorState(message);
+  }, []);
 
   const updateDraft = useCallback((patch: Partial<BrandProjectDraft>) => {
     setDraft((prev) => touchDraft({ ...prev, ...patch }));
@@ -356,15 +431,27 @@ export function BrandWizardProvider({
   }, [draft]);
 
   const startGenerating = useCallback(() => {
-    updateDraft({ status: "generating", step: WIZARD_STEP_COUNT - 1 });
+    setGenerationErrorState(null);
+    const reviewStep = WIZARD_STEP_COUNT - 1;
+    const next = touchDraft({
+      ...draftRef.current,
+      status: "generating",
+      step: reviewStep,
+    });
+    setDraft(next);
     setView("generating");
-  }, [updateDraft]);
+    if (draftHasUserContent(next)) {
+      const toSave = normalizeBrandDraft({ ...next, status: "draft", step: reviewStep });
+      saveDraft(toSave);
+      lastSavedSnapshotRef.current = draftSnapshot(toSave);
+      draftPersistedRef.current = true;
+    }
+  }, []);
 
-  const cancelGenerating = useCallback(() => {
-    const next = { ...draft, status: "draft" as const, step: WIZARD_STEP_COUNT - 1 };
-    setDraft(touchDraft(next));
+  const cancelGenerating = useCallback(async () => {
+    await persistDraft();
     setView("steps");
-  }, [draft]);
+  }, [persistDraft]);
 
   const resetWizard = useCallback(() => {
     deleteDraft(draft.id);
@@ -390,6 +477,10 @@ export function BrandWizardProvider({
       exitWithoutSaving,
       isSaving,
       saveError,
+      generationError,
+      setGenerationError,
+      clearGenerationError,
+      persistDraft,
       startGenerating,
       cancelGenerating,
       toOrchestrateInput,
@@ -412,6 +503,10 @@ export function BrandWizardProvider({
       exitWithoutSaving,
       isSaving,
       saveError,
+      generationError,
+      setGenerationError,
+      clearGenerationError,
+      persistDraft,
       startGenerating,
       cancelGenerating,
       toOrchestrateInput,

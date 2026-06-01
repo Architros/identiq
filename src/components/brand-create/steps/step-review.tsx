@@ -14,14 +14,19 @@ import { ReviewTypographyWidget } from "@/components/brand-create/review/review-
 import { ReviewReferencesGrid } from "@/components/brand-create/review/review-references-grid";
 import { ReviewBrandAssets } from "@/components/brand-create/review/review-brand-assets";
 import { ReviewTokenSummary } from "@/components/brand-create/review/review-token-summary";
+import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 import { summarizeAttachments } from "@/lib/brand/attachment-utils";
 import { attachmentDisplayUrl } from "@/lib/storage/upload-client";
 
 type StepReviewProps = {
   showFinishError?: boolean;
+  generationError?: string | null;
 };
 
-export function StepReview({ showFinishError = false }: StepReviewProps) {
+export function StepReview({
+  showFinishError = false,
+  generationError = null,
+}: StepReviewProps) {
   const { draft, editFromReview, updateDraft } = useBrandWizard();
 
   const sectorLabel =
@@ -43,6 +48,13 @@ export function StepReview({ showFinishError = false }: StepReviewProps) {
       <p className="text-sm text-muted">
         Review your brand foundation and asset plan before generation.
       </p>
+
+      {generationError ? (
+        <UserFacingErrorAlert
+          className="rounded-xl px-4 py-3"
+          message={generationError}
+        />
+      ) : null}
 
       <ReviewSection
         title={WIZARD_STEP_LABELS[0]}

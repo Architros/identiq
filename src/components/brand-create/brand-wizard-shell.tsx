@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useCredits } from "@/contexts/credits-context";
 import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
 import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
+import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
+import { showErrorToast } from "@/lib/toast/show-toast";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useBrandWizard } from "@/contexts/brand-wizard-context";
@@ -43,6 +45,10 @@ export function BrandWizardShell() {
     validateStep,
     editFromReview,
     startGenerating,
+    setGenerationError,
+    persistDraft,
+    generationError,
+    clearGenerationError,
   } = useBrandWizard();
   const { availableTokens } = useCredits();
 
@@ -76,6 +82,19 @@ export function BrandWizardShell() {
       return;
     }
     setReviewFinishError(false);
+    const preflight = validateGenerationPreflight(draft, availableTokens);
+    if (!preflight.ok) {
+      setReviewFinishError(true);
+      setGenerationError(preflight.message);
+      void persistDraft();
+      showErrorToast(preflight.message, {
+        title: "Can't start generation",
+        dedupeKey: "wizard-preflight-failed",
+        mapAsGeneration: false,
+      });
+      return;
+    }
+    clearGenerationError();
     startGenerating();
   };
 
@@ -228,7 +247,10 @@ export function BrandWizardShell() {
               {draft.step === 5 && <StepAttachments />}
               {draft.step === 6 && <StepAssets />}
               {draft.step === 7 && (
-                <StepReview showFinishError={reviewFinishError} />
+                <StepReview
+                  showFinishError={reviewFinishError}
+                  generationError={generationError}
+                />
               )}
             </>
           )}
