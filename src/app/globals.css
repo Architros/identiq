@@ -182,3 +182,18 @@ body {
 .identiq-scrollbar::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Global interactive cursor defaults */
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]),
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}

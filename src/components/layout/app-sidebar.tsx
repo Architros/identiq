@@ -14,7 +14,12 @@ import {
   subscribeGenerationChrome,
 } from "@/lib/generation/chrome-store";
 import { cn } from "@/lib/utils";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type MouseEvent,
+} from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
@@ -63,10 +68,31 @@ export function AppSidebar({ mobileOpen = false }: AppSidebarProps) {
     window.localStorage.setItem("identiq:sidebar-collapsed", next ? "1" : "0");
   };
 
+  const expandIfCollapsedFromBlankClick = (event: MouseEvent<HTMLElement>) => {
+    if (!isDesktop || !collapsed) return;
+    const target = event.target as HTMLElement;
+    if (
+      target.closest(
+        "button, a, input, textarea, select, [role='menu'], [role='menuitem'], [role='button']",
+      )
+    ) {
+      return;
+    }
+    setCollapsed(false);
+    window.localStorage.setItem("identiq:sidebar-collapsed", "0");
+  };
+
+  useEffect(() => {
+    if (!isDesktop) return;
+    const width = collapsed ? "72px" : "240px";
+    document.documentElement.style.setProperty("--app-sidebar-width", width);
+  }, [collapsed, isDesktop]);
+
   return (
     <aside
+      onClick={expandIfCollapsedFromBlankClick}
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex h-full w-[min(280px,88vw)] shrink-0 flex-col overflow-visible border-r border-border bg-surface px-3 py-4 transition-[transform,width] duration-200 ease-out md:relative md:z-auto md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 flex h-full w-[min(280px,88vw)] shrink-0 flex-col overflow-visible border-r border-border bg-surface px-3 py-4 transition-[transform,width] duration-200 ease-out md:relative md:z-50 md:translate-x-0",
         collapsed && isDesktop ? "md:w-[72px]" : "md:w-[240px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       )}

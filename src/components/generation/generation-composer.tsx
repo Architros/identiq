@@ -51,7 +51,7 @@ export function GenerationComposer({
       <div
         className={cn(
           className ??
-            "fixed inset-x-0 bottom-0 z-40 bg-transparent supports-[padding:max(0px)]:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+            "fixed inset-x-0 bottom-0 z-40 bg-transparent md:left-[var(--app-sidebar-width,240px)] supports-[padding:max(0px)]:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
         )}
       >
         <ComposerFrost />
