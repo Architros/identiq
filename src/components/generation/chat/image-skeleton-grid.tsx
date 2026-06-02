@@ -10,6 +10,7 @@ import {
   aspectRatioGenerationLeftWrapperClass,
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
+import type { AspectRatio } from "@/lib/generation/presets";
 import { cn } from "@/lib/utils";
 
 function formatImageModelLabel(modelId?: string): string {
@@ -17,6 +18,30 @@ function formatImageModelLabel(modelId?: string): string {
   if (modelId.includes("gpt-5.4-image")) return "GPT-5.4 Image 2";
   if (modelId.includes("gpt-image")) return "GPT Image 2";
   return modelId.split("/").pop() ?? modelId;
+}
+
+function skeletonSizeClass(ratio: AspectRatio, centered: boolean): string {
+  const compactSize: Record<AspectRatio, string> = {
+    "1:1": centered
+      ? "w-[min(100%,260px)] max-w-[260px]"
+      : "w-full max-w-[min(100%,260px)]",
+    "9:16": centered
+      ? "w-[min(100%,170px)] max-w-[170px]"
+      : "w-full max-w-[min(100%,170px)]",
+    "16:9": centered
+      ? "w-[min(100%,360px)] max-w-[360px]"
+      : "w-full max-w-[min(100%,360px)]",
+    "4:5": centered
+      ? "w-[min(100%,220px)] max-w-[220px]"
+      : "w-full max-w-[min(100%,220px)]",
+    "2:3": centered
+      ? "w-[min(100%,200px)] max-w-[200px]"
+      : "w-full max-w-[min(100%,200px)]",
+    "21:9": centered
+      ? "w-[min(100%,420px)] max-w-[420px]"
+      : "w-full max-w-[min(100%,420px)]",
+  };
+  return compactSize[ratio];
 }
 
 type ImageSkeletonGridProps = {
@@ -94,6 +119,7 @@ export function ImageSkeletonGrid({
               centered
                 ? aspectRatioGenerationCenteredTileClass(ratio)
                 : aspectRatioGenerationLeftWrapperClass(ratio),
+              skeletonSizeClass(ratio, centered),
               "relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-sidebar-active via-border/30 to-sidebar-active",
               animated && !failed && "animate-pulse",
               failed && "opacity-70",

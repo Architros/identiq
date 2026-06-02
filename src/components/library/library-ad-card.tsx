@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SparklesIcon } from "@hugeicons/core-free-icons";
 import type { LibraryTemplate } from "@/lib/library/types";
@@ -30,6 +31,7 @@ export function LibraryAdCard({
   onOpen,
   eager = false,
 }: LibraryAdCardProps) {
+  const searchParams = useSearchParams();
   const title = template.title ?? "Template";
   const stored = hasStoredDimensions(template);
   const [loadedRatio, setLoadedRatio] = useState<number | null>(
@@ -39,7 +41,14 @@ export function LibraryAdCard({
   const aspectRatio =
     loadedRatio ?? (stored ? template.width / template.height : 4 / 5);
 
-  const remixHref = `/images?libraryId=${encodeURIComponent(template.id)}`;
+  const carryPresetIds = searchParams.get("carryPresetIds")?.trim();
+  const remixQuery = new URLSearchParams({
+    libraryId: template.id,
+  });
+  if (carryPresetIds) {
+    remixQuery.set("carryPresetIds", carryPresetIds);
+  }
+  const remixHref = `/images?${remixQuery.toString()}`;
 
   return (
     <div

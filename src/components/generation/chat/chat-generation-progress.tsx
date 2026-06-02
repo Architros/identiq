@@ -58,7 +58,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
       <div
         className={cn(
           "w-full space-y-4",
-          isLibraryRemix && "flex flex-col items-center text-center",
+          isLibraryRemix && "flex flex-col items-start text-left",
         )}
       >
         {isLibraryRemix ? (
@@ -66,7 +66,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
             <h2 className="font-display text-xl font-normal tracking-tight text-foreground sm:text-2xl">
               Remix failed
             </h2>
-            <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
+            <p className="max-w-xl text-sm leading-relaxed text-muted">
               {generationError ??
                 "Something went wrong while creating your image. Please try again."}
             </p>
@@ -82,7 +82,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           quantity={quantity}
           animated={false}
           failed
-          centered={isLibraryRemix}
+          centered={false}
           onRetry={() => void submitGeneration()}
         />
       </div>

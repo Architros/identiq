@@ -3,34 +3,26 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useBrand } from "@/components/providers/brand-provider";
-import { useCredits } from "@/contexts/credits-context";
 import { useGeneration } from "@/contexts/generation-context";
+import { getPresetById } from "@/lib/generation/presets";
 import { getLibraryTemplate } from "@/lib/library/templates";
 import { aspectRatioForLibraryTemplate } from "@/lib/library/template-aspect-ratio";
-import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 
-/** Applies `?libraryId=` — attaches template, opens chat, auto-remixes when tokens allow. */
+/** Applies `?libraryId=` — attaches template and opens remix chat state. */
 export function LibraryFromUrl() {
   const searchParams = useSearchParams();
   const { hasActiveBrand, isLoading } = useBrand();
-  const { availableTokens } = useCredits();
   const {
     addReferenceImageFromUrl,
     setLibraryTemplateId,
     setAspectRatio,
-    submitGeneration,
     prepareLibraryRemixSession,
-    reportGenerationError,
-    isGenerating,
-    referenceImages,
-    quantity,
-    resolution,
+    addPreset,
   } = useGeneration();
   const sessionRef = useRef<string | null>(null);
-  const autoSubmitRef = useRef<string | null>(null);
-  const insufficientTokensNotifiedRef = useRef<string | null>(null);
 
   const libraryId = searchParams.get("libraryId")?.trim() ?? null;
+  const carryPresetIds = searchParams.get("carryPresetIds")?.trim() ?? "";
 
   useEffect(() => {
     if (!libraryId) return;
@@ -41,57 +33,28 @@ export function LibraryFromUrl() {
 
     if (sessionRef.current !== libraryId) {
       sessionRef.current = libraryId;
-      autoSubmitRef.current = null;
-      insufficientTokensNotifiedRef.current = null;
       prepareLibraryRemixSession();
+      if (carryPresetIds) {
+        for (const presetId of carryPresetIds.split(",")) {
+          const preset = getPresetById(presetId.trim());
+          if (preset) addPreset(preset);
+        }
+      }
       setLibraryTemplateId(libraryId);
       addReferenceImageFromUrl({ url: template.imageUrl, name: "Template" });
       setAspectRatio(aspectRatioForLibraryTemplate(template));
       return;
     }
-
-    const hasTemplateAttached = referenceImages.some(
-      (img) =>
-        img.name === "Template" && img.previewUrl === template.imageUrl,
-    );
-    if (!hasTemplateAttached) return;
-
-    if (autoSubmitRef.current === libraryId || isGenerating) return;
-
-    const tokenCost = calculateGenerationTokenCost({
-      presetCount: 0,
-      hasPrompt: false,
-      isLibraryRemix: true,
-      quantity,
-      resolution,
-      referenceImageCount: 1,
-    });
-
-    if (tokenCost > availableTokens) {
-      if (insufficientTokensNotifiedRef.current !== libraryId) {
-        insufficientTokensNotifiedRef.current = libraryId;
-        reportGenerationError("Insufficient tokens");
-      }
-      return;
-    }
-
-    autoSubmitRef.current = libraryId;
-    void submitGeneration();
   }, [
     libraryId,
+    carryPresetIds,
     isLoading,
     hasActiveBrand,
-    isGenerating,
-    referenceImages,
-    availableTokens,
-    quantity,
-    resolution,
     addReferenceImageFromUrl,
+    addPreset,
     setLibraryTemplateId,
     setAspectRatio,
     prepareLibraryRemixSession,
-    reportGenerationError,
-    submitGeneration,
   ]);
 
   return null;

@@ -9,6 +9,10 @@ import {
   bottomNav,
 } from "@/lib/navigation";
 import { useSidebarNav } from "@/contexts/sidebar-nav-context";
+import {
+  getGenerationChromeCompact,
+  subscribeGenerationChrome,
+} from "@/lib/generation/chrome-store";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -39,14 +43,19 @@ export function AppSidebar({ mobileOpen = false }: AppSidebarProps) {
     getDesktopNav,
     () => true,
   );
+  const generationChromeCompact = useSyncExternalStore(
+    subscribeGenerationChrome,
+    getGenerationChromeCompact,
+    () => false,
+  );
   const hiddenOnMobile = !isDesktop && !mobileOpen;
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isDesktop) return;
     const saved = window.localStorage.getItem("identiq:sidebar-collapsed");
-    setCollapsed(saved === "1");
-  }, [isDesktop]);
+    setCollapsed(generationChromeCompact || saved === "1");
+  }, [isDesktop, generationChromeCompact]);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -57,7 +66,7 @@ export function AppSidebar({ mobileOpen = false }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex h-full w-[min(280px,88vw)] shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-3 py-4 transition-[transform,width] duration-200 ease-out md:relative md:z-auto md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 flex h-full w-[min(280px,88vw)] shrink-0 flex-col overflow-visible border-r border-border bg-surface px-3 py-4 transition-[transform,width] duration-200 ease-out md:relative md:z-auto md:translate-x-0",
         collapsed && isDesktop ? "md:w-[72px]" : "md:w-[240px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       )}

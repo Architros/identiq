@@ -9,7 +9,8 @@ type ChatUserBubbleProps = {
 };
 
 export function ChatUserBubble({ message, messageIndex }: ChatUserBubbleProps) {
-  const { continueFromMessageIndex, isGenerating } = useGeneration();
+  const { continueFromMessageIndex, isGenerating, libraryTemplateId } = useGeneration();
+  const isLibraryRemix = Boolean(libraryTemplateId);
   const text = message.parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
@@ -20,16 +21,18 @@ export function ChatUserBubble({ message, messageIndex }: ChatUserBubbleProps) {
   return (
     <div className="group flex justify-end">
       <div className="max-w-xl space-y-1">
-        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => void continueFromMessageIndex(messageIndex)}
-            className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Continue from here
-          </button>
-        </div>
+        {!isLibraryRemix ? (
+          <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => void continueFromMessageIndex(messageIndex)}
+              className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continue from here
+            </button>
+          </div>
+        ) : null}
         <div className="rounded-2xl bg-accent px-4 py-2.5 text-sm text-white">
           {text}
         </div>

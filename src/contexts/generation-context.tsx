@@ -163,6 +163,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const referenceImagesRef = useRef<ReferenceImage[]>([]);
   const activeChatIdRef = useRef<string | null>(null);
   const lastReportedErrorRef = useRef<string | null>(null);
+  const submitInFlightRef = useRef(false);
 
   const reportGenerationError = useCallback((raw: string) => {
     const message = formatInlineGenerationError(raw);
@@ -707,6 +708,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const submitGeneration = useCallback(async () => {
+    if (submitInFlightRef.current || status === "submitted" || status === "streaming") {
+      return;
+    }
     if (isLoading) {
       showErrorToast("Still loading your brand. Try again in a moment.", {
         mapAsGeneration: false,
@@ -768,16 +772,23 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       presetSummary ||
       "Generate on-brand assets";
 
-    await sendMessage(
-      {
-        text: messageText,
-        metadata: {
-          presetTitles: selectedPresets.map((p) => p.title),
-          presetIds: selectedPresets.map((p) => p.id),
+    submitInFlightRef.current = true;
+    try {
+      await sendMessage(
+        {
+          text: messageText,
+          metadata: {
+            presetTitles: selectedPresets.map((p) => p.title),
+            presetIds: selectedPresets.map((p) => p.id),
+          },
         },
-      },
-      { body: buildGenerationBody(composerReferences) },
-    );
+        { body: buildGenerationBody(composerReferences) },
+      );
+    } catch {
+      reportGenerationError("Generation failed to start. Please try again.");
+    } finally {
+      submitInFlightRef.current = false;
+    }
   }, [
     selectedPresets,
     prompt,
@@ -788,6 +799,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     sendMessage,
     hasActiveBrand,
     isLoading,
+    reportGenerationError,
+    status,
     selectedPresets,
   ]);
 

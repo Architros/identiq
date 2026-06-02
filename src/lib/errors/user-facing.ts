@@ -78,12 +78,13 @@ export function toUserFacingGenerationError(raw?: string | null): UserFacingErro
   if (
     lower.includes("insufficient token") ||
     lower.includes("not enough token") ||
-    lower.includes('"insufficient_tokens"')
+    lower.includes('"insufficient_tokens"') ||
+    lower.includes("requires more credits") ||
+    (lower.includes("can only afford") && lower.includes("max_tokens"))
   ) {
     return {
-      title: "Not enough tokens",
-      message:
-        "This generation needs more tokens than you have available. Reduce presets or quantity, buy more tokens, then try again.",
+      title: "Generation failed",
+      message: "Something went wrong while creating your image. Please try again.",
     };
   }
 

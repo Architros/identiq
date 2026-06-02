@@ -25,8 +25,14 @@ export function ChatMessageList({
 
   const isLibraryRemix = Boolean(libraryTemplateId);
   const lastMessage = messages[messages.length - 1];
+  const hasPendingGenerationPhase =
+    generationPhase !== null &&
+    generationPhase !== "error" &&
+    generationPhase !== "done" &&
+    generationPhase !== "stopped";
   const showInlineProgress =
-    isGenerating && (!lastMessage || lastMessage.role === "user");
+    (isGenerating || hasPendingGenerationPhase) &&
+    (!lastMessage || lastMessage.role === "user");
   const showInlineFailure =
     !isGenerating &&
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
@@ -38,9 +44,12 @@ export function ChatMessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isGenerating, generationPhase, showInlineFailure]);
 
-  const scrollPadding = compactFooter
-    ? "pb-44 scroll-pb-44"
-    : "pb-28 scroll-pb-28";
+  const isPreGenerationEmptyState = messages.length === 0 && showWelcome;
+  const scrollPadding = isPreGenerationEmptyState
+    ? "pb-6"
+    : compactFooter
+      ? "pb-44 scroll-pb-44"
+      : "pb-28 scroll-pb-28";
 
   const centerEmptyState =
     showWelcome && !isLibraryRemix && !showInlineFailure;
@@ -51,6 +60,7 @@ export function ChatMessageList({
     <div
       className={cn(
         "min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+        isPreGenerationEmptyState && "overflow-hidden",
         scrollPadding,
         centerEmptyState && "flex flex-col justify-center",
         libraryRemixStatus && "pt-6 sm:pt-10",
@@ -58,11 +68,13 @@ export function ChatMessageList({
     >
       <div
         className={cn(
-          "mx-auto w-full space-y-6",
+          "w-full space-y-6",
           isLibraryRemix || showWelcome
-            ? "max-w-xl text-center"
-            : "mr-auto max-w-2xl",
-          libraryRemixStatus && "flex flex-col items-center",
+            ? libraryRemixStatus
+              ? "mr-auto max-w-2xl text-left"
+              : "mx-auto max-w-xl text-center"
+            : "mx-auto mr-auto max-w-2xl",
+          libraryRemixStatus && "flex flex-col items-start",
         )}
       >
         {showWelcome ? <ChatWelcomeEmpty /> : null}
@@ -74,7 +86,7 @@ export function ChatMessageList({
           if (message.role === "user") {
             return (
               <ChatUserBubble
-                key={message.id}
+                key={`${message.id}-${index}`}
                 message={message}
                 messageIndex={index}
               />
@@ -83,7 +95,7 @@ export function ChatMessageList({
 
           return (
             <ChatAssistantTurn
-              key={message.id}
+              key={`${message.id}-${index}`}
               message={message}
               isStreaming={streaming}
               messageIndex={index}

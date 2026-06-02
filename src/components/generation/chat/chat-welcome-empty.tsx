@@ -19,9 +19,16 @@ export function ChatWelcomeEmpty() {
   const brandName = hasActiveBrand
     ? brandDisplayLabel(activeBrand)
     : "your brand";
+  const selectedPresetTitles = selectedPresets.map((preset) => preset.title);
+  const selectedPresetLine =
+    selectedPresetTitles.length > 0
+      ? selectedPresetTitles.join(" · ")
+      : null;
 
   const presetLine = isLibraryRemix
-    ? "Adapt this library layout with a short brief — colors, copy, and mood will follow your brand."
+    ? selectedPresetLine
+      ? `Using preset: ${selectedPresetLine}. Adapt this library layout with a short brief — colors, copy, and mood will follow your brand.`
+      : "Adapt this library layout with a short brief — colors, copy, and mood will follow your brand."
     : selectedPresets.length > 0
       ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Describe what you want and generate when you're ready.`
       : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";
@@ -54,6 +61,11 @@ export function ChatWelcomeEmpty() {
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
           {presetLine}
         </p>
+        {isLibraryRemix && selectedPresetLine ? (
+          <div className="mx-auto flex w-fit items-center rounded-full border border-accent/25 bg-accent/[0.08] px-3 py-1 text-xs font-medium text-accent">
+            Preset: {selectedPresetLine}
+          </div>
+        ) : null}
       </div>
 
       {!isLibraryRemix ? (

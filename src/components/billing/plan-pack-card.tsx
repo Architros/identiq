@@ -71,32 +71,18 @@ export function PlanPackCard({
           <p className="mt-1 text-xs text-muted">{pack.billedLine}</p>
         </div>
 
-        {highlighted ? (
-          <TextureButton
-            type="button"
-            variant="accent"
-            shape="card"
-            fullWidth
-            disabled={loading}
-            onClick={onBuy}
-            className="relative z-10 mt-4"
-            innerClassName="w-full py-2.5"
-          >
-            {loading ? "…" : "Buy tokens"}
-          </TextureButton>
-        ) : (
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onBuy}
-            className={cn(
-              "relative z-10 mt-4 w-full cursor-pointer rounded-xl border border-border bg-surface py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-sidebar-active",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            {loading ? "…" : "Buy tokens"}
-          </button>
-        )}
+        <TextureButton
+          type="button"
+          variant={highlighted ? "accent" : "neutral"}
+          shape="card"
+          fullWidth
+          disabled={loading}
+          onClick={onBuy}
+          className="relative z-10 mt-4"
+          innerClassName="w-full py-2.5"
+        >
+          {loading ? "…" : "Buy tokens"}
+        </TextureButton>
 
         <p className="relative z-10 mt-3 text-sm text-muted">{pack.tagline}</p>
 

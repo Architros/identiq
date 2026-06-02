@@ -1,7 +1,8 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Folder01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Folder01Icon } from "@hugeicons/core-free-icons";
+import { TextureButton } from "@/components/ui/texture-button";
 import { cn } from "@/lib/utils";
 
 type WelcomeOfferBannerProps = {
@@ -29,12 +30,9 @@ export function WelcomeOfferBanner({
       )}
     >
       <span className="absolute -top-2.5 left-4 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
-        <HugeiconsIcon
-          icon={SparklesIcon}
-          size={12}
-          color="currentColor"
-          strokeWidth={1.75}
-        />
+        <span aria-hidden className="text-[12px] leading-none">
+          👋
+        </span>
         Welcome offer
       </span>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -59,20 +57,21 @@ export function WelcomeOfferBanner({
             {claimable ? "One-time welcome pack" : "Already claimed"}
           </p>
         </div>
-        <button
+        <TextureButton
           type="button"
+          variant={claimable ? "accent" : "neutral"}
+          shape="card"
+          fullWidth={false}
           disabled={loading || !claimable}
           onClick={onClaim}
-          className={cn(
-            "shrink-0 cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors",
-            claimable
-              ? "bg-accent text-white hover:bg-accent/90"
-              : "border border-border bg-surface text-muted",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+          className="shrink-0"
+          innerClassName={cn(
+            "px-5 py-2.5 text-sm font-semibold",
+            !claimable && "text-muted",
           )}
         >
           {loading ? "…" : claimable ? "Claim offer" : "Already claimed"}
-        </button>
+        </TextureButton>
       </div>
     </div>
   );

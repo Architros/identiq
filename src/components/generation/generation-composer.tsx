@@ -28,25 +28,34 @@ export function GenerationComposer({
   compact = false,
   className,
 }: GenerationComposerProps) {
+  const isFooter = layout === "footer";
   const dock = (
     <div
       className={cn(
         "relative mx-auto flex w-full max-w-2xl justify-center px-2",
-        compact ? "py-2" : "pb-3 pt-6 max-md:pb-2 max-md:pt-4 md:pb-4 md:pt-14",
+        isFooter
+          ? compact
+            ? "py-1.5 sm:py-2"
+            : "py-2 sm:py-3"
+          : compact
+            ? "py-2"
+            : "pb-3 pt-6 max-md:pb-2 max-md:pt-4 md:pb-4 md:pt-14",
       )}
     >
       <GenerationDock variant="images" compact={compact} />
     </div>
   );
 
-  if (layout === "footer") {
+  if (isFooter) {
     return (
       <div
         className={cn(
-          className ?? "relative z-10 shrink-0 bg-transparent",
+          className ??
+            "fixed inset-x-0 bottom-0 z-40 bg-transparent supports-[padding:max(0px)]:pb-[max(0.5rem,env(safe-area-inset-bottom))]",
         )}
       >
-        <div className="px-0 pb-2 sm:pb-3">{dock}</div>
+        <ComposerFrost />
+        <div className="px-0 pb-1 sm:pb-2">{dock}</div>
       </div>
     );
   }

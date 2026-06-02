@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { LibraryTemplate } from "@/lib/library/types";
@@ -17,6 +18,7 @@ export function LibraryTemplateModal({
   template,
   onClose,
 }: LibraryTemplateModalProps) {
+  const searchParams = useSearchParams();
   useEffect(() => {
     if (!template) return;
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +39,14 @@ export function LibraryTemplateModal({
     libraryCategories.find((cat) => cat.id === template.category)?.label ??
     template.category;
 
-  const remixHref = `/images?libraryId=${encodeURIComponent(template.id)}`;
+  const carryPresetIds = searchParams.get("carryPresetIds")?.trim();
+  const remixQuery = new URLSearchParams({
+    libraryId: template.id,
+  });
+  if (carryPresetIds) {
+    remixQuery.set("carryPresetIds", carryPresetIds);
+  }
+  const remixHref = `/images?${remixQuery.toString()}`;
 
   return (
     <div

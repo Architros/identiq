@@ -76,16 +76,18 @@ export function ChatAssistantTurn({
   return (
     <div className="group flex w-full justify-start">
       <div className="w-full space-y-3">
-        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => void continueFromMessageIndex(messageIndex)}
-            className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Continue from here
-          </button>
-        </div>
+        {!isLibraryRemix ? (
+          <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => void continueFromMessageIndex(messageIndex)}
+              className="cursor-pointer text-xs text-muted underline hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continue from here
+            </button>
+          </div>
+        ) : null}
 
         {showThinking ? (
           <AITextLoading
