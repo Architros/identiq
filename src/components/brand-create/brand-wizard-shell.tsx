@@ -129,6 +129,13 @@ export function BrandWizardShell() {
     prevStep();
   };
 
+  const helperMessage = displayError
+    ? `Almost there - please complete this step before continuing (${displayError.replace(
+        /\.$/,
+        "",
+      ).toLowerCase()}).`
+    : null;
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       {saveError ? (
@@ -268,9 +275,13 @@ export function BrandWizardShell() {
               Back
             </Button>
             <div className="flex flex-col items-end gap-1">
-              {!isReview && displayError ? (
-                <p className="text-xs text-destructive" role="alert">
-                  {displayError}
+              {!isReview && helperMessage ? (
+                <p
+                  className="rounded-md bg-sidebar-active px-2.5 py-1 text-xs text-muted"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {helperMessage}
                 </p>
               ) : null}
               {isReview ? (

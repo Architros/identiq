@@ -27,6 +27,8 @@ function hasAspectOverrides(
 export function draftHasUserContent(draft: BrandProjectDraft): boolean {
   if (draft.name.trim()) return true;
   if (draft.domain.trim()) return true;
+  if (draft.websiteSourceUrl.trim()) return true;
+  if (draft.websiteSummary.trim()) return true;
   if (draft.tagline.trim()) return true;
   if (draft.description.trim()) return true;
   if (draft.audience.trim()) return true;

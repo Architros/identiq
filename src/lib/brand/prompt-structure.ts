@@ -10,6 +10,8 @@ export type BrandPromptContext = {
   brandName: string;
   memory: BrandMemory;
   description?: string;
+  websiteSummary?: string;
+  websiteSourceUrl?: string;
   sector?: string;
   feelings?: string[];
   audience?: string;
@@ -49,6 +51,8 @@ export function brandContextFromWizard(
     brandName: input.name,
     memory,
     description: input.description,
+    websiteSummary: input.websiteSummary,
+    websiteSourceUrl: input.websiteSourceUrl,
     sector: input.sector,
     feelings: input.feelings,
     audience: input.audience,
@@ -148,6 +152,12 @@ export function buildBrandIdentitySection(brand: BrandPromptContext): string {
       ? `Brand personality: ${resolveFeelingLabels(brand.feelings).join(", ")}`
       : "",
     brand.description ? `What they do: ${brand.description}` : "",
+    brand.websiteSourceUrl
+      ? `Website source: ${brand.websiteSourceUrl}`
+      : "",
+    brand.websiteSummary
+      ? `Website context: ${brand.websiteSummary}`
+      : "",
     brand.audience ? `Target audience: ${brand.audience}` : "",
     brand.styleNotes ? `Style notes from founder: ${brand.styleNotes}` : "",
     "",

@@ -30,6 +30,7 @@ export function AppBrandMark({
         height={26}
         className="h-8 w-auto shrink-0 sm:h-9"
         priority
+        style={{ width: "auto", height: "auto" }}
       />
       {!compact ? (
         <span className="truncate font-display text-xl tracking-tight text-foreground sm:text-2xl">

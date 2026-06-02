@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Match Supabase Auth default minimum (Dashboard → Auth → Providers → Email). */
+/** Baseline minimum; Supabase project policy can be configured higher. */
 export const PASSWORD_MIN_LENGTH = 6;
 
 export const passwordSchema = z
@@ -8,6 +8,10 @@ export const passwordSchema = z
   .min(
     PASSWORD_MIN_LENGTH,
     `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+  )
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+    "Password must include lowercase, uppercase, and a digit.",
   )
   .max(72, "Password must be at most 72 characters.");
 
@@ -23,7 +27,10 @@ export const setPasswordFormSchema = z
 
 export type SetPasswordFormValues = z.infer<typeof setPasswordFormSchema>;
 
-export type PasswordRequirementId = "min_length" | "passwords_match";
+export type PasswordRequirementId =
+  | "min_length"
+  | "char_mix"
+  | "passwords_match";
 
 export type PasswordRequirement = {
   id: PasswordRequirementId;
@@ -35,6 +42,10 @@ export const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
     id: "min_length",
     label: `At least ${PASSWORD_MIN_LENGTH} characters`,
   },
+  {
+    id: "char_mix",
+    label: "Lowercase, uppercase letters, and digits",
+  },
   { id: "passwords_match", label: "Passwords match" },
 ];
 
@@ -44,6 +55,8 @@ export function getPasswordRequirementStatus(
 ): Record<PasswordRequirementId, boolean> {
   return {
     min_length: password.length >= PASSWORD_MIN_LENGTH,
+    char_mix:
+      /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password),
     passwords_match:
       confirmPassword.length > 0 && password === confirmPassword,
   };
@@ -68,10 +81,14 @@ export function userMustSetPassword(user: {
 export function mapPasswordUpdateError(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("at least") || lower.includes("too short")) {
-    return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
+    const parsedMin = message.match(/at least\s+(\d+)\s+characters?/i)?.[1];
+    if (parsedMin) {
+      return `Password must be at least ${parsedMin} characters.`;
+    }
+    return `Password is too short. Use at least ${PASSWORD_MIN_LENGTH} characters (or more if required by your project settings).`;
   }
   if (lower.includes("weak") || lower.includes("strength")) {
-    return "Choose a stronger password (mix letters and numbers).";
+    return "Use lowercase, uppercase letters, and at least one number.";
   }
   if (lower.includes("same") && lower.includes("password")) {
     return "New password must be different from your current password.";

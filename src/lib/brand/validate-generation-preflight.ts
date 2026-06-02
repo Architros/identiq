@@ -9,6 +9,20 @@ export type GenerationPreflightResult =
   | { ok: true; assetCount: number; tokenCost: number }
   | { ok: false; message: string };
 
+function hasValidDomainInput(domain: string): boolean {
+  const trimmed = domain.trim();
+  if (!trimmed) return false;
+  try {
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
+    const parsed = new URL(withProtocol);
+    return parsed.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
 export function validateGenerationPreflight(
   draft: BrandProjectDraft,
   availableTokens: number,
@@ -16,8 +30,16 @@ export function validateGenerationPreflight(
   if (!draft.name.trim()) {
     return { ok: false, message: "Brand name is required." };
   }
-  if (!draft.description.trim()) {
-    return { ok: false, message: "Brand description is required." };
+  if (
+    !draft.description.trim() &&
+    !hasValidDomainInput(draft.domain) &&
+    !draft.websiteSummary.trim()
+  ) {
+    return {
+      ok: false,
+      message:
+        "Add a short description or use your website URL before generating.",
+    };
   }
   if (!draft.sector) {
     return { ok: false, message: "Select a sector before generating." };

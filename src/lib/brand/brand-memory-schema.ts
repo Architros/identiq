@@ -13,7 +13,7 @@ export const brandMemorySchema = z.object({
   brand_style: z.string(),
   primary_color: z.string(),
   secondary_color: z.string(),
-  accent_color: z.string().optional(),
+  accent_color: z.string(),
   font_pairing: z.string(),
   visual_language: z.string(),
   tone: z.string(),
@@ -32,6 +32,8 @@ export type WizardTypography = z.infer<typeof wizardTypographySchema>;
 export const wizardOrchestrateInputSchema = z.object({
   name: z.string().min(1),
   domain: z.string().optional(),
+  websiteSourceUrl: z.string().url().optional(),
+  websiteSummary: z.string().optional(),
   tagline: z.string().optional(),
   description: z.string(),
   sector: z.string(),

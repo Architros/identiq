@@ -85,6 +85,13 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+function previewFontFamily(fontLabel: string): string {
+  // Remove role suffixes like "(Display)" or "(Body)" before applying font-family.
+  const withoutRole = fontLabel.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+  const cleaned = withoutRole.replace(/^["']|["']$/g, "").trim();
+  return cleaned || "inherit";
+}
+
 export function BrandDetailsPageContent() {
   const router = useRouter();
   const params = useParams();
@@ -104,6 +111,27 @@ export function BrandDetailsPageContent() {
   const displayName = summary?.displayName ?? kit?.displayName ?? "";
   const logo = kit ? primaryLogo(kit.assets) : undefined;
   const colorSwatches = kit ? getBrandColorSwatches(kit) : [];
+  const fallbackPrimary = colorSwatches.find((swatch) => swatch.id === "primary")
+    ?.hex;
+  const fallbackSecondary = colorSwatches.find(
+    (swatch) => swatch.id === "secondary",
+  )?.hex;
+  const fallbackAccent = colorSwatches.find((swatch) => swatch.id === "accent")
+    ?.hex;
+  const fallbackBrandColors = [
+    fallbackPrimary,
+    fallbackSecondary,
+    fallbackAccent,
+  ].filter((value): value is string => Boolean(value));
+  const fallbackBgStyle =
+    fallbackBrandColors.length > 0
+      ? {
+          background:
+            fallbackBrandColors.length === 1
+              ? fallbackBrandColors[0]
+              : `linear-gradient(135deg, ${fallbackBrandColors.join(", ")})`,
+        }
+      : undefined;
   const fonts = kit ? parseFontPairing(kit.memory.font_pairing) : [];
   const toneTags = kit ? getToneTags(kit) : [];
   const aesthetic = kit ? getAestheticText(kit) : "";
@@ -188,8 +216,35 @@ export function BrandDetailsPageContent() {
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-sidebar-active text-lg font-semibold text-muted">
-                    {displayName.slice(0, 2).toUpperCase()}
+                  <div
+                    className={cn(
+                      "relative flex h-full w-full items-center justify-center",
+                      fallbackBgStyle ? "text-white" : "bg-sidebar-active text-muted",
+                    )}
+                    style={fallbackBgStyle}
+                  >
+                    <Image
+                      src="/brand/logo-identiq.svg"
+                      alt="identiq"
+                      width={46}
+                      height={33}
+                      className={cn(
+                        "h-9 w-auto drop-shadow-sm",
+                        fallbackBgStyle && "brightness-0 invert",
+                      )}
+                      style={{ width: "auto", height: "auto" }}
+                      priority
+                    />
+                    <span
+                      className={cn(
+                        "absolute bottom-2 right-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-wide",
+                        fallbackBgStyle
+                          ? "bg-black/20 text-white"
+                          : "bg-background/85 text-foreground",
+                      )}
+                    >
+                      {displayName.slice(0, 2).toUpperCase()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -403,7 +458,7 @@ export function BrandDetailsPageContent() {
                     >
                       <p
                         className="text-2xl leading-none text-foreground"
-                        style={{ fontFamily: font.split("+")[0]?.trim() }}
+                        style={{ fontFamily: previewFontFamily(font) }}
                       >
                         Aa Bb Cc
                       </p>

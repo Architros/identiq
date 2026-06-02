@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 type LibraryAdCardProps = {
   template: LibraryTemplate;
   onOpen: (template: LibraryTemplate) => void;
+  eager?: boolean;
 };
 
 function hasStoredDimensions(
@@ -24,7 +25,11 @@ function hasStoredDimensions(
   );
 }
 
-export function LibraryAdCard({ template, onOpen }: LibraryAdCardProps) {
+export function LibraryAdCard({
+  template,
+  onOpen,
+  eager = false,
+}: LibraryAdCardProps) {
   const title = template.title ?? "Template";
   const stored = hasStoredDimensions(template);
   const [loadedRatio, setLoadedRatio] = useState<number | null>(
@@ -63,6 +68,8 @@ export function LibraryAdCard({ template, onOpen }: LibraryAdCardProps) {
           className="h-full w-full object-contain"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px"
           unoptimized
+          priority={eager}
+          loading={eager ? "eager" : undefined}
           onLoad={(e) => {
             const img = e.currentTarget;
             if (img.naturalWidth > 0 && img.naturalHeight > 0) {

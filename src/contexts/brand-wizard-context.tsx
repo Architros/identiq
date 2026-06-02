@@ -79,6 +79,20 @@ function touchDraft(draft: BrandProjectDraft): BrandProjectDraft {
   return { ...draft, updatedAt: new Date().toISOString() };
 }
 
+function hasValidDomainInput(domain: string): boolean {
+  const trimmed = domain.trim();
+  if (!trimmed) return false;
+  try {
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
+    const parsed = new URL(withProtocol);
+    return parsed.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
 async function resolveInitialDraft(
   draftIdParam: string | null,
   brandNameParam: string | null,
@@ -111,7 +125,13 @@ export function validateWizardStep(
   switch (step) {
     case 0:
       if (!draft.name.trim()) return "Brand name is required";
-      if (!draft.description.trim()) return "Short description is required";
+      if (
+        !draft.description.trim() &&
+        !hasValidDomainInput(draft.domain) &&
+        !draft.websiteSummary.trim()
+      ) {
+        return "Add a short description or use your website URL";
+      }
       return null;
     case 1:
       if (!draft.sector) return "Select a sector";
@@ -396,8 +416,11 @@ export function BrandWizardProvider({
     return {
       name: draft.name.trim(),
       domain: draft.domain.trim() || undefined,
+      websiteSourceUrl: draft.websiteSourceUrl.trim() || undefined,
+      websiteSummary: draft.websiteSummary.trim() || undefined,
       tagline: draft.tagline.trim() || undefined,
-      description: draft.description.trim(),
+      description:
+        draft.description.trim() || draft.websiteSummary.trim() || "Brand profile",
       sector: draft.sector,
       feelings: draft.feelings,
       colors: {

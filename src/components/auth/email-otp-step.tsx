@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { OtpInput } from "@/components/auth/otp-input";
+import { AgentRequestSpinner } from "@/components/ui/agent-request-spinner";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { TextureButton } from "@/components/ui/texture-button";
 import {
@@ -137,7 +138,7 @@ export function EmailOtpStep({
       >
         {verifying ? (
           <>
-            <ButtonSpinner />
+            <AgentRequestSpinner className="w-5" />
             <span>Verifying…</span>
           </>
         ) : (

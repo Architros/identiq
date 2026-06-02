@@ -13,6 +13,8 @@ type ReviewBasicsSummaryProps = {
   domain: string;
   tagline: string;
   description: string;
+  websiteSourceUrl?: string;
+  websiteSummary?: string;
 };
 
 export function ReviewBasicsSummary({
@@ -20,6 +22,8 @@ export function ReviewBasicsSummary({
   domain,
   tagline,
   description,
+  websiteSourceUrl,
+  websiteSummary,
 }: ReviewBasicsSummaryProps) {
   return (
     <div className="space-y-4">
@@ -67,17 +71,40 @@ export function ReviewBasicsSummary({
         </div>
       ) : null}
 
-      <div className="flex gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-active text-muted">
-          <HugeiconsIcon
-            icon={AlignLeftIcon}
-            size={16}
-            color="currentColor"
-            strokeWidth={1.75}
-          />
-        </span>
-        <p className="text-sm leading-relaxed text-muted">{description}</p>
-      </div>
+      {description ? (
+        <div className="flex gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-active text-muted">
+            <HugeiconsIcon
+              icon={AlignLeftIcon}
+              size={16}
+              color="currentColor"
+              strokeWidth={1.75}
+            />
+          </span>
+          <p className="text-sm leading-relaxed text-muted">{description}</p>
+        </div>
+      ) : null}
+
+      {websiteSummary ? (
+        <div className="flex gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-active text-muted">
+            <HugeiconsIcon
+              icon={Globe02Icon}
+              size={16}
+              color="currentColor"
+              strokeWidth={1.75}
+            />
+          </span>
+          <div className="min-w-0">
+            {websiteSourceUrl ? (
+              <p className="truncate text-xs text-muted">{websiteSourceUrl}</p>
+            ) : null}
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {websiteSummary}
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

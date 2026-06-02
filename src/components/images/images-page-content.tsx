@@ -44,6 +44,7 @@ import {
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { normalizeReferenceUrl } from "@/lib/brand/reference-url";
 import { cn } from "@/lib/utils";
+import { TextureButton } from "@/components/ui/texture-button";
 
 type ImagesTab = "generated" | "uploaded";
 
@@ -371,12 +372,14 @@ function EmptyState({
       <p className="text-base font-medium text-foreground">{title}</p>
       <p className="mt-2 max-w-sm text-sm text-muted">{description}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link
+        <TextureButton
           href={primaryHref}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+          variant="accent"
+          shape="card"
+          innerClassName="px-4 py-2 text-sm font-medium"
         >
           {primaryLabel}
-        </Link>
+        </TextureButton>
         <Link
           href={secondaryHref}
           className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground"

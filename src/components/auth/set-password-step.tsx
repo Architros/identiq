@@ -25,16 +25,14 @@ type SetPasswordStepProps = {
 
 const COPY: Record<
   SetPasswordVariant,
-  { title: string; description: string; submit: string }
+  { description: string; submit: string }
 > = {
   signup: {
-    title: "Create your password",
     description:
       "You'll use this password to sign in with your email next time.",
     submit: "Continue",
   },
   recovery: {
-    title: "Set a new password",
     description: "Choose a new password for your account.",
     submit: "Update password",
   },
@@ -57,7 +55,7 @@ export function SetPasswordStep({
 
   const requirementsMet = useMemo(() => {
     const status = getPasswordRequirementStatus(password, confirmPassword);
-    return status.min_length && status.passwords_match;
+    return status.min_length && status.char_mix && status.passwords_match;
   }, [password, confirmPassword]);
 
   const finishSignIn = async (supabase: ReturnType<typeof createClient>) => {
@@ -119,17 +117,7 @@ export function SetPasswordStep({
 
   return (
     <div className="w-full space-y-5">
-      <div className="text-center">
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          {copy.title}
-        </h2>
-        <p className="mt-2 text-sm text-muted">{copy.description}</p>
-      </div>
-
-      <PasswordRequirementsList
-        password={password}
-        confirmPassword={confirmPassword}
-      />
+      <p className="text-center text-sm text-muted">{copy.description}</p>
 
       <div className="space-y-3">
         <PasswordField
@@ -169,6 +157,11 @@ export function SetPasswordStep({
           }}
         />
       </div>
+
+      <PasswordRequirementsList
+        password={password}
+        confirmPassword={confirmPassword}
+      />
 
       <TextureButton
         type="button"

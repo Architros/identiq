@@ -12,7 +12,6 @@ const inputClass =
 
 type EmailCollectStepProps = {
   purpose: OtpPurpose;
-  title: string;
   description: string;
   submitLabel: string;
   onBack: () => void;
@@ -23,7 +22,6 @@ type EmailCollectStepProps = {
 
 export function EmailCollectStep({
   purpose,
-  title,
   description,
   submitLabel,
   onBack,
@@ -65,12 +63,7 @@ export function EmailCollectStep({
 
   return (
     <div className="w-full space-y-5">
-      <div className="text-center">
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          {title}
-        </h2>
-        <p className="mt-2 text-sm text-muted">{description}</p>
-      </div>
+      <p className="text-center text-sm text-muted">{description}</p>
 
       <input
         type="email"

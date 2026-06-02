@@ -83,11 +83,12 @@ export function LibraryPageContent() {
         </div>
       ) : (
         <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 [column-gap:1rem]">
-          {filtered.map((template) => (
+          {filtered.map((template, index) => (
             <div key={template.id} className="mb-4 break-inside-avoid">
               <LibraryAdCard
                 template={template}
                 onOpen={setPreviewTemplate}
+                eager={index < 2}
               />
             </div>
           ))}

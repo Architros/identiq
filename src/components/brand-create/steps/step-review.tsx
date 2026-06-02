@@ -65,6 +65,8 @@ export function StepReview({
           domain={draft.domain}
           tagline={draft.tagline}
           description={draft.description}
+          websiteSourceUrl={draft.websiteSourceUrl}
+          websiteSummary={draft.websiteSummary}
         />
       </ReviewSection>
 

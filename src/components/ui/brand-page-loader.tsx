@@ -41,6 +41,7 @@ export function BrandPageLoader() {
           height={40}
           priority
           className="h-10 w-auto"
+          style={{ width: "auto", height: "auto" }}
         />
       </motion.div>
     </div>

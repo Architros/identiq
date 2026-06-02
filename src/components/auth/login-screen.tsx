@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuthBrandHeader } from "@/components/auth/auth-brand-header";
@@ -170,18 +171,28 @@ function LoginForm() {
         : "signup";
 
   const showOAuth = mode === "sign-in" || mode === "sign-up-email";
+  const heading =
+    mode === "sign-in"
+      ? "Sign in to Identiq"
+      : mode === "sign-up-email"
+        ? "Verify your email"
+        : mode === "sign-up-otp"
+          ? "Enter verification code"
+          : mode === "sign-up-password"
+            ? "Create your password"
+            : mode === "forgot-email"
+              ? "Forgot password?"
+              : mode === "forgot-otp"
+                ? "Enter reset code"
+                : mode === "forgot-password"
+                  ? "Set a new password"
+                  : "Create your password";
 
   return (
     <div className="flex w-full max-w-[400px] flex-col items-center">
       <AuthBrandHeader />
       <h1 className="mb-8 font-display text-[1.75rem] font-semibold tracking-tight text-foreground">
-        {mode === "sign-in"
-          ? "Sign in to Identiq"
-          : mode.startsWith("sign-up")
-            ? "Create your account"
-            : mode.startsWith("forgot")
-              ? "Reset your password"
-              : "Create your password"}
+        {heading}
       </h1>
 
       {error ? (
@@ -261,7 +272,6 @@ function LoginForm() {
           ) : null}
           <EmailCollectStep
             purpose="signup"
-            title="Verify your email"
             description="We'll send a 6-digit code to create your account."
             submitLabel="Send verification code"
             onBack={goSignIn}
@@ -276,7 +286,6 @@ function LoginForm() {
       ) : mode === "forgot-email" ? (
         <EmailCollectStep
           purpose="recovery"
-          title="Forgot password?"
           description="We'll send a 6-digit code to reset your password."
           submitLabel="Send reset code"
           onBack={goSignIn}
@@ -344,8 +353,18 @@ function LoginForm() {
       )}
 
       <p className="mt-10 max-w-[320px] text-center text-xs leading-relaxed text-muted">
-        By continuing, you agree to Identiq&apos;s Terms of Service and Privacy
-        Policy.
+        By continuing, you agree to Identiq&apos;s{" "}
+        <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link
+          href="/privacy"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Privacy Policy
+        </Link>
+        .
       </p>
     </div>
   );

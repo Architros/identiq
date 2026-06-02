@@ -11,6 +11,7 @@ export function AuthBrandHeader() {
           height={29}
           className="h-9 w-auto"
           priority
+          style={{ width: "auto", height: "auto" }}
         />
         <span className="font-display text-2xl tracking-tight text-foreground">
           identiq

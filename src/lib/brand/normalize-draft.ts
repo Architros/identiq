@@ -84,6 +84,16 @@ export function normalizeBrandDraft(draft: BrandProjectDraft): BrandProjectDraft
     status,
     step,
     logo,
+    websiteSourceUrl: draft.websiteSourceUrl?.trim() ?? "",
+    websiteSummary: draft.websiteSummary?.trim() ?? "",
+    websiteFetchedAt: draft.websiteFetchedAt?.trim() ?? "",
+    websiteFetchStatus:
+      draft.websiteFetchStatus === "loading" ||
+      draft.websiteFetchStatus === "done" ||
+      draft.websiteFetchStatus === "error"
+        ? draft.websiteFetchStatus
+        : "idle",
+    websiteFetchError: draft.websiteFetchError?.trim() ?? "",
     typography: normalizeTypography(draft.typography),
     assetSelections: normalizeAssetSelections(
       draft.assetSelections ?? getDefaultAssetSelections(),

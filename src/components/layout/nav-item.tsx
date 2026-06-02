@@ -12,9 +12,10 @@ import { useSidebarNav } from "@/contexts/sidebar-nav-context";
 
 type NavItemProps = {
   item: NavItemConfig;
+  compact?: boolean;
 };
 
-export function NavItem({ item }: NavItemProps) {
+export function NavItem({ item, compact = false }: NavItemProps) {
   const pathname = usePathname();
   const { activeBrandId, hasActiveBrand, isLoading } = useBrand();
   const { openHelp, openFeedback } = useSupportModals();
@@ -40,13 +41,14 @@ export function NavItem({ item }: NavItemProps) {
         color="currentColor"
         strokeWidth={1.75}
       />
-      <span className="flex-1 truncate">{item.label}</span>
-      {item.isNew ? <Badge>NEW</Badge> : null}
+      {!compact ? <span className="flex-1 truncate">{item.label}</span> : null}
+      {!compact && item.isNew ? <Badge>NEW</Badge> : null}
     </>
   );
 
   const className = cn(
     "flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors",
+    compact && "justify-center gap-0 px-2",
     isActive && "bg-sidebar-active font-medium",
     !isActive && !item.disabled && "hover:bg-sidebar-active/70",
     item.disabled && "cursor-default text-muted",
@@ -66,6 +68,7 @@ export function NavItem({ item }: NavItemProps) {
           className,
           "cursor-pointer appearance-none border-0 bg-transparent",
         )}
+        title={compact ? item.label : undefined}
       >
         {content}
       </button>
@@ -74,7 +77,11 @@ export function NavItem({ item }: NavItemProps) {
 
   if (item.disabled || item.href === "#") {
     return (
-      <span className={className} aria-disabled="true">
+      <span
+        className={className}
+        aria-disabled="true"
+        title={compact ? item.label : undefined}
+      >
         {content}
       </span>
     );
@@ -86,6 +93,7 @@ export function NavItem({ item }: NavItemProps) {
       className={className}
       aria-current={isActive ? "page" : undefined}
       onClick={closeMobileNav}
+      title={compact ? item.label : undefined}
     >
       {content}
     </Link>

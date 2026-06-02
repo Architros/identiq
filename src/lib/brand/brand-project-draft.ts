@@ -64,6 +64,11 @@ export type BrandProjectDraft = {
   step: number;
   name: string;
   domain: string;
+  websiteSourceUrl: string;
+  websiteSummary: string;
+  websiteFetchedAt: string;
+  websiteFetchStatus: "idle" | "loading" | "done" | "error";
+  websiteFetchError: string;
   tagline: string;
   description: string;
   sector: BrandSector | "";
@@ -189,6 +194,11 @@ export function createEmptyDraft(): BrandProjectDraft {
     step: 0,
     name: "",
     domain: "",
+    websiteSourceUrl: "",
+    websiteSummary: "",
+    websiteFetchedAt: "",
+    websiteFetchStatus: "idle",
+    websiteFetchError: "",
     tagline: "",
     description: "",
     sector: "",

@@ -136,9 +136,10 @@ function MenuItem({
 type UserMenuProps = {
   /** Sidebar footer (dropdown above) or billing header (dropdown below). */
   variant?: "sidebar" | "header";
+  compact?: boolean;
 };
 
-export function UserMenu({ variant = "sidebar" }: UserMenuProps) {
+export function UserMenu({ variant = "sidebar", compact = false }: UserMenuProps) {
   const isHeader = variant === "header";
   const router = useRouter();
   const { openBuyTokens } = useCredits();
@@ -227,6 +228,7 @@ export function UserMenu({ variant = "sidebar" }: UserMenuProps) {
         className={cn(
           "flex items-center gap-2 rounded-lg text-left transition-colors",
           isHeader ? "px-2 py-1.5" : "w-full gap-3 px-2 py-2",
+          compact && !isHeader && "w-auto justify-center gap-0 px-1.5",
           "hover:bg-sidebar-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
           open && "bg-sidebar-active",
         )}
@@ -235,7 +237,13 @@ export function UserMenu({ variant = "sidebar" }: UserMenuProps) {
         aria-haspopup="menu"
       >
         <UserAvatar profile={profile} initials={initials} />
-        <span className={cn("min-w-0", isHeader && "hidden sm:block")}>
+        <span
+          className={cn(
+            "min-w-0",
+            isHeader && "hidden sm:block",
+            compact && !isHeader && "hidden",
+          )}
+        >
           <span className="block max-w-[140px] truncate text-sm font-medium text-foreground">
             {name}
           </span>
@@ -248,7 +256,7 @@ export function UserMenu({ variant = "sidebar" }: UserMenuProps) {
           size={16}
           color="currentColor"
           strokeWidth={1.75}
-          className="shrink-0 text-muted"
+          className={cn("shrink-0 text-muted", compact && !isHeader && "hidden")}
         />
       </button>
 

@@ -85,6 +85,7 @@ export function StepGenerating() {
       draft.assetAspectOverrides,
     ),
   );
+  const itemsRef = useRef<AssetProgressData[]>(items);
   const [brandMemory, setBrandMemory] = useState<BrandMemoryStreamData | null>(
     null,
   );
@@ -116,6 +117,10 @@ export function StepGenerating() {
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
     null,
   );
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   const preflight = useMemo(
     () => validateGenerationPreflight(draft, availableTokens),
@@ -219,6 +224,15 @@ export function StepGenerating() {
             model: imageModel,
             createdAt: now,
           });
+        }
+
+        const failedAssets = itemsRef.current.filter((item) => item.status === "error");
+        if (failedAssets.length > 0 || generated.length === 0) {
+          throw new Error(
+            failedAssets.length > 0
+              ? "Generation failed for one or more assets. Review and try again."
+              : "Generation did not return assets. Please try again.",
+          );
         }
 
         const kit: BrandKit = {
