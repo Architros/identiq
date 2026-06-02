@@ -13,9 +13,7 @@ export function LibraryFromUrl() {
   const searchParams = useSearchParams();
   const { hasActiveBrand, isLoading } = useBrand();
   const {
-    activeChatId,
     isGenerating,
-    libraryTemplateId,
     showChatView,
     addReferenceImageFromUrl,
     setLibraryTemplateId,
@@ -52,27 +50,20 @@ export function LibraryFromUrl() {
 
     if (isGenerating) {
       markLibraryRemixInitDone(sessionKey);
-      if (libraryTemplateId !== libraryId) {
-        setLibraryTemplateId(libraryId);
-      }
+      setLibraryTemplateId(libraryId);
       return;
     }
 
     const isResumeSession = Boolean(carryChatId);
-    if (!isResumeSession) {
-      prepareLibraryRemixSession();
-    }
-
     markLibraryRemixInitDone(sessionKey);
 
     void (async () => {
-      if (isResumeSession && carryChatId !== activeChatId) {
+      if (isResumeSession) {
         await openChatSession(carryChatId);
-      } else if (!activeChatId) {
+      } else {
+        prepareLibraryRemixSession();
         await ensureChatSession("Library remix");
       }
-
-      if (libraryTemplateId === libraryId) return;
 
       clearReferenceImages();
       if (carryPresetIds) {
@@ -95,9 +86,7 @@ export function LibraryFromUrl() {
     remixInit,
     isLoading,
     hasActiveBrand,
-    activeChatId,
     isGenerating,
-    libraryTemplateId,
     showChatView,
     addReferenceImageFromUrl,
     addPreset,

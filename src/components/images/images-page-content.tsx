@@ -245,6 +245,7 @@ export function ImagesPageContent() {
                                 alt: label,
                                 title: label,
                                 subtitle: formatDisplayDate(asset.createdAt),
+                                downloadFilename: `${asset.jobId || asset.id}.png`,
                               }),
                             onAttachToChat: () =>
                               attachToChat(asset.previewUrl, label),

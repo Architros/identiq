@@ -163,6 +163,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [quantity, setQuantity] = useState(1);
   const [withBackground, setWithBackground] = useState(true);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatBootstrapMessages, setChatBootstrapMessages] = useState<
+    IdentiqUIMessage[]
+  >([]);
   const [chatTitle, setChatTitle] = useState("New chat");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
     null,
@@ -180,6 +183,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const submitInFlightRef = useRef(false);
   const generationLockedRef = useRef(false);
   const libraryRemixSessionKeyRef = useRef<string | null>(null);
+  const pendingChatHydrationRef = useRef<{
+    chatId: string;
+    messages: IdentiqUIMessage[];
+  } | null>(null);
 
   const reportGenerationError = useCallback((raw: string) => {
     const message = formatInlineGenerationError(raw);
@@ -371,6 +378,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const { messages, sendMessage, stop, status, setMessages } =
     useChat<IdentiqUIMessage>({
       id: activeChatId ?? undefined,
+      messages: chatBootstrapMessages,
       transport,
       onFinish: ({ isAbort, isError, messages: finishedMessages }) => {
         setGenerationStartedAt(null);
@@ -481,6 +489,14 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     messagesRef.current = messages;
   }, [messages]);
 
+  useEffect(() => {
+    const pending = pendingChatHydrationRef.current;
+    if (!pending || pending.chatId !== activeChatId) return;
+    setMessages(pending.messages);
+    registeredJobsRef.current.clear();
+    pendingChatHydrationRef.current = null;
+  }, [activeChatId, setMessages]);
+
   const isGenerating = status === "submitted" || status === "streaming";
   const isLibraryRemix = Boolean(libraryTemplateId);
 
@@ -564,33 +580,49 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setView("chat");
   }, []);
 
+  const ensuringChatSessionRef = useRef<Promise<string | null> | null>(null);
+
   const ensureChatSession = useCallback(
     async (title?: string): Promise<string | null> => {
       if (activeChatIdRef.current) return activeChatIdRef.current;
-      if (!hasActiveBrand || !brandKit.id) return null;
-      try {
-        const res = await fetch("/api/ideas/chats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            brandId: brandKit.id,
-            title: title?.trim() || chatTitle,
-            settingsSnapshot: settingsSnapshot(),
-          }),
-        });
-        if (!res.ok) return null;
-        const data = (await res.json()) as { chat: IdeasChatSummary };
-        const chatId = data.chat.id;
-        flushSync(() => {
-          setActiveChatId(chatId);
-          activeChatIdRef.current = chatId;
-          setChatTitle(data.chat.title);
-        });
-        return chatId;
-      } catch {
-        return null;
+      if (ensuringChatSessionRef.current) {
+        return ensuringChatSessionRef.current;
       }
+      if (!hasActiveBrand || !brandKit.id) return null;
+
+      const createChat = (async (): Promise<string | null> => {
+        try {
+          const res = await fetch("/api/ideas/chats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              brandId: brandKit.id,
+              title: title?.trim() || chatTitle,
+              settingsSnapshot: settingsSnapshot(),
+            }),
+          });
+          if (!res.ok) return null;
+          const data = (await res.json()) as { chat: IdeasChatSummary };
+          const chatId = data.chat.id;
+          if (activeChatIdRef.current && activeChatIdRef.current !== chatId) {
+            return activeChatIdRef.current;
+          }
+          flushSync(() => {
+            setActiveChatId(chatId);
+            activeChatIdRef.current = chatId;
+            setChatTitle(data.chat.title);
+          });
+          return chatId;
+        } catch {
+          return null;
+        } finally {
+          ensuringChatSessionRef.current = null;
+        }
+      })();
+
+      ensuringChatSessionRef.current = createChat;
+      return createChat;
     },
     [brandKit.id, chatTitle, hasActiveBrand, settingsSnapshot],
   );
@@ -617,22 +649,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             settingsSnapshot: Record<string, unknown> | null;
           };
         };
-        setActiveChatId(data.chat.id);
-        activeChatIdRef.current = data.chat.id;
-        setChatTitle(data.chat.title);
-        if (
-          data.chat.messages.length === 0 &&
-          messagesRef.current.length > 0
-        ) {
+        const loadedMessages = data.chat.messages;
+        pendingChatHydrationRef.current = {
+          chatId: data.chat.id,
+          messages: loadedMessages,
+        };
+        flushSync(() => {
+          setChatBootstrapMessages(loadedMessages);
+          setActiveChatId(data.chat.id);
+          activeChatIdRef.current = data.chat.id;
+          setChatTitle(data.chat.title);
           registeredJobsRef.current.clear();
           setView("chat");
           setHistoryOpen(false);
-        } else {
-          setMessages(data.chat.messages);
-          registeredJobsRef.current.clear();
-          setView("chat");
-          setHistoryOpen(false);
-        }
+        });
         const snap = data.chat.settingsSnapshot;
         if (snap?.aspectRatio) {
           setAspectRatio(snap.aspectRatio as AspectRatio);
@@ -643,31 +673,36 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         if (typeof snap?.quantity === "number") {
           setQuantity(snap.quantity);
         }
-        if (typeof snap?.userPrompt === "string") {
+        if (typeof snap?.libraryTemplateId === "string") {
+          setLibraryTemplateId(snap.libraryTemplateId);
+        }
+        if (loadedMessages.length > 0) {
+          setPrompt("");
+        } else if (typeof snap?.userPrompt === "string") {
           setPrompt(snap.userPrompt);
         }
       } catch {
         showErrorToast("Could not load this chat. Try again.");
       }
     },
-    [setMessages],
+    [setLibraryTemplateId],
   );
 
   const prepareLibraryRemixSession = useCallback(() => {
-    flushSync(() => {
-      setActiveChatId(null);
-      activeChatIdRef.current = null;
-      setChatTitle("Library remix");
-      setMessages([]);
-      setPrompt("");
-      registeredJobsRef.current.clear();
-      setGenerationStartedAt(null);
-      setGenerationPhase(null);
-      setGenerationPresetTitle(undefined);
-      lastReportedErrorRef.current = null;
-      setGenerationError(null);
-      setView("chat");
-    });
+    setChatBootstrapMessages([]);
+    pendingChatHydrationRef.current = null;
+    setActiveChatId(null);
+    activeChatIdRef.current = null;
+    setChatTitle("Library remix");
+    setMessages([]);
+    setPrompt("");
+    registeredJobsRef.current.clear();
+    setGenerationStartedAt(null);
+    setGenerationPhase(null);
+    setGenerationPresetTitle(undefined);
+    lastReportedErrorRef.current = null;
+    setGenerationError(null);
+    setView("chat");
   }, [setMessages]);
 
   const startNewChat = useCallback(() => {
@@ -675,6 +710,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       stop();
       pendingTokenCostRef.current = 0;
     }
+    pendingChatHydrationRef.current = null;
+    setChatBootstrapMessages([]);
     setActiveChatId(null);
     activeChatIdRef.current = null;
     setChatTitle("New chat");
@@ -923,13 +960,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       remixDefaultPrompt ||
       presetSummary ||
       "Generate on-brand assets";
+    const userPromptDraft = prompt.trim();
 
     submitInFlightRef.current = true;
+    setPrompt("");
     try {
       const chatId = await ensureChatSession(
         remixingLibrary ? "Library remix" : undefined,
       );
       if (!chatId) {
+        setPrompt(userPromptDraft);
         reportGenerationError("Could not start chat session. Please try again.");
         return;
       }
@@ -941,7 +981,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             presetIds: selectedPresets.map((p) => p.id),
           },
         },
-        { body: buildGenerationBody(composerReferences) },
+        {
+          body: {
+            ...buildGenerationBody(composerReferences),
+            userPrompt: messageText,
+          },
+        },
       );
       queueMicrotask(() => {
         const draftMessages = messagesRef.current;
@@ -953,6 +998,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         });
       });
     } catch {
+      setPrompt(userPromptDraft);
       reportGenerationError("Generation failed to start. Please try again.");
     } finally {
       submitInFlightRef.current = false;

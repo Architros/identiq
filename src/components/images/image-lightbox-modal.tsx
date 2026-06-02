@@ -1,14 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Download04Icon,
+  Image01Icon,
+} from "@hugeicons/core-free-icons";
+import { downloadImageUrl } from "@/lib/download/fetch-image-blob";
+import { cn } from "@/lib/utils";
 
 export type LightboxImage = {
   src: string;
   alt: string;
   title?: string;
   subtitle?: string;
+  /** Defaults to a sanitized alt-based name when omitted. */
+  downloadFilename?: string;
+  libraryHref?: string;
+  libraryLabel?: string;
+  onLibraryNavigate?: () => void;
 };
 
 type ImageLightboxModalProps = {
@@ -17,6 +29,8 @@ type ImageLightboxModalProps = {
 };
 
 export function ImageLightboxModal({ image, onClose }: ImageLightboxModalProps) {
+  const [downloading, setDownloading] = useState(false);
+
   useEffect(() => {
     if (!image) return;
     const onKey = (e: KeyboardEvent) => {
@@ -26,7 +40,29 @@ export function ImageLightboxModal({ image, onClose }: ImageLightboxModalProps) 
     return () => document.removeEventListener("keydown", onKey);
   }, [image, onClose]);
 
+  useEffect(() => {
+    if (!image) setDownloading(false);
+  }, [image]);
+
+  const handleDownload = useCallback(async () => {
+    if (!image) return;
+    const safeName =
+      image.downloadFilename?.trim() ||
+      `${image.alt.replace(/[^\w.-]+/g, "_").slice(0, 80) || "asset"}.png`;
+    setDownloading(true);
+    try {
+      await downloadImageUrl(image.src, safeName);
+    } catch {
+      window.open(image.src, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(false);
+    }
+  }, [image]);
+
   if (!image) return null;
+
+  const libraryHref = image.libraryHref?.trim();
+  const libraryLabel = image.libraryLabel?.trim() || "Brand assets";
 
   return (
     <div
@@ -73,9 +109,47 @@ export function ImageLightboxModal({ image, onClose }: ImageLightboxModalProps) 
             className="max-h-[70vh] max-w-full rounded-lg object-contain"
           />
         </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+          {libraryHref ? (
+            <Link
+              href={libraryHref}
+              onClick={() => {
+                image.onLibraryNavigate?.();
+                onClose();
+              }}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors",
+                "hover:bg-sidebar-active",
+              )}
+            >
+              <HugeiconsIcon
+                icon={Image01Icon}
+                size={16}
+                color="currentColor"
+                strokeWidth={1.75}
+              />
+              {libraryLabel}
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={downloading}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors",
+              "hover:bg-sidebar-active disabled:cursor-wait disabled:opacity-60",
+            )}
+          >
+            <HugeiconsIcon
+              icon={Download04Icon}
+              size={16}
+              color="currentColor"
+              strokeWidth={1.75}
+            />
+            {downloading ? "Downloading…" : "Download"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
-
