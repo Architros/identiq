@@ -69,12 +69,11 @@ export function ChatMessageList({
       <div
         className={cn(
           "w-full space-y-6",
-          isLibraryRemix || showWelcome
-            ? libraryRemixStatus
-              ? "mr-auto max-w-2xl text-left"
-              : "mx-auto max-w-xl text-center"
-            : "mx-auto mr-auto max-w-2xl",
-          libraryRemixStatus && "flex flex-col items-start",
+          isLibraryRemix
+            ? "mr-auto max-w-2xl text-left flex flex-col items-start"
+            : showWelcome
+              ? "mx-auto max-w-xl text-center"
+              : "mx-auto mr-auto max-w-2xl",
         )}
       >
         {showWelcome ? <ChatWelcomeEmpty /> : null}
