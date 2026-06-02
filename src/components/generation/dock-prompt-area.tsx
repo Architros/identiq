@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -15,7 +15,7 @@ import {
 import { useGeneration } from "@/contexts/generation-context";
 import { DockSettingsRow } from "@/components/generation/dock-settings-row";
 import { DockCreateButton } from "@/components/generation/dock-create-button";
-import { getPresetById } from "@/lib/generation/presets";
+import { generationPresets } from "@/lib/generation/presets";
 import { cn } from "@/lib/utils";
 
 type DockPromptAreaProps = {
@@ -35,6 +35,7 @@ export function DockPromptArea({
   const isIdeasGrid = variant === "ideas-grid";
   const [referenceChoiceOpen, setReferenceChoiceOpen] = useState(false);
   const [typeChoiceOpen, setTypeChoiceOpen] = useState(false);
+  const [typeSearchQuery, setTypeSearchQuery] = useState("");
   const {
     prompt,
     setPrompt,
@@ -57,10 +58,15 @@ export function DockPromptArea({
   const compactInput = isImages && (isGenerating || generationPhase === "error");
   const showTypePicker = isImages && (isLibraryRemix || selectedPresets.length === 0);
 
-  const quickPresetIds = ["linkedin-post", "x-post", "instagram-post"] as const;
-  const quickTypePresets = quickPresetIds
-    .map((id) => getPresetById(id))
-    .filter((preset): preset is NonNullable<typeof preset> => Boolean(preset));
+  const quickTypePresets = generationPresets;
+  const filteredTypePresets = useMemo(() => {
+    const q = typeSearchQuery.trim().toLowerCase();
+    if (!q) return quickTypePresets;
+    return quickTypePresets.filter((preset) => {
+      const haystack = `${preset.title} ${preset.categoryLabel} ${preset.description}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [quickTypePresets, typeSearchQuery]);
 
   const refThumbSize = isImages
     ? "h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24"
@@ -153,30 +159,45 @@ export function DockPromptArea({
     <div
       role="menu"
       aria-label="Select type"
-      className="absolute bottom-[calc(100%+8px)] left-0 z-50 min-w-[220px] overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.14)]"
+      className="absolute bottom-[calc(100%+8px)] left-0 z-50 min-w-[240px] overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.14)]"
     >
-      {quickTypePresets.map((preset) => (
-        <button
-          key={preset.id}
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setTypeChoiceOpen(false);
-            setReferenceChoiceOpen(false);
-            addPreset(preset);
-          }}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-sidebar-active"
-        >
-          <HugeiconsIcon
-            icon={preset.platformIcon}
-            size={16}
-            color="currentColor"
-            strokeWidth={1.75}
-            className="text-muted"
-          />
-          {preset.title}
-        </button>
-      ))}
+      <div className="pb-1.5">
+        <input
+          value={typeSearchQuery}
+          onChange={(e) => setTypeSearchQuery(e.target.value)}
+          placeholder="Search presets..."
+          className="h-8 w-full rounded-md border border-border bg-background px-2.5 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        />
+      </div>
+      <div className="max-h-72 overflow-y-auto pr-0.5 [scrollbar-color:rgba(148,163,184,0.65)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/80 [&::-webkit-scrollbar-thumb:hover]:bg-border [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+        {filteredTypePresets.length > 0 ? (
+          filteredTypePresets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setTypeChoiceOpen(false);
+                setReferenceChoiceOpen(false);
+                setTypeSearchQuery("");
+                addPreset(preset);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-sidebar-active"
+            >
+              <HugeiconsIcon
+                icon={preset.platformIcon}
+                size={16}
+                color="currentColor"
+                strokeWidth={1.75}
+                className="text-muted"
+              />
+              {preset.title}
+            </button>
+          ))
+        ) : (
+          <p className="px-2.5 py-2 text-xs text-muted">No matching presets.</p>
+        )}
+      </div>
     </div>
   ) : null;
 
@@ -193,7 +214,7 @@ export function DockPromptArea({
       <div
         className={cn(
           "space-y-2",
-          isIdeasGrid ? "space-y-3 px-4" : "space-y-1.5 px-2.5 max-md:px-2 md:space-y-2 md:px-3",
+          isIdeasGrid ? "space-y-3 px-4" : "space-y-1.5 p-2 md:space-y-2",
         )}
       >
         <input

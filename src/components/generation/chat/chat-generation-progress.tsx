@@ -80,6 +80,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
         <ImageSkeletonGrid
           aspectRatio={aspectRatio}
           quantity={quantity}
+          mediaTypeLabel={generationPresetTitle}
           animated={false}
           failed
           centered={false}
@@ -109,6 +110,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
         <ImageSkeletonGrid
           aspectRatio={aspectRatio}
           quantity={quantity}
+          mediaTypeLabel={generationPresetTitle}
           elapsedStartedAt={generationStartedAt}
           progressTexts={progressTexts}
           centered={isLibraryRemix}

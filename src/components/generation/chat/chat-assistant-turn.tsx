@@ -106,6 +106,7 @@ export function ChatAssistantTurn({
             <ImageSkeletonGrid
               aspectRatio={skeletonAspectRatio}
               quantity={skeletonQuantity}
+              mediaTypeLabel={generationStatus?.presetTitle}
               imageModel={generationStatus?.imageModel}
               displayDimensions={generationStatus?.displayDimensions}
               elapsedStartedAt={isFailed ? null : generationStartedAt}

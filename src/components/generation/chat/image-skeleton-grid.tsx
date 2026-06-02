@@ -47,6 +47,7 @@ function skeletonSizeClass(ratio: AspectRatio, centered: boolean): string {
 type ImageSkeletonGridProps = {
   aspectRatio: string;
   quantity: number;
+  mediaTypeLabel?: string;
   imageModel?: string;
   displayDimensions?: string;
   elapsedStartedAt?: number | null;
@@ -65,6 +66,7 @@ type ImageSkeletonGridProps = {
 export function ImageSkeletonGrid({
   aspectRatio,
   quantity,
+  mediaTypeLabel,
   imageModel,
   displayDimensions,
   elapsedStartedAt = null,
@@ -103,6 +105,26 @@ export function ImageSkeletonGrid({
             {formatImageModelLabel(imageModel)}
             {elapsed ? ` · ${elapsed}` : null}
           </p>
+          {mediaTypeLabel ? (
+            <div
+              className={cn(
+                "inline-flex w-fit items-center rounded-full border border-border/70 bg-surface px-2.5 py-1 text-[11px] font-medium text-muted",
+                centered ? "mx-auto" : "mx-0",
+              )}
+            >
+              {mediaTypeLabel}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {failed && mediaTypeLabel ? (
+        <div
+          className={cn(
+            "inline-flex w-fit items-center rounded-full border border-border/70 bg-surface px-2.5 py-1 text-[11px] font-medium text-muted",
+            centered ? "mx-auto" : "mx-0",
+          )}
+        >
+          {mediaTypeLabel}
         </div>
       ) : null}
 
