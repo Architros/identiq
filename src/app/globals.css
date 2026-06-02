@@ -183,6 +183,46 @@ body {
   background: transparent;
 }
 
+/* Global custom scrollbar (all scrollable containers) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border) 90%, var(--muted))
+    transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--border) 90%, var(--muted));
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 35%, var(--muted));
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Global text selection color */
+::selection {
+  color: #c2410c;
+  background: rgba(251, 146, 60, 0.24);
+}
+
+::-moz-selection {
+  color: #c2410c;
+  background: rgba(251, 146, 60, 0.24);
+}
+
 /* Global interactive cursor defaults */
 a[href],
 button:not(:disabled),

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useBrand } from "@/components/providers/brand-provider";
@@ -18,7 +19,6 @@ import type { AspectRatio, GenerationPreset, Resolution } from "@/lib/generation
 import { getPresetById } from "@/lib/generation/presets";
 import type {
   GenerationPhase,
-  GenerationStatusData,
   IdentiqUIMessage,
 } from "@/lib/generation/chat-message-types";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
@@ -32,13 +32,18 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
 import type { IdeasChatSummary } from "@/lib/generation/ideas-chat-types";
 import {
   deriveChatTitle,
+  getMessageText,
   isMeaningfulChatHistory,
 } from "@/lib/generation/chat-history";
 import { selectCategoryMatchedLibraryReferences } from "@/lib/library/reference-selection";
+import { getLibraryTemplate } from "@/lib/library/templates";
+import {
+  defaultRemixPrompt,
+  resolveRemixMode,
+} from "@/lib/generation/remix-mode";
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const LIBRARY_REMIX_DEFAULT_PROMPT = "Remix this layout for my brand";
 
 export type IdeasView = "grid" | "chat";
 
@@ -59,6 +64,7 @@ type GenerationContextValue = {
   aspectRatio: AspectRatio;
   resolution: Resolution;
   quantity: number;
+  withBackground: boolean;
   messages: IdentiqUIMessage[];
   chatStatus: "submitted" | "streaming" | "ready" | "error";
   isGenerating: boolean;
@@ -74,15 +80,18 @@ type GenerationContextValue = {
   setHistoryOpen: (open: boolean) => void;
   addPreset: (preset: GenerationPreset) => void;
   removePreset: (id: string) => void;
+  clearPresets: () => void;
   setActivePreset: (id: string) => void;
   setPrompt: (value: string) => void;
   addReferenceImage: (files: FileList | File[]) => void;
   addReferenceImageFromUrl: (params: { url: string; name: string }) => boolean;
   setLibraryTemplateId: (id: string | null) => void;
   removeReferenceImage: (id: string) => void;
+  clearReferenceImages: () => void;
   setAspectRatio: (value: AspectRatio) => void;
   setResolution: (value: Resolution) => void;
   setQuantity: (value: number) => void;
+  setWithBackground: (value: boolean) => void;
   submitGeneration: () => Promise<void>;
   reportGenerationError: (raw: string) => void;
   stopGeneration: () => void;
@@ -93,6 +102,10 @@ type GenerationContextValue = {
   openChatSession: (chatId: string) => Promise<void>;
   continueFromMessageIndex: (index: number) => Promise<void>;
   refreshChatHistory: () => Promise<IdeasChatSummary[]>;
+  ensureChatSession: (title?: string) => Promise<string | null>;
+  isLibraryRemixInitDone: (sessionKey: string) => boolean;
+  markLibraryRemixInitDone: (sessionKey: string) => void;
+  showChatView: () => void;
 };
 
 const GenerationContext = createContext<GenerationContextValue | null>(null);
@@ -148,6 +161,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [quantity, setQuantity] = useState(1);
+  const [withBackground, setWithBackground] = useState(true);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState("New chat");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
@@ -164,6 +178,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const activeChatIdRef = useRef<string | null>(null);
   const lastReportedErrorRef = useRef<string | null>(null);
   const submitInFlightRef = useRef(false);
+  const generationLockedRef = useRef(false);
+  const libraryRemixSessionKeyRef = useRef<string | null>(null);
 
   const reportGenerationError = useCallback((raw: string) => {
     const message = formatInlineGenerationError(raw);
@@ -177,6 +193,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const setLibraryTemplateId = useCallback((id: string | null) => {
     libraryTemplateIdRef.current = id;
     setLibraryTemplateIdState(id);
+    if (!id) {
+      libraryRemixSessionKeyRef.current = null;
+    }
   }, []);
 
   useEffect(() => {
@@ -197,6 +216,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
+      withBackground,
       userPrompt: prompt,
       libraryTemplateId:
         libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
@@ -206,6 +226,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
+      withBackground,
       prompt,
       libraryTemplateId,
     ],
@@ -221,24 +242,29 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           url: img.previewUrl,
           name: img.name,
         }));
+      const remixing = Boolean(
+        libraryTemplateIdRef.current ?? libraryTemplateId,
+      );
     return {
-      chatId: activeChatId ?? undefined,
+      chatId: activeChatIdRef.current ?? activeChatId ?? undefined,
       brandId: brandKit.id,
       brandDisplayName: brandKit.displayName,
       brandMemory,
       brandAssets: brandKit.assets,
-      presets: selectedPresets.map((p) => ({
-        id: p.id,
-        title: p.title,
-        defaultPrompt: p.defaultPrompt,
-        aspectRatio: p.aspectRatio,
-      })),
+      presets: remixing
+        ? []
+        : selectedPresets.map((p) => ({
+            id: p.id,
+            title: p.title,
+            defaultPrompt: p.defaultPrompt,
+            aspectRatio: p.aspectRatio,
+          })),
       userPrompt: prompt,
       imageAssist: true,
       referenceImageCount: mergedComposerReferences.length,
       composerReferenceImages: mergedComposerReferences,
       libraryTemplateId: libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
-      settings: { aspectRatio, resolution, quantity },
+      settings: { aspectRatio, resolution, quantity, withBackground },
     };
     },
     [
@@ -251,8 +277,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
+      withBackground,
     ],
   );
+
+  const isLogoLikePreset = useCallback((preset: GenerationPreset): boolean => {
+    const text = `${preset.id} ${preset.title}`.toLowerCase();
+    return (
+      text.includes("logo") ||
+      text.includes("wordmark") ||
+      text.includes("brandmark") ||
+      text.includes("icon")
+    );
+  }, []);
 
   const transport = useMemo(
     () =>
@@ -264,7 +301,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const saveMessages = useCallback(
     async (msgs: IdentiqUIMessage[], title?: string) => {
-      if (!isMeaningfulChatHistory(msgs)) {
+      const hasDraftUserPrompt = msgs.some(
+        (message) => message.role === "user" && getMessageText(message).length > 0,
+      );
+
+      if (!isMeaningfulChatHistory(msgs) && !hasDraftUserPrompt) {
         const chatId = activeChatIdRef.current;
         if (chatId) {
           await deleteChatSession(chatId);
@@ -443,6 +484,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const isGenerating = status === "submitted" || status === "streaming";
   const isLibraryRemix = Boolean(libraryTemplateId);
 
+  useEffect(() => {
+    generationLockedRef.current = isGenerating;
+  }, [isGenerating]);
+
   const generationActivity = useMemo(() => {
     if (
       !isGenerating ||
@@ -471,11 +516,26 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, [view, isGenerating, libraryTemplateId]);
 
   useEffect(() => {
-    if (isGenerating && generationStartedAt === null && status === "submitted") {
-      setGenerationStartedAt(Date.now());
-      setGenerationPhase(isLibraryRemix ? "composing-prompt" : "orchestrating");
+    if (typeof window === "undefined") return;
+    if (!libraryTemplateId || !activeChatId) return;
+    if (window.location.pathname !== "/images") return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("libraryId", libraryTemplateId);
+    params.set("carryChatId", activeChatId);
+    if (selectedPresets.length > 0) {
+      params.set(
+        "carryPresetIds",
+        selectedPresets.map((preset) => preset.id).join(","),
+      );
     }
-  }, [isGenerating, generationStartedAt, status, isLibraryRemix]);
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [libraryTemplateId, activeChatId, selectedPresets]);
 
   const refreshChatHistory = useCallback(async (): Promise<IdeasChatSummary[]> => {
     if (!brandKit.id) return [];
@@ -492,8 +552,58 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     }
   }, [brandKit.id]);
 
+  const isLibraryRemixInitDone = useCallback((sessionKey: string) => {
+    return libraryRemixSessionKeyRef.current === sessionKey;
+  }, []);
+
+  const markLibraryRemixInitDone = useCallback((sessionKey: string) => {
+    libraryRemixSessionKeyRef.current = sessionKey;
+  }, []);
+
+  const showChatView = useCallback(() => {
+    setView("chat");
+  }, []);
+
+  const ensureChatSession = useCallback(
+    async (title?: string): Promise<string | null> => {
+      if (activeChatIdRef.current) return activeChatIdRef.current;
+      if (!hasActiveBrand || !brandKit.id) return null;
+      try {
+        const res = await fetch("/api/ideas/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            brandId: brandKit.id,
+            title: title?.trim() || chatTitle,
+            settingsSnapshot: settingsSnapshot(),
+          }),
+        });
+        if (!res.ok) return null;
+        const data = (await res.json()) as { chat: IdeasChatSummary };
+        const chatId = data.chat.id;
+        flushSync(() => {
+          setActiveChatId(chatId);
+          activeChatIdRef.current = chatId;
+          setChatTitle(data.chat.title);
+        });
+        return chatId;
+      } catch {
+        return null;
+      }
+    },
+    [brandKit.id, chatTitle, hasActiveBrand, settingsSnapshot],
+  );
+
   const openChatSession = useCallback(
     async (chatId: string) => {
+      if (generationLockedRef.current) return;
+      if (
+        activeChatIdRef.current === chatId &&
+        messagesRef.current.length > 0
+      ) {
+        return;
+      }
       try {
         const res = await fetch(`/api/ideas/chats/${chatId}`, {
           credentials: "same-origin",
@@ -510,10 +620,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setActiveChatId(data.chat.id);
         activeChatIdRef.current = data.chat.id;
         setChatTitle(data.chat.title);
-        setMessages(data.chat.messages);
-        registeredJobsRef.current.clear();
-        setView("chat");
-        setHistoryOpen(false);
+        if (
+          data.chat.messages.length === 0 &&
+          messagesRef.current.length > 0
+        ) {
+          registeredJobsRef.current.clear();
+          setView("chat");
+          setHistoryOpen(false);
+        } else {
+          setMessages(data.chat.messages);
+          registeredJobsRef.current.clear();
+          setView("chat");
+          setHistoryOpen(false);
+        }
         const snap = data.chat.settingsSnapshot;
         if (snap?.aspectRatio) {
           setAspectRatio(snap.aspectRatio as AspectRatio);
@@ -535,17 +654,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   );
 
   const prepareLibraryRemixSession = useCallback(() => {
-    setActiveChatId(null);
-    activeChatIdRef.current = null;
-    setChatTitle("Library remix");
-    setMessages([]);
-    registeredJobsRef.current.clear();
-    setGenerationStartedAt(null);
-    setGenerationPhase(null);
-    setGenerationPresetTitle(undefined);
-    lastReportedErrorRef.current = null;
-    setGenerationError(null);
-    setView("chat");
+    flushSync(() => {
+      setActiveChatId(null);
+      activeChatIdRef.current = null;
+      setChatTitle("Library remix");
+      setMessages([]);
+      setPrompt("");
+      registeredJobsRef.current.clear();
+      setGenerationStartedAt(null);
+      setGenerationPhase(null);
+      setGenerationPresetTitle(undefined);
+      lastReportedErrorRef.current = null;
+      setGenerationError(null);
+      setView("chat");
+    });
   }, [setMessages]);
 
   const startNewChat = useCallback(() => {
@@ -584,23 +706,27 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const addPreset = useCallback(
     (preset: GenerationPreset) => {
+      if (generationLockedRef.current) return;
       setSelectedPresets((prev) => {
         if (prev.some((p) => p.id === preset.id)) {
           setActivePresetId(preset.id);
           setAspectRatio(preset.aspectRatio);
           setResolution(preset.suggestedResolution);
+          setWithBackground(!isLogoLikePreset(preset));
           return prev;
         }
         setActivePresetId(preset.id);
         setAspectRatio(preset.aspectRatio);
         setResolution(preset.suggestedResolution);
+        setWithBackground(!isLogoLikePreset(preset));
         return [preset];
       });
     },
-    [],
+    [isLogoLikePreset],
   );
 
   const removePreset = useCallback((id: string) => {
+    if (generationLockedRef.current) return;
     setSelectedPresets((prev) => {
       const next = prev.filter((p) => p.id !== id);
       setActivePresetId((current) => {
@@ -611,7 +737,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
+  const clearPresets = useCallback(() => {
+    if (generationLockedRef.current) return;
+    setSelectedPresets([]);
+    setActivePresetId(null);
+    setWithBackground(true);
+  }, []);
+
   const setActivePreset = useCallback((id: string) => {
+    if (generationLockedRef.current) return;
     const preset = getPresetById(id);
     if (!preset) return;
     setActivePresetId(id);
@@ -707,6 +841,17 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
+  const clearReferenceImages = useCallback(() => {
+    setReferenceImages((prev) => {
+      for (const img of prev) {
+        if (img.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(img.previewUrl);
+        }
+      }
+      return [];
+    });
+  }, []);
+
   const submitGeneration = useCallback(async () => {
     if (submitInFlightRef.current || status === "submitted" || status === "streaming") {
       return;
@@ -743,7 +888,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     const composerReferences = [...userReferences, ...autoReferences].slice(0, 4);
 
     const tokenCost = calculateGenerationTokenCost({
-      presetCount: selectedPresets.length,
+      presetCount: remixingLibrary ? 0 : selectedPresets.length,
       hasPrompt: prompt.trim().length > 0,
       isLibraryRemix: remixingLibrary,
       quantity,
@@ -762,18 +907,32 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationError(null);
     pendingTokenCostRef.current = tokenCost;
     setGenerationStartedAt(Date.now());
+    setGenerationPhase(remixingLibrary ? "composing-prompt" : "orchestrating");
     lastPresetPhaseRef.current = null;
     setView("chat");
 
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
+    const remixTemplate = remixingLibrary
+      ? getLibraryTemplate(libraryTemplateIdRef.current ?? "")
+      : undefined;
+    const remixDefaultPrompt = remixingLibrary
+      ? defaultRemixPrompt(resolveRemixMode(remixTemplate?.category))
+      : "";
     const messageText =
       prompt.trim() ||
-      (remixingLibrary ? LIBRARY_REMIX_DEFAULT_PROMPT : "") ||
+      remixDefaultPrompt ||
       presetSummary ||
       "Generate on-brand assets";
 
     submitInFlightRef.current = true;
     try {
+      const chatId = await ensureChatSession(
+        remixingLibrary ? "Library remix" : undefined,
+      );
+      if (!chatId) {
+        reportGenerationError("Could not start chat session. Please try again.");
+        return;
+      }
       await sendMessage(
         {
           text: messageText,
@@ -784,6 +943,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         },
         { body: buildGenerationBody(composerReferences) },
       );
+      queueMicrotask(() => {
+        const draftMessages = messagesRef.current;
+        const chatIdForDraft = activeChatIdRef.current;
+        if (!chatIdForDraft || draftMessages.length === 0) return;
+        void persistChatMessages(chatIdForDraft, draftMessages, {
+          title: remixingLibrary ? "Library remix" : chatTitle,
+          settingsSnapshot: settingsSnapshot(),
+        });
+      });
     } catch {
       reportGenerationError("Generation failed to start. Please try again.");
     } finally {
@@ -797,11 +965,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     availableTokens,
     buildGenerationBody,
     sendMessage,
+    ensureChatSession,
     hasActiveBrand,
     isLoading,
     reportGenerationError,
     status,
-    selectedPresets,
+    chatTitle,
+    settingsSnapshot,
   ]);
 
   const stopGeneration = useCallback(() => {
@@ -811,6 +981,26 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationPhase("stopped");
     lastPresetPhaseRef.current = null;
   }, [stop]);
+
+  const setAspectRatioGuarded = useCallback((value: AspectRatio) => {
+    if (generationLockedRef.current) return;
+    setAspectRatio(value);
+  }, []);
+
+  const setResolutionGuarded = useCallback((value: Resolution) => {
+    if (generationLockedRef.current) return;
+    setResolution(value);
+  }, []);
+
+  const setQuantityGuarded = useCallback((value: number) => {
+    if (generationLockedRef.current) return;
+    setQuantity(value);
+  }, []);
+
+  const setWithBackgroundGuarded = useCallback((value: boolean) => {
+    if (generationLockedRef.current) return;
+    setWithBackground(value);
+  }, []);
 
   const closeChat = useCallback(() => {
     if (isGenerating) {
@@ -832,6 +1022,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
+      withBackground,
       messages,
       chatStatus: status,
       isGenerating,
@@ -847,15 +1038,18 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setHistoryOpen,
       addPreset,
       removePreset,
+      clearPresets,
       setActivePreset,
       setPrompt,
       addReferenceImage,
       addReferenceImageFromUrl,
       setLibraryTemplateId,
       removeReferenceImage,
-      setAspectRatio,
-      setResolution,
-      setQuantity,
+      clearReferenceImages,
+      setAspectRatio: setAspectRatioGuarded,
+      setResolution: setResolutionGuarded,
+      setQuantity: setQuantityGuarded,
+      setWithBackground: setWithBackgroundGuarded,
       submitGeneration,
       reportGenerationError,
       stopGeneration,
@@ -865,6 +1059,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       openChatSession,
       continueFromMessageIndex,
       refreshChatHistory,
+      ensureChatSession,
+      isLibraryRemixInitDone,
+      markLibraryRemixInitDone,
+      showChatView,
     }),
     [
       view,
@@ -875,6 +1073,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       aspectRatio,
       resolution,
       quantity,
+      withBackground,
       messages,
       status,
       isGenerating,
@@ -890,11 +1089,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setLibraryTemplateId,
       addPreset,
       removePreset,
+      clearPresets,
       setActivePreset,
       addReferenceImage,
       addReferenceImageFromUrl,
-      setLibraryTemplateId,
       removeReferenceImage,
+      clearReferenceImages,
+      setAspectRatioGuarded,
+      setResolutionGuarded,
+      setQuantityGuarded,
+      setWithBackgroundGuarded,
       submitGeneration,
       reportGenerationError,
       stopGeneration,
@@ -904,6 +1108,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       openChatSession,
       continueFromMessageIndex,
       refreshChatHistory,
+      ensureChatSession,
+      isLibraryRemixInitDone,
+      markLibraryRemixInitDone,
+      showChatView,
     ],
   );
 

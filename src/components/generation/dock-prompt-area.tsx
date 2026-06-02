@@ -9,6 +9,7 @@ import {
   ImageAdd01Icon,
   Image01Icon,
   LayoutGridIcon,
+  Tick01Icon,
   Upload04Icon,
   TimeScheduleIcon,
 } from "@hugeicons/core-free-icons";
@@ -36,6 +37,10 @@ export function DockPromptArea({
   const [referenceChoiceOpen, setReferenceChoiceOpen] = useState(false);
   const [typeChoiceOpen, setTypeChoiceOpen] = useState(false);
   const [typeSearchQuery, setTypeSearchQuery] = useState("");
+  const [previewReference, setPreviewReference] = useState<{
+    url: string;
+    name?: string;
+  } | null>(null);
   const {
     prompt,
     setPrompt,
@@ -48,17 +53,31 @@ export function DockPromptArea({
     submitGeneration,
     isGenerating,
     selectedPresets,
+    activeChatId,
     generationPhase,
     addPreset,
+    clearPresets,
+    aspectRatio,
+    resolution,
+    quantity,
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
   const isCompactRemix = compact && isLibraryRemix && view === "chat";
   const submitOnEnter = view === "chat";
+  const composerLocked = isGenerating;
   const compactInput = isImages && (isGenerating || generationPhase === "error");
   const showTypePicker = isImages && (isLibraryRemix || selectedPresets.length === 0);
+  const showSettingsRow =
+    !compactInput &&
+    (isImages || isIdeasGrid) &&
+    (!isCompactRemix || selectedPresets.length === 0);
 
   const quickTypePresets = generationPresets;
+  const selectedPresetIds = useMemo(
+    () => new Set(selectedPresets.map((preset) => preset.id)),
+    [selectedPresets],
+  );
   const filteredTypePresets = useMemo(() => {
     const q = typeSearchQuery.trim().toLowerCase();
     if (!q) return quickTypePresets;
@@ -67,6 +86,14 @@ export function DockPromptArea({
       return haystack.includes(q);
     });
   }, [quickTypePresets, typeSearchQuery]);
+  const sortedTypePresets = useMemo(() => {
+    return [...filteredTypePresets].sort((a, b) => {
+      const aSelected = selectedPresetIds.has(a.id) ? 0 : 1;
+      const bSelected = selectedPresetIds.has(b.id) ? 0 : 1;
+      if (aSelected !== bSelected) return aSelected - bSelected;
+      return a.title.localeCompare(b.title);
+    });
+  }, [filteredTypePresets, selectedPresetIds]);
 
   const refThumbSize = isImages
     ? "h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24"
@@ -107,7 +134,7 @@ export function DockPromptArea({
     <div
       role="menu"
       aria-label="Add reference or select type"
-      className="absolute left-0 top-[calc(100%+8px)] z-50 min-w-[220px] overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.14)]"
+      className="absolute bottom-[calc(100%+8px)] left-0 z-50 min-w-[220px] overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.14)]"
     >
       <button
         type="button"
@@ -119,6 +146,9 @@ export function DockPromptArea({
           const query = new URLSearchParams();
           if (carryPresetIds.length > 0) {
             query.set("carryPresetIds", carryPresetIds.join(","));
+          }
+          if (activeChatId) {
+            query.set("carryChatId", activeChatId);
           }
           router.push(query.size > 0 ? `/library?${query.toString()}` : "/library");
         }}
@@ -170,30 +200,73 @@ export function DockPromptArea({
         />
       </div>
       <div className="max-h-72 overflow-y-auto pr-0.5 [scrollbar-color:rgba(148,163,184,0.65)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/80 [&::-webkit-scrollbar-thumb:hover]:bg-border [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
-        {filteredTypePresets.length > 0 ? (
-          filteredTypePresets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setTypeChoiceOpen(false);
-                setReferenceChoiceOpen(false);
-                setTypeSearchQuery("");
-                addPreset(preset);
-              }}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-sidebar-active"
-            >
-              <HugeiconsIcon
-                icon={preset.platformIcon}
-                size={16}
-                color="currentColor"
-                strokeWidth={1.75}
-                className="text-muted"
-              />
-              {preset.title}
-            </button>
-          ))
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setTypeChoiceOpen(false);
+            setReferenceChoiceOpen(false);
+            setTypeSearchQuery("");
+            clearPresets();
+          }}
+          className={cn(
+            "flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-sidebar-active",
+            selectedPresets.length === 0
+              ? "bg-sidebar-active/70 text-foreground"
+              : "text-foreground",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">No preset (Brand only)</span>
+          {selectedPresets.length === 0 ? (
+            <HugeiconsIcon
+              icon={Tick01Icon}
+              size={14}
+              color="currentColor"
+              strokeWidth={2}
+              className="text-accent"
+            />
+          ) : null}
+        </button>
+        <div className="my-1 h-px bg-border/70" />
+        {sortedTypePresets.length > 0 ? (
+          sortedTypePresets.map((preset) => {
+            const isSelected = selectedPresetIds.has(preset.id);
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setTypeChoiceOpen(false);
+                  setReferenceChoiceOpen(false);
+                  setTypeSearchQuery("");
+                  addPreset(preset);
+                }}
+                className={cn(
+                  "flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-sidebar-active",
+                  isSelected && "bg-sidebar-active/70",
+                )}
+              >
+                <HugeiconsIcon
+                  icon={preset.platformIcon}
+                  size={16}
+                  color="currentColor"
+                  strokeWidth={1.75}
+                  className="text-muted"
+                />
+                <span className="min-w-0 flex-1 truncate">{preset.title}</span>
+                {isSelected ? (
+                  <HugeiconsIcon
+                    icon={Tick01Icon}
+                    size={14}
+                    color="currentColor"
+                    strokeWidth={2}
+                    className="text-accent"
+                  />
+                ) : null}
+              </button>
+            );
+          })
         ) : (
           <p className="px-2.5 py-2 text-xs text-muted">No matching presets.</p>
         )}
@@ -217,6 +290,43 @@ export function DockPromptArea({
           isIdeasGrid ? "space-y-3 px-4" : "space-y-1.5 p-2 md:space-y-2",
         )}
       >
+        {previewReference ? (
+          <div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-foreground/55 p-4 backdrop-blur-sm"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setPreviewReference(null);
+            }}
+          >
+            <div
+              className="relative w-full max-w-4xl rounded-2xl border border-border bg-surface p-3 shadow-xl"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewReference(null)}
+                className="absolute right-3 top-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-surface/90 text-muted ring-1 ring-border transition-colors hover:text-foreground"
+                aria-label="Close preview"
+              >
+                <HugeiconsIcon
+                  icon={Cancel01Icon}
+                  size={16}
+                  color="currentColor"
+                  strokeWidth={2}
+                />
+              </button>
+              <div className="relative flex max-h-[78vh] min-h-[220px] items-center justify-center overflow-hidden rounded-xl bg-background">
+                <Image
+                  src={previewReference.url}
+                  alt={previewReference.name ?? "Reference preview"}
+                  width={1600}
+                  height={1600}
+                  className="h-auto max-h-[78vh] w-auto max-w-full object-contain"
+                  unoptimized
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
         <input
           ref={inputRef}
           type="file"
@@ -242,29 +352,41 @@ export function DockPromptArea({
               <div
                 key={img.id}
                 className={cn(
-                  "relative shrink-0 overflow-hidden rounded-lg border border-border",
+                  "group relative shrink-0 overflow-hidden rounded-lg border border-border",
                   refThumbSize,
                 )}
               >
-                <Image
-                  src={img.previewUrl}
-                  alt="Reference"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
                 <button
                   type="button"
+                  onClick={() =>
+                    setPreviewReference({
+                      url: img.previewUrl,
+                      name: img.name,
+                    })
+                  }
+                  className="absolute inset-0 cursor-pointer"
+                  aria-label="Open reference preview"
+                >
+                  <Image
+                    src={img.previewUrl}
+                    alt="Reference"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </button>
+                <button
+                  type="button"
+                  disabled={composerLocked}
                   onClick={() => removeReferenceImage(img.id)}
-                  className="absolute inset-0 flex cursor-pointer items-center justify-center bg-foreground/50 opacity-0 transition-opacity hover:opacity-100"
+                  className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-foreground/70 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label="Remove reference"
                 >
                   <HugeiconsIcon
                     icon={Cancel01Icon}
-                    size={removeIconSize}
+                    size={14}
                     color="currentColor"
                     strokeWidth={2}
-                    className="text-white"
                   />
                 </button>
               </div>
@@ -275,13 +397,16 @@ export function DockPromptArea({
                 <div className="relative shrink-0" ref={referenceChooserRef}>
                   <button
                     type="button"
+                    disabled={composerLocked}
                     onClick={() => {
+                      if (composerLocked) return;
                       setTypeChoiceOpen(false);
                       setReferenceChoiceOpen((open) => !open);
                     }}
                     className={cn(
                       "flex cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
                       refThumbSize,
+                      composerLocked && "pointer-events-none opacity-50",
                     )}
                     aria-label="Add reference image"
                     aria-expanded={referenceChoiceOpen}
@@ -303,13 +428,16 @@ export function DockPromptArea({
               <div className="relative shrink-0" ref={typeChooserRef}>
                 <button
                   type="button"
+                  disabled={composerLocked}
                   onClick={() => {
+                    if (composerLocked) return;
                     setReferenceChoiceOpen(false);
                     setTypeChoiceOpen((open) => !open);
                   }}
                   className={cn(
                     "flex cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
                     refThumbSize,
+                    composerLocked && "pointer-events-none opacity-50",
                   )}
                   aria-label="Select asset type"
                   aria-expanded={typeChoiceOpen}
@@ -362,11 +490,16 @@ export function DockPromptArea({
               <div className="relative shrink-0" ref={referenceChooserRef}>
                 <button
                   type="button"
+                  disabled={composerLocked}
                   onClick={() => {
+                    if (composerLocked) return;
                     setTypeChoiceOpen(false);
                     setReferenceChoiceOpen((open) => !open);
                   }}
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground"
+                  className={cn(
+                    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                    composerLocked && "pointer-events-none opacity-50",
+                  )}
                   aria-label="Open actions"
                   aria-expanded={referenceChoiceOpen}
                   aria-haspopup="menu"
@@ -385,11 +518,16 @@ export function DockPromptArea({
               <div className="relative shrink-0" ref={typeChooserRef}>
                 <button
                   type="button"
+                  disabled={composerLocked}
                   onClick={() => {
+                    if (composerLocked) return;
                     setReferenceChoiceOpen(false);
                     setTypeChoiceOpen((open) => !open);
                   }}
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground"
+                  className={cn(
+                    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                    composerLocked && "pointer-events-none opacity-50",
+                  )}
                   aria-label="Select asset type"
                   aria-expanded={typeChoiceOpen}
                   aria-haspopup="menu"
@@ -407,6 +545,7 @@ export function DockPromptArea({
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
+              readOnly={composerLocked}
               placeholder={
                 isLibraryRemix
                   ? "Optional: add direction for this remix…"
@@ -421,6 +560,7 @@ export function DockPromptArea({
                   ? "min-h-8 max-md:min-h-7 py-0 text-sm leading-snug md:min-h-9 md:py-0.5"
                   : "text-sm leading-relaxed",
                 compactInput && "min-h-8 py-1",
+                composerLocked && "opacity-80",
               )}
               onKeyDown={(e) => {
                 if (
@@ -443,7 +583,12 @@ export function DockPromptArea({
               isIdeasGrid && "absolute bottom-2 right-2 flex-wrap",
             )}
           >
-            {!isCompactRemix && !compactInput && (isImages || isIdeasGrid) ? (
+            {compactInput && composerLocked ? (
+              <span className="hidden shrink-0 rounded-md border border-border/70 bg-surface px-2 py-1 text-[10px] font-medium text-muted sm:inline-flex">
+                {aspectRatio} · {resolution} · {quantity}x
+              </span>
+            ) : null}
+            {showSettingsRow ? (
               <DockSettingsRow compact={isImages} />
             ) : null}
             <DockCreateButton compact={isImages} />

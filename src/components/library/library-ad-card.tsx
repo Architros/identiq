@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -42,8 +42,10 @@ export function LibraryAdCard({
     loadedRatio ?? (stored ? template.width / template.height : 4 / 5);
 
   const carryPresetIds = searchParams.get("carryPresetIds")?.trim();
+  const remixInit = useMemo(() => String(Date.now()), [template.id]);
   const remixQuery = new URLSearchParams({
     libraryId: template.id,
+    remixInit,
   });
   if (carryPresetIds) {
     remixQuery.set("carryPresetIds", carryPresetIds);

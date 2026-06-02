@@ -8,6 +8,7 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { DockSettingsFields } from "@/components/generation/dock-settings-fields";
+import { useGeneration } from "@/contexts/generation-context";
 import { cn } from "@/lib/utils";
 
 type MenuPosition = {
@@ -28,6 +29,7 @@ function computeMenuPosition(anchor: HTMLElement): MenuPosition {
 }
 
 export function DockSettingsMobileMenu() {
+  const { isGenerating } = useGeneration();
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -120,11 +122,13 @@ export function DockSettingsMobileMenu() {
         aria-label="Generation settings"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
+        disabled={isGenerating}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border/50 bg-white/90 text-muted shadow-sm backdrop-blur-sm transition-colors",
           "hover:border-border hover:bg-sidebar-active/80 hover:text-foreground",
           open && "border-accent/30 text-accent ring-2 ring-accent/15",
+          isGenerating && "pointer-events-none opacity-50",
         )}
       >
         <HugeiconsIcon

@@ -27,8 +27,8 @@ export function ChatWelcomeEmpty() {
 
   const presetLine = isLibraryRemix
     ? selectedPresetLine
-      ? `Using preset: ${selectedPresetLine}. Adapt this library layout with a short brief — colors, copy, and mood will follow your brand.`
-      : "Adapt this library layout with a short brief — colors, copy, and mood will follow your brand."
+      ? `Using preset: ${selectedPresetLine}. Add a short brief and create.`
+      : "Add a short brief and create."
     : selectedPresets.length > 0
       ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Describe what you want and generate when you're ready.`
       : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";

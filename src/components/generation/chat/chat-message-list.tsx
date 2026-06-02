@@ -38,7 +38,10 @@ export function ChatMessageList({
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
     (!lastMessage || lastMessage.role === "user");
   const showWelcome =
-    messages.length === 0 && !showInlineProgress && !showInlineFailure;
+    messages.length === 0 &&
+    !showInlineProgress &&
+    !showInlineFailure &&
+    !(isLibraryRemix && (isGenerating || hasPendingGenerationPhase));
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,7 +62,7 @@ export function ChatMessageList({
   return (
     <div
       className={cn(
-        "min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+        "h-full min-h-0 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-6 sm:py-5",
         isPreGenerationEmptyState && "overflow-hidden",
         scrollPadding,
         centerEmptyState && "flex flex-col justify-center",
@@ -70,7 +73,9 @@ export function ChatMessageList({
         className={cn(
           "w-full space-y-6",
           isLibraryRemix
-            ? "mr-auto max-w-2xl text-left flex flex-col items-start"
+            ? showWelcome
+              ? "mx-auto max-w-xl text-center"
+              : "mr-auto max-w-2xl text-left flex flex-col items-start"
             : showWelcome
               ? "mx-auto max-w-xl text-center"
               : "mx-auto mr-auto max-w-2xl",

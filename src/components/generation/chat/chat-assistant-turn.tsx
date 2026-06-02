@@ -29,6 +29,7 @@ export function ChatAssistantTurn({
     aspectRatio: sessionAspectRatio,
     quantity: sessionQuantity,
     submitGeneration,
+    referenceImages,
   } = useGeneration();
   const isLibraryRemix = Boolean(libraryTemplateId);
   const {
@@ -72,6 +73,10 @@ export function ChatAssistantTurn({
       }),
     [generationStatus?.presetTitle, isLibraryRemix],
   );
+  const remixPreviewUrl = isLibraryRemix
+    ? referenceImages.find((img) => img.name === "Template")?.previewUrl ??
+      referenceImages[0]?.previewUrl
+    : undefined;
 
   return (
     <div className="group flex w-full justify-start">
@@ -107,12 +112,13 @@ export function ChatAssistantTurn({
               aspectRatio={skeletonAspectRatio}
               quantity={skeletonQuantity}
               mediaTypeLabel={generationStatus?.presetTitle}
+              remixPreviewUrl={remixPreviewUrl}
               imageModel={generationStatus?.imageModel}
               displayDimensions={generationStatus?.displayDimensions}
               elapsedStartedAt={isFailed ? null : generationStartedAt}
               animated={!isFailed}
               failed={isFailed}
-              centered={isLibraryRemix && !isFailed}
+              centered={false}
               onRetry={isFailed ? () => void submitGeneration() : undefined}
               progressTexts={isFailed ? undefined : renderingTexts}
             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +19,10 @@ export function LibraryTemplateModal({
   onClose,
 }: LibraryTemplateModalProps) {
   const searchParams = useSearchParams();
+  const remixInit = useMemo(
+    () => String(Date.now()),
+    [template?.id],
+  );
   useEffect(() => {
     if (!template) return;
     const onKey = (e: KeyboardEvent) => {
@@ -42,6 +46,7 @@ export function LibraryTemplateModal({
   const carryPresetIds = searchParams.get("carryPresetIds")?.trim();
   const remixQuery = new URLSearchParams({
     libraryId: template.id,
+    remixInit,
   });
   if (carryPresetIds) {
     remixQuery.set("carryPresetIds", carryPresetIds);

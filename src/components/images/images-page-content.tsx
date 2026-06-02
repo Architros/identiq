@@ -133,22 +133,14 @@ export function ImagesPageContent() {
     (r) => !r.type.startsWith("image/"),
   );
 
-  if (view === "chat") {
-    return (
-      <>
-        <Suspense fallback={null}>
-          <LibraryFromUrl />
-        </Suspense>
-        <IdeasChatView />
-      </>
-    );
-  }
-
   return (
     <>
       <Suspense fallback={null}>
         <LibraryFromUrl />
       </Suspense>
+      {view === "chat" ? (
+        <IdeasChatView />
+      ) : (
       <div className="relative mx-auto flex min-h-full w-full max-w-6xl flex-col px-6 pt-6 lg:px-8 lg:pt-8">
         <div className="flex-1 pb-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -343,11 +335,14 @@ export function ImagesPageContent() {
 
         <GenerationComposer layout="sticky" />
       </div>
+      )}
 
+      {view !== "chat" ? (
       <GenerationHistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
       />
+      ) : null}
     </>
   );
 }

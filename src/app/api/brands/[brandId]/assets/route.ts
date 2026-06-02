@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
 import {
+  discardAssetForBrand,
   listAssetsForBrand,
   listReferencesForBrand,
   saveAssetsForBrand,
@@ -12,6 +13,9 @@ import type { GeneratedBrandAsset } from "@/lib/brand/types";
 
 const saveSchema = z.object({
   assets: z.array(z.custom<Omit<GeneratedBrandAsset, "status">>()),
+});
+const discardSchema = z.object({
+  id: z.string().min(1),
 });
 
 type RouteContext = { params: Promise<{ brandId: string }> };
@@ -70,5 +74,24 @@ export async function POST(request: Request, context: RouteContext) {
       }
       throw err;
     }
+  }, requirePurchasedPlan);
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { brandId } = await context.params;
+  return withAuth("brand:create", async (user) => {
+    const owns = await userOwnsBrand(user.id, brandId);
+    if (!owns) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const url = new URL(request.url);
+    const parsed = discardSchema.safeParse({ id: url.searchParams.get("id") });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid asset id" }, { status: 400 });
+    }
+
+    await discardAssetForBrand(user.id, brandId, parsed.data.id);
+    return NextResponse.json({ ok: true });
   }, requirePurchasedPlan);
 }

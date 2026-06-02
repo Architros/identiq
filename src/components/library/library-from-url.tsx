@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useGeneration } from "@/contexts/generation-context";
@@ -13,16 +13,32 @@ export function LibraryFromUrl() {
   const searchParams = useSearchParams();
   const { hasActiveBrand, isLoading } = useBrand();
   const {
+    activeChatId,
+    isGenerating,
+    libraryTemplateId,
+    showChatView,
     addReferenceImageFromUrl,
     setLibraryTemplateId,
     setAspectRatio,
     prepareLibraryRemixSession,
+    openChatSession,
+    ensureChatSession,
     addPreset,
+    clearPresets,
+    clearReferenceImages,
+    isLibraryRemixInitDone,
+    markLibraryRemixInitDone,
   } = useGeneration();
-  const sessionRef = useRef<string | null>(null);
 
   const libraryId = searchParams.get("libraryId")?.trim() ?? null;
   const carryPresetIds = searchParams.get("carryPresetIds")?.trim() ?? "";
+  const carryChatId = searchParams.get("carryChatId")?.trim() ?? "";
+  const remixInit = searchParams.get("remixInit")?.trim() ?? "";
+
+  useEffect(() => {
+    if (!libraryId) return;
+    showChatView();
+  }, [libraryId, showChatView]);
 
   useEffect(() => {
     if (!libraryId) return;
@@ -31,30 +47,69 @@ export function LibraryFromUrl() {
     const template = getLibraryTemplate(libraryId);
     if (!template) return;
 
-    if (sessionRef.current !== libraryId) {
-      sessionRef.current = libraryId;
+    const sessionKey = `${libraryId}:${remixInit || "0"}`;
+    if (isLibraryRemixInitDone(sessionKey)) return;
+
+    if (isGenerating) {
+      markLibraryRemixInitDone(sessionKey);
+      if (libraryTemplateId !== libraryId) {
+        setLibraryTemplateId(libraryId);
+      }
+      return;
+    }
+
+    const isResumeSession = Boolean(carryChatId);
+    if (!isResumeSession) {
       prepareLibraryRemixSession();
+    }
+
+    markLibraryRemixInitDone(sessionKey);
+
+    void (async () => {
+      if (isResumeSession && carryChatId !== activeChatId) {
+        await openChatSession(carryChatId);
+      } else if (!activeChatId) {
+        await ensureChatSession("Library remix");
+      }
+
+      if (libraryTemplateId === libraryId) return;
+
+      clearReferenceImages();
       if (carryPresetIds) {
+        clearPresets();
         for (const presetId of carryPresetIds.split(",")) {
           const preset = getPresetById(presetId.trim());
           if (preset) addPreset(preset);
         }
+      } else {
+        clearPresets();
       }
       setLibraryTemplateId(libraryId);
       addReferenceImageFromUrl({ url: template.imageUrl, name: "Template" });
       setAspectRatio(aspectRatioForLibraryTemplate(template));
-      return;
-    }
+    })();
   }, [
     libraryId,
     carryPresetIds,
+    carryChatId,
+    remixInit,
     isLoading,
     hasActiveBrand,
+    activeChatId,
+    isGenerating,
+    libraryTemplateId,
+    showChatView,
     addReferenceImageFromUrl,
     addPreset,
+    clearPresets,
+    clearReferenceImages,
     setLibraryTemplateId,
     setAspectRatio,
+    openChatSession,
     prepareLibraryRemixSession,
+    ensureChatSession,
+    isLibraryRemixInitDone,
+    markLibraryRemixInitDone,
   ]);
 
   return null;

@@ -4,6 +4,7 @@ import {
   dedupeHistoryChatSummaries,
   deriveChatTitle,
   deriveHistoryChatDisplay,
+  getMessageText,
   isMeaningfulChatHistory,
 } from "@/lib/generation/chat-history";
 import {
@@ -216,7 +217,11 @@ export async function replaceIdeasChatMessages(
   messages: IdentiqUIMessage[],
   options?: { title?: string; settingsSnapshot?: Record<string, unknown> },
 ): Promise<{ saved: boolean; title?: string }> {
-  if (!isMeaningfulChatHistory(messages)) {
+  const hasDraftUserPrompt = messages.some(
+    (message) => message.role === "user" && getMessageText(message).length > 0,
+  );
+
+  if (!isMeaningfulChatHistory(messages) && !hasDraftUserPrompt) {
     await deleteIdeasChat(userId, chatId);
     return { saved: false };
   }

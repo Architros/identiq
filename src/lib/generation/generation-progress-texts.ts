@@ -10,61 +10,21 @@ export function generationProgressTexts(input: {
   switch (phase) {
     case "composing-prompt":
       return isLibraryRemix
-        ? [
-            "Studying the template…",
-            "Mapping your brand colors…",
-            "Adapting the layout…",
-            "Almost ready…",
-          ]
-        : [
-            "Reading your prompt…",
-            "Applying brand guidelines…",
-            "Composing the scene…",
-            "Almost ready…",
-          ];
+        ? ["Adapting the layout…"]
+        : ["Preparing your prompt…"];
     case "orchestrating":
-      return [
-        "Understanding your idea…",
-        "Weaving in brand context…",
-        "Refining the creative brief…",
-        "Handing off to the renderer…",
-      ];
+      return ["Preparing generation…"];
     case "generating-image": {
       if (presetTitle) {
-        return [
-          `Rendering ${presetTitle}…`,
-          "Applying brand style…",
-          "Enhancing composition…",
-          "Polishing details…",
-          "Almost done…",
-        ];
+        return [`Rendering ${presetTitle}…`];
       }
       return isLibraryRemix
-        ? [
-            "Rendering your remix…",
-            "Blending logo and colors…",
-            "Sharpening the layout…",
-            "Almost done…",
-          ]
-        : [
-            "Rendering your image…",
-            "Applying brand style…",
-            "Enhancing details…",
-            "Finishing touches…",
-            "Almost done…",
-          ];
+        ? ["Rendering your remix…"]
+        : ["Rendering your image…"];
     }
     default:
       return isLibraryRemix
-        ? [
-            "Starting library remix…",
-            "Loading template…",
-            "Preparing your brand…",
-          ]
-        : [
-            "Starting generation…",
-            "Preparing your canvas…",
-            "Getting creative…",
-          ];
+        ? ["Starting library remix…"]
+        : ["Starting generation…"];
   }
 }

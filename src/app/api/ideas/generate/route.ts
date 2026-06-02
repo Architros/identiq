@@ -19,6 +19,7 @@ import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
 import { getBrandForUser } from "@/lib/db/repositories/brands";
 import { listReferencesForBrand } from "@/lib/db/repositories/assets";
 import { mergeGenerationReferenceUrls } from "@/lib/generation/merge-reference-urls";
+import { getLibraryTemplate } from "@/lib/library/templates";
 import type { AspectRatio } from "@/lib/generation/presets";
 import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
 import { userOwnsIdeasChat } from "@/lib/db/repositories/ideas-chats";
@@ -120,6 +121,9 @@ export async function POST(request: Request) {
   });
   const referenceImageUrls = mergedRefs.urls;
   const isLibraryRemix = mergedRefs.isLibraryRemix;
+  const libraryTemplate = gen.libraryTemplateId
+    ? getLibraryTemplate(gen.libraryTemplateId)
+    : undefined;
   const hasLogoAttachment = Boolean(
     logoUrl && referenceImageUrls.includes(logoUrl),
   );
@@ -138,10 +142,12 @@ export async function POST(request: Request) {
   const messages = body.messages ?? [];
   const abortSignal = request.signal;
   const generationId = generateId();
-  const runs = buildGenerationRuns(
-    gen.presets,
-    gen.settings.aspectRatio as AspectRatio,
-  );
+  const runs = isLibraryRemix
+    ? buildGenerationRuns([], gen.settings.aspectRatio as AspectRatio)
+    : buildGenerationRuns(
+        gen.presets,
+        gen.settings.aspectRatio as AspectRatio,
+      );
 
   const tokenCost = calculateGenerationTokenCost({
     presetCount: runs.length,
@@ -180,7 +186,7 @@ export async function POST(request: Request) {
         brandDisplayName,
         brandMemory: gen.brandMemory,
         brandAssets: gen.brandAssets,
-        presets: gen.presets,
+        presets: isLibraryRemix ? [] : gen.presets,
         userPrompt: gen.userPrompt,
         imageAssist: gen.imageAssist,
         referenceImageUrls,
@@ -188,8 +194,10 @@ export async function POST(request: Request) {
         mode: isLibraryRemix ? "library-remix" : "default",
         hasLogoAttachment,
         description: kit?.description,
+        tagline: kit?.tagline,
         sector: kit?.sector,
         feelings: kit?.feelings,
+        templateCategory: libraryTemplate?.category,
       });
 
       let finalPrompt = basePrompt;
@@ -260,6 +268,10 @@ export async function POST(request: Request) {
         }
       }
 
+      if (gen.settings.withBackground === false) {
+        finalPrompt = `${finalPrompt}\n\nBackground requirement: transparent background only. Do not add any solid, gradient, scene, or texture background.`;
+      }
+
       if (abortSignal.aborted) {
         writer.write({
           type: "data-generation-status",
@@ -293,6 +305,7 @@ export async function POST(request: Request) {
               resolution: gen.settings.resolution,
               quantity: gen.settings.quantity,
               presetId: run.presetId,
+              withBackground: gen.settings.withBackground,
             },
             referenceImageUrls,
             abortSignal,

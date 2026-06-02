@@ -10,12 +10,15 @@ export function GenerationMainChrome({ children }: { children: React.ReactNode }
   useEffect(() => {
     const main = document.querySelector("main");
     if (!main) return;
+    const el = main as HTMLElement;
     if (view === "chat") {
-      main.classList.add("overflow-hidden");
+      el.style.overflow = "hidden";
     } else {
-      main.classList.remove("overflow-hidden");
+      el.style.overflow = "";
     }
-    return () => main.classList.remove("overflow-hidden");
+    return () => {
+      el.style.overflow = "";
+    };
   }, [view]);
 
   return children;

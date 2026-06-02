@@ -282,24 +282,67 @@ export function assembleImageGenerationPrompt(
 /** Short brand spec for Ideas (avoids full identity wall of text). */
 export function buildCompactBrandSpec(brand: BrandPromptContext): string {
   const { memory } = brand;
-  return [
+  const lines = [
     `Brand: ${brand.brandName}`,
     `Colors — primary ${memory.primary_color}, secondary ${memory.secondary_color}`,
     `Style: ${memory.brand_style}. Visual language: ${memory.visual_language}. Tone: ${memory.tone}.`,
-  ].join("\n");
+  ];
+
+  const contextLine = truncateBrandContext(
+    brand.description?.trim() || brand.websiteSummary?.trim(),
+  );
+  if (contextLine) {
+    lines.push(`About: ${contextLine}`);
+  }
+
+  return lines.join("\n");
 }
 
-/** Library remix: adapt attached layout template to this brand. */
+function truncateBrandContext(text?: string, maxLen = 200): string | undefined {
+  const trimmed = text?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
+function buildRemixAttachmentSection(input: {
+  referenceUrls: string[];
+  referenceNames: string[];
+  hasLogoAttachment: boolean;
+}): string {
+  const lines = [
+    "## Attached images",
+    "- Image 1: Library template — the design to preserve or adapt.",
+  ];
+  if (input.hasLogoAttachment) {
+    lines.push(
+      "- Image 2: Brand logo — use this exact mark where a logo appears. Do not invent or substitute a different symbol.",
+    );
+  }
+  if (input.referenceUrls.length > 0) {
+    lines.push("Attachment list:");
+    for (let i = 0; i < input.referenceUrls.length; i++) {
+      lines.push(
+        `- ${input.referenceNames[i] ?? `Image ${i + 1}`}: ${input.referenceUrls[i]}`,
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
+/** Library remix: apply brand to attached template with tiered context. */
 export function assembleLibraryRemixPrompt(input: {
   brand: BrandPromptContext;
   userDirection: string;
   referenceNames: string[];
   referenceUrls: string[];
   hasLogoAttachment: boolean;
+  remixMode: "preserve-design" | "adapt-content";
 }): string {
   const brand = input.brand;
   const { memory } = brand;
   const sections: string[] = [];
+  const preserveDesign = input.remixMode === "preserve-design";
 
   const direction = input.userDirection.trim();
   if (direction) {
@@ -312,22 +355,53 @@ export function assembleLibraryRemixPrompt(input: {
     );
   }
 
-  sections.push(
-    [
-      "## Task",
-      `Adapt the attached library layout template to "${brand.brandName}".`,
-      "Keep the template composition, layout, and hierarchy. Replace colors, typography feel, and branding with this brand.",
-      "The first attached image is the library layout source — match its structure.",
-    ].join("\n"),
-  );
+  if (preserveDesign) {
+    sections.push(
+      [
+        "## Task",
+        `Apply "${brand.brandName}" branding to the attached library template.`,
+        "This is a brand-application task, not a redesign.",
+        "Preserve the template's design concept, form, composition, and visual structure exactly.",
+        "Only recolor using the brand palette and place the attached brand logo where a logo slot exists.",
+        "Do not invent a new mark or reinterpret the visual idea.",
+      ].join("\n"),
+    );
+  } else {
+    sections.push(
+      [
+        "## Task",
+        `Adapt the attached library template for "${brand.brandName}".`,
+        "Keep the template's layout, hierarchy, and composition.",
+        "Replace placeholder copy, colors, typography feel, and branding with this brand.",
+        "Do not invent a new layout or redesign the concept.",
+      ].join("\n"),
+    );
+  }
 
   sections.push(
     [
       "## Brand colors (use exact hex)",
       `Primary: ${memory.primary_color}`,
       `Secondary: ${memory.secondary_color}`,
-    ].join("\n"),
+      memory.accent_color ? `Accent: ${memory.accent_color}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
   );
+
+  if (!preserveDesign) {
+    const copyHint = truncateBrandContext(
+      brand.tagline?.trim() || brand.description?.trim(),
+      120,
+    );
+    if (copyHint) {
+      sections.push(
+        ["## Brand copy hint", copyHint, "Use for replacing placeholder text only."].join(
+          "\n",
+        ),
+      );
+    }
+  }
 
   if (input.hasLogoAttachment) {
     sections.push(
@@ -341,9 +415,10 @@ export function assembleLibraryRemixPrompt(input: {
 
   if (input.referenceUrls.length > 0) {
     sections.push(
-      buildReferenceGuidanceSection({
-        urls: input.referenceUrls,
-        names: input.referenceNames,
+      buildRemixAttachmentSection({
+        referenceUrls: input.referenceUrls,
+        referenceNames: input.referenceNames,
+        hasLogoAttachment: input.hasLogoAttachment,
       }),
     );
   }

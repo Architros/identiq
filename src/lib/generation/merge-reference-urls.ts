@@ -3,6 +3,7 @@ import { collectBrandReferenceImageUrls } from "@/lib/brand/prompt-structure";
 import { getLibraryTemplate } from "@/lib/library/templates";
 
 const MAX_REFERENCE_IMAGES = 4;
+const MAX_REMIX_REFERENCE_IMAGES = 2;
 
 export type ComposerReferenceImage = {
   url: string;
@@ -40,6 +41,29 @@ export function mergeGenerationReferenceUrls(input: {
     ? getLibraryTemplate(input.libraryTemplateId)
     : undefined;
 
+  const composer = input.composerReferenceImages ?? [];
+  const isLibraryRemix = Boolean(
+    input.libraryTemplateId ||
+      composer.some((r) => r.name === "Template") ||
+      libraryTemplate?.imageUrl,
+  );
+
+  if (isLibraryRemix) {
+    if (libraryTemplate?.imageUrl) {
+      pushUnique(urls, names, libraryTemplate.imageUrl, "Library template");
+    }
+
+    if (input.logoUrl) {
+      pushUnique(urls, names, input.logoUrl, "Brand logo");
+    }
+
+    return {
+      urls: urls.slice(0, MAX_REMIX_REFERENCE_IMAGES),
+      names: names.slice(0, MAX_REMIX_REFERENCE_IMAGES),
+      isLibraryRemix: true,
+    };
+  }
+
   if (libraryTemplate?.imageUrl) {
     pushUnique(
       urls,
@@ -53,7 +77,6 @@ export function mergeGenerationReferenceUrls(input: {
     pushUnique(urls, names, input.logoUrl, "Brand logo");
   }
 
-  const composer = input.composerReferenceImages ?? [];
   for (const ref of composer) {
     const isLibraryRef =
       ref.name === "Template" ||
@@ -70,18 +93,9 @@ export function mergeGenerationReferenceUrls(input: {
     pushUnique(urls, names, dbUrls[i], `Brand reference ${i + 1}`);
   }
 
-  const cappedUrls = urls.slice(0, MAX_REFERENCE_IMAGES);
-  const cappedNames = names.slice(0, MAX_REFERENCE_IMAGES);
-
-  const isLibraryRemix = Boolean(
-    input.libraryTemplateId ||
-      composer.some((r) => r.name === "Template") ||
-      libraryTemplate?.imageUrl,
-  );
-
   return {
-    urls: cappedUrls,
-    names: cappedNames,
+    urls: urls.slice(0, MAX_REFERENCE_IMAGES),
+    names: names.slice(0, MAX_REFERENCE_IMAGES),
     isLibraryRemix,
   };
 }

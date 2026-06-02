@@ -4,6 +4,7 @@ import {
   assembleLibraryRemixPrompt,
   type BrandPromptContext,
 } from "@/lib/brand/prompt-structure";
+import { resolveRemixMode } from "@/lib/generation/remix-mode";
 
 export type PresetPromptInput = {
   id: string;
@@ -25,7 +26,9 @@ export type BuildPromptInput = {
   hasLogoAttachment?: boolean;
   sector?: string;
   description?: string;
+  tagline?: string;
   feelings?: string[];
+  templateCategory?: string;
 };
 
 export function buildComposedPrompt(input: BuildPromptInput): string {
@@ -35,6 +38,7 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     description: input.description,
     sector: input.sector,
     feelings: input.feelings,
+    tagline: input.tagline,
   };
 
   const presetLines =
@@ -58,12 +62,14 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     const names =
       input.referenceImageNames ??
       urls.map((_, i) => `Reference ${i + 1}`);
+    const remixMode = resolveRemixMode(input.templateCategory);
     return assembleLibraryRemixPrompt({
       brand,
       userDirection: input.userPrompt,
       referenceUrls: urls,
       referenceNames: names,
       hasLogoAttachment: input.hasLogoAttachment ?? false,
+      remixMode,
     });
   }
 

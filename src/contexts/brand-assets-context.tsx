@@ -178,7 +178,14 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
     (asset: Omit<GeneratedBrandAsset, "status">) => {
       updateBrand((prev) => {
         if (prev.some((a) => a.id === asset.id)) return prev;
-        return [{ ...asset, status: "pending" as const }, ...prev];
+        const next = [{ ...asset, status: "saved" as const }, ...prev];
+        void fetch(`/api/brands/${asset.brandId}/assets`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ assets: [asset] }),
+        }).catch(() => undefined);
+        return next;
       });
     },
     [updateBrand],
@@ -281,8 +288,12 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   const discardAsset = useCallback(
     (id: string) => {
       updateBrand((prev) => prev.filter((a) => a.id !== id));
+      void fetch(`/api/brands/${brandKit.id}/assets?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      }).catch(() => undefined);
     },
-    [updateBrand],
+    [updateBrand, brandKit.id],
   );
 
   const value = useMemo(

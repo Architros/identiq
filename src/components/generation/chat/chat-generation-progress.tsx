@@ -23,6 +23,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
     generationPresetTitle,
     generationError,
     submitGeneration,
+    referenceImages,
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
@@ -52,6 +53,10 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
       }),
     [effectivePhase, generationPresetTitle, isLibraryRemix],
   );
+  const remixPreviewUrl = isLibraryRemix
+    ? referenceImages.find((img) => img.name === "Template")?.previewUrl ??
+      referenceImages[0]?.previewUrl
+    : undefined;
 
   if (isFailed) {
     return (
@@ -81,6 +86,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           aspectRatio={aspectRatio}
           quantity={quantity}
           mediaTypeLabel={generationPresetTitle}
+          remixPreviewUrl={remixPreviewUrl}
           animated={false}
           failed
           centered={false}
@@ -94,35 +100,27 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
     <div
       className={cn(
         "w-full space-y-3",
-        isLibraryRemix && "flex flex-col items-center text-center",
+        isLibraryRemix && "flex flex-col items-start text-left",
       )}
     >
-      {isComposingEffective ? (
-        <AITextLoading
-          texts={progressTexts}
-          size="sm"
-          compact
-          interval={1400}
-        />
-      ) : null}
-
-      {isRenderingEffective ? (
+      {isComposingEffective || isRenderingEffective ? (
         <ImageSkeletonGrid
           aspectRatio={aspectRatio}
           quantity={quantity}
           mediaTypeLabel={generationPresetTitle}
+          remixPreviewUrl={remixPreviewUrl}
           elapsedStartedAt={generationStartedAt}
           progressTexts={progressTexts}
-          centered={isLibraryRemix}
+          centered={false}
         />
-      ) : !isComposingEffective && !isRenderingEffective ? (
+      ) : (
         <AITextLoading
           texts={progressTexts}
           size="sm"
           compact
           interval={1400}
         />
-      ) : null}
+      )}
     </div>
   );
 }

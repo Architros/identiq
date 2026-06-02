@@ -242,7 +242,8 @@ export function StepGenerating() {
           memory: complete.memory,
           assets: kitAssets,
           references,
-          description: draft.description,
+          description:
+            draft.description.trim() || draft.websiteSummary.trim() || undefined,
           tagline: draft.tagline || undefined,
           sector: draft.sector || undefined,
           feelings: draft.feelings,

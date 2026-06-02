@@ -10,6 +10,7 @@ export type GenerationSettingsInput = {
   resolution: Resolution;
   quantity: number;
   presetId?: string;
+  withBackground?: boolean;
 };
 
 export type MappedImageSettings = ResolvedImageOutput & {

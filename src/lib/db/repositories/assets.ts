@@ -80,6 +80,21 @@ export async function saveAssetsForBrand(
   if (error) throw error;
 }
 
+export async function discardAssetForBrand(
+  userId: string,
+  brandId: string,
+  id: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("generated_assets")
+    .update({ status: "discarded" as const })
+    .eq("user_id", userId)
+    .eq("brand_id", brandId)
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function listReferencesForBrand(
   userId: string,
   brandId: string,

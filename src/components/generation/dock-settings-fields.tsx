@@ -21,14 +21,18 @@ export function DockSettingsFields({
     aspectRatio,
     resolution,
     quantity,
+    withBackground,
     activePresetId,
     selectedPresets,
+    isGenerating,
     setAspectRatio,
     setResolution,
     setQuantity,
+    setWithBackground,
   } = useGeneration();
 
   const presetLocked = selectedPresets.length > 0;
+  const settingsLocked = isGenerating || presetLocked;
 
   const resolutionOptions = useMemo(
     () =>
@@ -46,6 +50,7 @@ export function DockSettingsFields({
   }));
 
   const stacked = layout === "stacked";
+  const showBackgroundToggle = selectedPresets.length === 0;
 
   return (
     <div
@@ -61,7 +66,7 @@ export function DockSettingsFields({
           setAspectRatio(v as AspectRatio);
           onChange?.();
         }}
-        disabled={presetLocked}
+        disabled={settingsLocked}
         fullWidth={stacked}
       />
       <DockSelect
@@ -72,6 +77,7 @@ export function DockSettingsFields({
           setResolution(v);
           onChange?.();
         }}
+        disabled={isGenerating}
         fullWidth={stacked}
       />
       <DockSelect
@@ -82,8 +88,30 @@ export function DockSettingsFields({
           setQuantity(v);
           onChange?.();
         }}
+        disabled={isGenerating}
         fullWidth={stacked}
       />
+      {showBackgroundToggle ? (
+        <button
+          type="button"
+          disabled={isGenerating}
+          onClick={() => {
+            setWithBackground(!withBackground);
+            onChange?.();
+          }}
+          className={cn(
+            "inline-flex cursor-pointer items-center rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+            withBackground
+              ? "border-accent/35 bg-accent/[0.08] text-foreground"
+              : "border-border bg-white/90 text-muted hover:bg-sidebar-active",
+            stacked && "justify-start",
+            isGenerating && "pointer-events-none opacity-50",
+          )}
+          aria-pressed={withBackground}
+        >
+          With background
+        </button>
+      ) : null}
     </div>
   );
 }

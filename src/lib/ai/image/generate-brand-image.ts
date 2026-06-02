@@ -51,6 +51,7 @@ export async function generateBrandImage(input: {
     abortSignal: input.abortSignal,
     providerOptions: {
       openrouter: {
+        max_tokens: 8192,
         image_config: {
           aspect_ratio: mapped.aspectRatio,
           image_size: mapped.resolution,
