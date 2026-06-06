@@ -59,7 +59,7 @@ export function WelcomeOfferBanner({
         </div>
         <TextureButton
           type="button"
-          variant={claimable ? "accent" : "neutral"}
+          variant={claimable ? "accent" : "primary"}
           shape="card"
           fullWidth={false}
           disabled={loading || !claimable}

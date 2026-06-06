@@ -73,7 +73,7 @@ export function PlanPackCard({
 
         <TextureButton
           type="button"
-          variant={highlighted ? "accent" : "neutral"}
+          variant={highlighted ? "accent" : "primary"}
           shape="card"
           fullWidth
           disabled={loading}
