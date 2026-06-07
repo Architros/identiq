@@ -30,7 +30,7 @@ export function ChatWelcomeEmpty() {
       ? `Using preset: ${selectedPresetLine}. Add a short brief and create.`
       : "Add a short brief and create."
     : selectedPresets.length > 0
-      ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Describe what you want and generate when you're ready.`
+      ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Add optional direction, or click Create to generate now.`
       : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";
 
   return (
@@ -61,7 +61,7 @@ export function ChatWelcomeEmpty() {
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted">
           {presetLine}
         </p>
-        {isLibraryRemix && selectedPresetLine ? (
+        {selectedPresetLine ? (
           <div className="mx-auto flex w-fit items-center rounded-full border border-accent/25 bg-accent/[0.08] px-3 py-1 text-xs font-medium text-accent">
             Preset: {selectedPresetLine}
           </div>

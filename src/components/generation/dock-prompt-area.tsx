@@ -67,7 +67,8 @@ export function DockPromptArea({
   const submitOnEnter = view === "chat";
   const composerLocked = isGenerating;
   const compactInput = isImages && (isGenerating || generationPhase === "error");
-  const showTypePicker = isImages && (isLibraryRemix || selectedPresets.length === 0);
+  const showTypePicker = isImages;
+  const activeTypePreset = selectedPresets[0];
   const showSettingsRow =
     !compactInput &&
     (isImages || isIdeasGrid) &&
@@ -435,20 +436,43 @@ export function DockPromptArea({
                     setTypeChoiceOpen((open) => !open);
                   }}
                   className={cn(
-                    "flex cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
-                    refThumbSize,
+                    "flex cursor-pointer items-center gap-2 rounded-lg border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                    activeTypePreset
+                      ? "min-h-12 min-w-[7.5rem] max-w-[11rem] border-accent/35 px-2.5 py-1.5 text-foreground ring-1 ring-accent/15 sm:min-h-16 sm:max-w-[12rem] md:min-h-24 md:max-w-[13rem]"
+                      : cn("justify-center", refThumbSize, "border-border"),
                     composerLocked && "pointer-events-none opacity-50",
                   )}
-                  aria-label="Select asset type"
+                  aria-label={
+                    activeTypePreset
+                      ? `Selected preset: ${activeTypePreset.title}. Change type`
+                      : "Select asset type"
+                  }
                   aria-expanded={typeChoiceOpen}
                   aria-haspopup="menu"
                 >
-                  <HugeiconsIcon
-                    icon={LayoutGridIcon}
-                    size={refIconSize}
-                    color="currentColor"
-                    strokeWidth={1.75}
-                  />
+                  {activeTypePreset ? (
+                    <>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent/10 sm:h-8 sm:w-8">
+                        <HugeiconsIcon
+                          icon={activeTypePreset.platformIcon}
+                          size={refIconSize}
+                          color="currentColor"
+                          strokeWidth={1.75}
+                          className="text-accent"
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-left text-xs font-medium leading-tight">
+                        {activeTypePreset.title}
+                      </span>
+                    </>
+                  ) : (
+                    <HugeiconsIcon
+                      icon={LayoutGridIcon}
+                      size={refIconSize}
+                      color="currentColor"
+                      strokeWidth={1.75}
+                    />
+                  )}
                 </button>
                 {typeMenu}
               </div>
@@ -525,19 +549,41 @@ export function DockPromptArea({
                     setTypeChoiceOpen((open) => !open);
                   }}
                   className={cn(
-                    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                    "flex cursor-pointer items-center gap-1.5 rounded-lg border bg-surface text-muted transition-colors hover:bg-sidebar-active hover:text-foreground",
+                    activeTypePreset
+                      ? "h-8 max-w-[9rem] border-accent/35 px-2 text-foreground ring-1 ring-accent/15"
+                      : "h-8 w-8 justify-center border-border",
                     composerLocked && "pointer-events-none opacity-50",
                   )}
-                  aria-label="Select asset type"
+                  aria-label={
+                    activeTypePreset
+                      ? `Selected preset: ${activeTypePreset.title}. Change type`
+                      : "Select asset type"
+                  }
                   aria-expanded={typeChoiceOpen}
                   aria-haspopup="menu"
                 >
-                  <HugeiconsIcon
-                    icon={LayoutGridIcon}
-                    size={16}
-                    color="currentColor"
-                    strokeWidth={1.75}
-                  />
+                  {activeTypePreset ? (
+                    <>
+                      <HugeiconsIcon
+                        icon={activeTypePreset.platformIcon}
+                        size={14}
+                        color="currentColor"
+                        strokeWidth={1.75}
+                        className="shrink-0 text-accent"
+                      />
+                      <span className="min-w-0 truncate text-[11px] font-medium">
+                        {activeTypePreset.title}
+                      </span>
+                    </>
+                  ) : (
+                    <HugeiconsIcon
+                      icon={LayoutGridIcon}
+                      size={16}
+                      color="currentColor"
+                      strokeWidth={1.75}
+                    />
+                  )}
                 </button>
                 {typeMenu}
               </div>

@@ -124,13 +124,11 @@ export function DockPresetTabs({ embedded = false }: DockPresetTabsProps) {
           ref={presetTabsRef}
           className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
         >
-          {selectedPresets.length === 0 && (
+          {selectedPresets.length === 0 && !embedded ? (
             <span className="px-2 py-1.5 text-xs text-muted">
-              {embedded
-                ? "Choose a format below"
-                : "Select a preset below to get started"}
+              Select a preset below to get started
             </span>
-          )}
+          ) : null}
 
           {selectedPresets.map((preset) => {
             const isActive = activePresetId === preset.id;

@@ -1,6 +1,8 @@
 "use client";
 
+import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
 import { GenerationDock } from "@/components/generation/generation-dock";
+import { useGeneration } from "@/contexts/generation-context";
 import { cn } from "@/lib/utils";
 
 type GenerationComposerProps = {
@@ -28,7 +30,15 @@ export function GenerationComposer({
   compact = false,
   className,
 }: GenerationComposerProps) {
+  const { view, isGenerating, generationPhase, generationError } =
+    useGeneration();
   const isFooter = layout === "footer";
+  const showInlineGridProgress =
+    layout === "sticky" &&
+    view === "grid" &&
+    (isGenerating ||
+      generationPhase === "error" ||
+      Boolean(generationError?.trim()));
   const dock = (
     <div
       className={cn(
@@ -68,6 +78,11 @@ export function GenerationComposer({
       }
     >
       <ComposerFrost />
+      {showInlineGridProgress ? (
+        <div className="mx-auto mb-3 w-full max-w-2xl rounded-2xl border border-border/80 bg-surface/95 px-4 py-4 shadow-sm backdrop-blur-sm">
+          <ChatGenerationProgress />
+        </div>
+      ) : null}
       {dock}
     </div>
   );

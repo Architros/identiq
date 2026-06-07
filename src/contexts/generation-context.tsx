@@ -946,9 +946,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationStartedAt(Date.now());
     setGenerationPhase(remixingLibrary ? "composing-prompt" : "orchestrating");
     lastPresetPhaseRef.current = null;
-    setView("chat");
+    setGenerationPresetTitle(selectedPresets[0]?.title);
+
+    const onImagesPage =
+      typeof window !== "undefined" && window.location.pathname === "/images";
+    if (!onImagesPage) {
+      setView("chat");
+    }
 
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
+    const presetDefaultPrompt = selectedPresets
+      .map((p) => p.defaultPrompt.trim())
+      .filter(Boolean)
+      .join("\n\n");
     const remixTemplate = remixingLibrary
       ? getLibraryTemplate(libraryTemplateIdRef.current ?? "")
       : undefined;
@@ -958,6 +968,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     const messageText =
       prompt.trim() ||
       remixDefaultPrompt ||
+      presetDefaultPrompt ||
       presetSummary ||
       "Generate on-brand assets";
     const userPromptDraft = prompt.trim();
