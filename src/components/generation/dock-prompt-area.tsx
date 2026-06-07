@@ -594,9 +594,11 @@ export function DockPromptArea({
               readOnly={composerLocked}
               placeholder={
                 isLibraryRemix
-                  ? "Optional: add direction for this remix…"
+                  ? selectedPresets.length > 0
+                    ? "Your customization (tone, copy, layout tweaks)…"
+                    : "Your customization for this remix…"
                   : selectedPresets.length > 0
-                    ? "Optional: add your creative direction…"
+                    ? "Your customization (overrides preset defaults)…"
                     : "Describe what to generate…"
               }
               rows={isIdeasGrid ? 3 : 1}

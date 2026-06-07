@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useGeneration } from "@/contexts/generation-context";
 import { ChatWelcomeEmpty } from "@/components/generation/chat/chat-welcome-empty";
 import { ChatUserBubble } from "@/components/generation/chat/chat-user-bubble";
 import { ChatAssistantTurn } from "@/components/generation/chat/chat-assistant-turn";
 import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
+import { RemixResultCanvas } from "@/components/generation/chat/remix-result-canvas";
+import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message";
 import { cn } from "@/lib/utils";
 
 export function ChatMessageList({
@@ -19,7 +21,15 @@ export function ChatMessageList({
     isGenerating,
     generationPhase,
     generationError,
+    generationStartedAt,
+    generationPresetTitle,
+    latestImageResult,
+    footerComposerExpanded,
     libraryTemplateId,
+    aspectRatio,
+    quantity,
+    referenceImages,
+    submitGeneration,
   } = useGeneration();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -37,27 +47,51 @@ export function ChatMessageList({
     !isGenerating &&
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
     (!lastMessage || lastMessage.role === "user");
+
+  const imageResultFromMessages = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.role !== "assistant") continue;
+      const { imageResult } = parseAssistantMessage(message);
+      if (imageResult) return imageResult;
+    }
+    return null;
+  }, [messages]);
+
+  const resolvedImageResult = latestImageResult ?? imageResultFromMessages;
+  const showRemixCanvas =
+    isLibraryRemix &&
+    (showInlineProgress || showInlineFailure || Boolean(resolvedImageResult));
+
   const showWelcome =
     messages.length === 0 &&
     !showInlineProgress &&
     !showInlineFailure &&
+    !resolvedImageResult &&
     !(isLibraryRemix && (isGenerating || hasPendingGenerationPhase));
+
+  const remixPreviewUrl = isLibraryRemix
+    ? referenceImages.find((img) => img.name === "Template")?.previewUrl ??
+      referenceImages[0]?.previewUrl
+    : undefined;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isGenerating, generationPhase, showInlineFailure]);
+  }, [messages, isGenerating, generationPhase, showInlineFailure, resolvedImageResult]);
 
   const isPreGenerationEmptyState = messages.length === 0 && showWelcome;
   const scrollPadding = isPreGenerationEmptyState
     ? "pb-6"
     : compactFooter
-      ? "pb-44 scroll-pb-44"
-      : "pb-28 scroll-pb-28";
+      ? footerComposerExpanded
+        ? "pb-44 scroll-pb-44"
+        : "pb-[4.75rem] scroll-pb-[4.75rem]"
+      : footerComposerExpanded
+        ? "pb-28 scroll-pb-28"
+        : "pb-[4.75rem] scroll-pb-[4.75rem]";
 
   const centerEmptyState =
     showWelcome && !isLibraryRemix && !showInlineFailure;
-  const libraryRemixStatus =
-    isLibraryRemix && (showInlineProgress || showInlineFailure);
 
   return (
     <div
@@ -66,7 +100,7 @@ export function ChatMessageList({
         isPreGenerationEmptyState && "overflow-hidden",
         scrollPadding,
         centerEmptyState && "flex flex-col justify-center",
-        libraryRemixStatus && "pt-6 sm:pt-10",
+        showRemixCanvas && "pt-4 sm:pt-6",
       )}
     >
       <div
@@ -75,13 +109,28 @@ export function ChatMessageList({
           isLibraryRemix
             ? showWelcome
               ? "mx-auto max-w-xl text-center"
-              : "mr-auto max-w-2xl text-left flex flex-col items-start"
+              : "mx-auto max-w-2xl"
             : showWelcome
               ? "mx-auto max-w-xl text-center"
               : "mx-auto mr-auto max-w-2xl",
         )}
       >
         {showWelcome ? <ChatWelcomeEmpty /> : null}
+
+        {showRemixCanvas ? (
+          <RemixResultCanvas
+            imageResult={resolvedImageResult}
+            aspectRatio={aspectRatio}
+            quantity={quantity}
+            remixPreviewUrl={remixPreviewUrl}
+            presetTitle={generationPresetTitle}
+            isGenerating={showInlineProgress}
+            isFailed={showInlineFailure}
+            errorMessage={generationError}
+            elapsedStartedAt={generationStartedAt}
+            onRetry={() => void submitGeneration()}
+          />
+        ) : null}
 
         {messages.map((message, index) => {
           const isLast = index === messages.length - 1;
@@ -103,11 +152,12 @@ export function ChatMessageList({
               message={message}
               isStreaming={streaming}
               messageIndex={index}
+              hideRemixVisuals={isLibraryRemix}
             />
           );
         })}
 
-        {showInlineProgress || showInlineFailure ? (
+        {!isLibraryRemix && (showInlineProgress || showInlineFailure) ? (
           <ChatGenerationProgress phase={generationPhase} />
         ) : null}
 

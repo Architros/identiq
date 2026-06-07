@@ -66,6 +66,7 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     return assembleLibraryRemixPrompt({
       brand,
       userDirection: input.userPrompt,
+      presetLines,
       referenceUrls: urls,
       referenceNames: names,
       hasLogoAttachment: input.hasLogoAttachment ?? false,

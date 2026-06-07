@@ -174,19 +174,11 @@ export async function POST(request: Request) {
     execute: async ({ writer }) => {
       const statusId = "generation-status";
 
-      writer.write({
-        type: "data-generation-status",
-        id: statusId,
-        data: {
-          phase: isLibraryRemix ? "composing-prompt" : "orchestrating",
-        },
-      });
-
       const basePrompt = buildComposedPrompt({
         brandDisplayName,
         brandMemory: gen.brandMemory,
         brandAssets: gen.brandAssets,
-        presets: isLibraryRemix ? [] : gen.presets,
+        presets: gen.presets,
         userPrompt: gen.userPrompt,
         imageAssist: gen.imageAssist,
         referenceImageUrls,
@@ -206,17 +198,20 @@ export async function POST(request: Request) {
         writer.write({
           type: "data-generation-status",
           id: statusId,
-          data: { phase: "composing-prompt" },
+          data: {
+            phase: "generating-image",
+            aspectRatio: gen.settings.aspectRatio,
+            quantity: gen.settings.quantity,
+            imageModel: getActiveImageModelId(),
+            presetTitle: gen.presets[0]?.title,
+          },
         });
-        const promptId = generateId();
-        writer.write({ type: "text-start", id: promptId });
-        writer.write({
-          type: "text-delta",
-          id: promptId,
-          delta: basePrompt,
-        });
-        writer.write({ type: "text-end", id: promptId });
       } else {
+        writer.write({
+          type: "data-generation-status",
+          id: statusId,
+          data: { phase: "orchestrating" },
+        });
         try {
           const orchestration = streamOrchestratePrompt({
             basePrompt,
@@ -298,11 +293,13 @@ export async function POST(request: Request) {
             },
           });
 
+          const remixResolution = isLibraryRemix ? "1K" : gen.settings.resolution;
+
           const { images, modelId, output } = await generateBrandImage({
             prompt: finalPrompt,
             settings: {
               aspectRatio: run.aspectRatio,
-              resolution: gen.settings.resolution,
+              resolution: remixResolution,
               quantity: gen.settings.quantity,
               presetId: run.presetId,
               withBackground: gen.settings.withBackground,
@@ -314,49 +311,17 @@ export async function POST(request: Request) {
           if (abortSignal.aborted) break;
 
           const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
-
-          const storedImages = await Promise.all(
-            images.map(async (img, index) => {
-              if (!isR2Configured()) {
-                return { base64: img.base64, mediaType: img.mediaType };
-              }
-              const id =
-                images.length > 1 ? `${jobId}_${index}` : jobId;
-              const uploaded = await uploadIdeasGeneratedImage({
-                brandId: gen.brandId,
-                jobId: id,
-                base64: img.base64,
-                mediaType: img.mediaType,
-              });
-              return {
-                mediaType: img.mediaType,
-                url: uploaded.url,
-                storageKey: uploaded.key,
-              };
-            }),
-          );
-
-          writer.write({
-            type: "data-generation-status",
-            id: statusId,
-            data: {
-              phase: "generating-image",
-              aspectRatio: output.aspectRatio,
-              quantity: gen.settings.quantity,
-              imageModel: modelId,
-              presetId: run.presetId,
-              presetTitle: run.presetTitle,
-              displayDimensions: output.displayDimensions,
-              size: output.size,
-            },
-          });
+          const previewImages = images.map((img) => ({
+            base64: img.base64,
+            mediaType: img.mediaType,
+          }));
 
           writer.write({
             type: "data-image-result",
             id: jobId,
             data: {
               jobId,
-              images: storedImages,
+              images: previewImages,
               model: modelId,
               composedPrompt: finalPrompt,
               userPrompt: gen.userPrompt,
@@ -371,6 +336,24 @@ export async function POST(request: Request) {
               completedAt: new Date().toISOString(),
             },
           });
+
+          if (isR2Configured()) {
+            void Promise.all(
+              images.map(async (img, index) => {
+                const id = images.length > 1 ? `${jobId}_${index}` : jobId;
+                try {
+                  await uploadIdeasGeneratedImage({
+                    brandId: gen.brandId,
+                    jobId: id,
+                    base64: img.base64,
+                    mediaType: img.mediaType,
+                  });
+                } catch (uploadError) {
+                  console.warn("[ideas/generate] R2 upload failed", uploadError);
+                }
+              }),
+            );
+          }
         }
 
         if (abortSignal.aborted) {

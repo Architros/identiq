@@ -18,6 +18,7 @@ export function LibraryFromUrl() {
     addReferenceImageFromUrl,
     setLibraryTemplateId,
     setAspectRatio,
+    setResolution,
     prepareLibraryRemixSession,
     openChatSession,
     ensureChatSession,
@@ -78,6 +79,7 @@ export function LibraryFromUrl() {
       setLibraryTemplateId(libraryId);
       addReferenceImageFromUrl({ url: template.imageUrl, name: "Template" });
       setAspectRatio(aspectRatioForLibraryTemplate(template));
+      setResolution("1K");
     })();
   }, [
     libraryId,
@@ -94,6 +96,7 @@ export function LibraryFromUrl() {
     clearReferenceImages,
     setLibraryTemplateId,
     setAspectRatio,
+    setResolution,
     openChatSession,
     prepareLibraryRemixSession,
     ensureChatSession,

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
+import { CollapsibleFooterComposer } from "@/components/generation/collapsible-footer-composer";
 import { GenerationDock } from "@/components/generation/generation-dock";
 import { useGeneration } from "@/contexts/generation-context";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,9 @@ export function GenerationComposer({
         )}
       >
         <ComposerFrost />
-        <div className="px-0 pb-1 sm:pb-2">{dock}</div>
+        <div className="px-0 pb-1 sm:pb-2">
+          <CollapsibleFooterComposer>{dock}</CollapsibleFooterComposer>
+        </div>
       </div>
     );
   }

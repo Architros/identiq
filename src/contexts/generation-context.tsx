@@ -75,6 +75,9 @@ type GenerationContextValue = {
   generationPresetTitle: string | undefined;
   generationActivity: string | null;
   generationError: string | null;
+  latestImageResult: ImageResultData | null;
+  footerComposerExpanded: boolean;
+  setFooterComposerExpanded: (expanded: boolean) => void;
   libraryTemplateId: string | null;
   historyOpen: boolean;
   setHistoryOpen: (open: boolean) => void;
@@ -172,6 +175,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   );
   const [historyOpen, setHistoryOpen] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [latestImageResult, setLatestImageResult] =
+    useState<ImageResultData | null>(null);
+  const [footerComposerExpanded, setFooterComposerExpanded] = useState(true);
   const lastPresetPhaseRef = useRef<string | null>(null);
 
   const pendingTokenCostRef = useRef(0);
@@ -258,20 +264,23 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       brandDisplayName: brandKit.displayName,
       brandMemory,
       brandAssets: brandKit.assets,
-      presets: remixing
-        ? []
-        : selectedPresets.map((p) => ({
-            id: p.id,
-            title: p.title,
-            defaultPrompt: p.defaultPrompt,
-            aspectRatio: p.aspectRatio,
-          })),
+      presets: selectedPresets.map((p) => ({
+        id: p.id,
+        title: p.title,
+        defaultPrompt: p.defaultPrompt,
+        aspectRatio: p.aspectRatio,
+      })),
       userPrompt: prompt,
       imageAssist: true,
       referenceImageCount: mergedComposerReferences.length,
       composerReferenceImages: mergedComposerReferences,
       libraryTemplateId: libraryTemplateIdRef.current ?? libraryTemplateId ?? undefined,
-      settings: { aspectRatio, resolution, quantity, withBackground },
+      settings: {
+        aspectRatio,
+        resolution: remixing ? "1K" : resolution,
+        quantity,
+        withBackground,
+      },
     };
     },
     [
@@ -445,6 +454,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
         if (dataPart.type === "data-image-result") {
           const data = dataPart.data as ImageResultData;
+          setLatestImageResult(data);
           if (registeredJobsRef.current.has(data.jobId)) return;
           registeredJobsRef.current.add(data.jobId);
 
@@ -702,6 +712,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationPresetTitle(undefined);
     lastReportedErrorRef.current = null;
     setGenerationError(null);
+    setLatestImageResult(null);
+    setFooterComposerExpanded(true);
+    setResolution("1K");
     setView("chat");
   }, [setMessages]);
 
@@ -724,6 +737,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setHistoryOpen(false);
     lastReportedErrorRef.current = null;
     setGenerationError(null);
+    setLatestImageResult(null);
+    setFooterComposerExpanded(true);
   }, [isGenerating, stop, setMessages, setLibraryTemplateId]);
 
   const continueFromMessageIndex = useCallback(
@@ -744,17 +759,18 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const addPreset = useCallback(
     (preset: GenerationPreset) => {
       if (generationLockedRef.current) return;
+      const remixing = Boolean(libraryTemplateIdRef.current);
       setSelectedPresets((prev) => {
         if (prev.some((p) => p.id === preset.id)) {
           setActivePresetId(preset.id);
           setAspectRatio(preset.aspectRatio);
-          setResolution(preset.suggestedResolution);
+          setResolution(remixing ? "1K" : preset.suggestedResolution);
           setWithBackground(!isLogoLikePreset(preset));
           return prev;
         }
         setActivePresetId(preset.id);
         setAspectRatio(preset.aspectRatio);
-        setResolution(preset.suggestedResolution);
+        setResolution(remixing ? "1K" : preset.suggestedResolution);
         setWithBackground(!isLogoLikePreset(preset));
         return [preset];
       });
@@ -942,9 +958,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
     lastReportedErrorRef.current = null;
     setGenerationError(null);
+    setLatestImageResult(null);
     pendingTokenCostRef.current = tokenCost;
     setGenerationStartedAt(Date.now());
-    setGenerationPhase(remixingLibrary ? "composing-prompt" : "orchestrating");
+    setGenerationPhase(
+      remixingLibrary ? "generating-image" : "orchestrating",
+    );
     lastPresetPhaseRef.current = null;
     setGenerationPresetTitle(selectedPresets[0]?.title);
 
@@ -954,6 +973,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setView("chat");
     }
 
+    const userAuthoredPrompt = prompt.trim();
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
     const presetDefaultPrompt = selectedPresets
       .map((p) => p.defaultPrompt.trim())
@@ -965,13 +985,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     const remixDefaultPrompt = remixingLibrary
       ? defaultRemixPrompt(resolveRemixMode(remixTemplate?.category))
       : "";
-    const messageText =
-      prompt.trim() ||
-      remixDefaultPrompt ||
-      presetDefaultPrompt ||
-      presetSummary ||
+    const fallbackPrompt = remixingLibrary
+      ? presetDefaultPrompt || remixDefaultPrompt
+      : presetDefaultPrompt || presetSummary;
+    const generationUserPrompt =
+      userAuthoredPrompt ||
+      fallbackPrompt ||
       "Generate on-brand assets";
-    const userPromptDraft = prompt.trim();
+    const chatMessageText = userAuthoredPrompt
+      ? userAuthoredPrompt
+      : selectedPresets.length > 0
+        ? `Create ${presetSummary}`
+        : generationUserPrompt;
+    const userPromptDraft = userAuthoredPrompt;
 
     submitInFlightRef.current = true;
     setPrompt("");
@@ -986,7 +1012,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       }
       await sendMessage(
         {
-          text: messageText,
+          text: chatMessageText,
           metadata: {
             presetTitles: selectedPresets.map((p) => p.title),
             presetIds: selectedPresets.map((p) => p.id),
@@ -995,7 +1021,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         {
           body: {
             ...buildGenerationBody(composerReferences),
-            userPrompt: messageText,
+            userPrompt: generationUserPrompt,
           },
         },
       );
@@ -1066,6 +1092,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     }
     setGenerationStartedAt(null);
     setLibraryTemplateId(null);
+    setLatestImageResult(null);
+    setFooterComposerExpanded(true);
     setView("grid");
   }, [isGenerating, stop, setLibraryTemplateId]);
 
@@ -1090,6 +1118,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       generationPresetTitle,
       generationActivity,
       generationError,
+      latestImageResult,
+      footerComposerExpanded,
+      setFooterComposerExpanded,
       libraryTemplateId,
       historyOpen,
       setHistoryOpen,
@@ -1141,6 +1172,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       generationPresetTitle,
       generationActivity,
       generationError,
+      latestImageResult,
+      footerComposerExpanded,
       libraryTemplateId,
       historyOpen,
       setLibraryTemplateId,

@@ -334,6 +334,7 @@ function buildRemixAttachmentSection(input: {
 export function assembleLibraryRemixPrompt(input: {
   brand: BrandPromptContext;
   userDirection: string;
+  presetLines?: string[];
   referenceNames: string[];
   referenceUrls: string[];
   hasLogoAttachment: boolean;
@@ -350,7 +351,19 @@ export function assembleLibraryRemixPrompt(input: {
       [
         "## User direction (highest priority)",
         direction,
-        "Follow the user direction above all else.",
+        "Follow the user direction above all else. Adapt the template and preset format to match it.",
+      ].join("\n"),
+    );
+  }
+
+  if (input.presetLines?.length) {
+    sections.push(
+      [
+        "## Asset format",
+        direction
+          ? "Deliver this format while honoring the user direction above:"
+          : "Deliver this asset format:",
+        ...input.presetLines.map((line) => `- ${line}`),
       ].join("\n"),
     );
   }

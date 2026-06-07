@@ -27,10 +27,10 @@ export function ChatWelcomeEmpty() {
 
   const presetLine = isLibraryRemix
     ? selectedPresetLine
-      ? `Using preset: ${selectedPresetLine}. Add a short brief and create.`
-      : "Add a short brief and create."
+      ? `Remixing with ${selectedPresetLine}. Add your customization below — your direction takes priority — then click Create.`
+      : "Add your customization below, then click Create to remix this template for your brand."
     : selectedPresets.length > 0
-      ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Add optional direction, or click Create to generate now.`
+      ? `Using ${selectedPresets.map((p) => p.title).join(" · ")}. Add your customization below, or click Create to generate with the preset defaults.`
       : "Describe the asset you want — tone, message, and layout — and generate when you're ready.";
 
   return (

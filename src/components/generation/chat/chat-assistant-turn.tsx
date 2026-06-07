@@ -14,12 +14,15 @@ type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
   isStreaming: boolean;
   messageIndex: number;
+  /** Library remix canvas owns skeleton/result display. */
+  hideRemixVisuals?: boolean;
 };
 
 export function ChatAssistantTurn({
   message,
   isStreaming,
   messageIndex,
+  hideRemixVisuals = false,
 }: ChatAssistantTurnProps) {
   const {
     continueFromMessageIndex,
@@ -103,7 +106,7 @@ export function ChatAssistantTurn({
           />
         ) : null}
 
-        {showSkeleton ? (
+        {showSkeleton && !hideRemixVisuals ? (
           <div className="space-y-2">
             {isFailed ? (
               <p className="text-sm text-muted">{inlineError}</p>
@@ -125,7 +128,9 @@ export function ChatAssistantTurn({
           </div>
         ) : null}
 
-        {imageResult ? <GeneratedImageCard data={imageResult} /> : null}
+        {imageResult && !hideRemixVisuals ? (
+          <GeneratedImageCard data={imageResult} />
+        ) : null}
 
         {showStopped ? (
           <p className="text-sm text-muted">Generation stopped.</p>
