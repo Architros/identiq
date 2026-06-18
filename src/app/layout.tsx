@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { cookies } from "next/headers";
 import { ConditionalAppShell } from "@/components/layout/conditional-app-shell";
 import { BILLING_ACCESS_COOKIE } from "@/lib/billing/billing-access-cookie";
@@ -33,6 +34,7 @@ export default async function RootLayout({
         <ConditionalAppShell initialHasBillingAccess={initialHasBillingAccess}>
           {children}
         </ConditionalAppShell>
+        <Analytics />
       </body>
     </html>
   );
