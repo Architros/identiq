@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Upload04Icon } from "@hugeicons/core-free-icons";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
-import { CreateBrandFirstModal } from "@/components/home/create-brand-first-modal";
+import {
+  BrandGuardedLink,
+  useRequireBrand,
+} from "@/contexts/require-brand-context";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_MAX_FILES,
@@ -29,31 +31,27 @@ export function HomeBrandUploadDropzone({
   className,
 }: HomeBrandUploadDropzoneProps) {
   const { hasActiveBrand, activeBrand, brandKit } = useBrand();
+  const { requireBrand } = useRequireBrand();
   const { brandReferences, addBrandReference } = useBrandAssets();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createBrandModalOpen, setCreateBrandModalOpen] = useState(false);
 
   const brandName = activeBrand.displayName || brandKit.displayName || "your brand";
   const remainingSlots = Math.max(0, ATTACHMENT_MAX_FILES - brandReferences.length);
 
   const openFilePicker = useCallback(() => {
-    if (!hasActiveBrand) {
-      setCreateBrandModalOpen(true);
-      return;
-    }
-    inputRef.current?.click();
-  }, [hasActiveBrand]);
+    requireBrand({ onAllowed: () => inputRef.current?.click() });
+  }, [requireBrand]);
 
   const startUpload = useCallback(
     async (files: FileList | null) => {
       if (!files?.length || isUploading) return;
 
       if (!hasActiveBrand) {
-        setCreateBrandModalOpen(true);
+        requireBrand();
         return;
       }
 
@@ -169,6 +167,7 @@ export function HomeBrandUploadDropzone({
     [
       isUploading,
       hasActiveBrand,
+      requireBrand,
       brandKit.id,
       remainingSlots,
       addBrandReference,
@@ -195,87 +194,83 @@ export function HomeBrandUploadDropzone({
   const isWide = variant === "wide";
 
   return (
-    <>
-      <div
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col",
+        isWide ? className : cn("h-full", className),
+      )}
+    >
+      <button
+        type="button"
+        disabled={isUploading}
+        onClick={openFilePicker}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
         className={cn(
-          "flex min-h-0 min-w-0 flex-col",
-          isWide ? className : cn("h-full", className),
+          "flex min-h-0 w-full flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center transition-colors",
+          "border-border/80 bg-sidebar-active/30 hover:border-accent/40 hover:bg-sidebar-active/50",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+          "disabled:pointer-events-none disabled:opacity-60",
+          isWide ? "min-h-[10rem] px-6 py-10" : "h-full px-4 py-6",
+          isDragging && "border-accent/50 bg-sidebar-active/60",
         )}
       >
-        <button
-          type="button"
-          disabled={isUploading}
-          onClick={openFilePicker}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          className={cn(
-            "flex min-h-0 w-full flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center transition-colors",
-            "border-border/80 bg-sidebar-active/30 hover:border-accent/40 hover:bg-sidebar-active/50",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-            "disabled:pointer-events-none disabled:opacity-60",
-            isWide ? "min-h-[10rem] px-6 py-10" : "h-full px-4 py-6",
-            isDragging && "border-accent/50 bg-sidebar-active/60",
-          )}
-        >
-          <HugeiconsIcon
-            icon={Upload04Icon}
-            size={isWide ? 28 : 22}
-            color="currentColor"
-            strokeWidth={1.5}
-            className="text-muted"
-          />
-          <span className="text-xs font-medium text-foreground">
-            {isUploading
-              ? "Uploading…"
-              : hasActiveBrand
-                ? `Upload to ${brandName}`
-                : "Drop files or click to upload"}
-          </span>
-          <span className="max-w-[14rem] text-[10px] leading-snug text-muted">
-            {hasActiveBrand
-              ? `PNG, JPG, WEBP, TXT, MD — ${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} left`
-              : `PNG, JPG, WEBP, TXT, MD — up to ${ATTACHMENT_MAX_FILES} files`}
-          </span>
-        </button>
-
-        {error ? (
-          <p
-            className="mt-1.5 text-center text-[10px] text-destructive"
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
-
-        {hasActiveBrand ? (
-          <p className="mt-1.5 text-center text-[10px] text-muted">
-            Files appear under{" "}
-            <Link href="/images" className="font-medium text-accent hover:underline">
-              Brand assets
-            </Link>
-            .
-          </p>
-        ) : null}
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ATTACHMENT_ACCEPT}
-          multiple
-          className="hidden"
-          disabled={isUploading || !hasActiveBrand}
-          onChange={(e) => {
-            void startUpload(e.target.files);
-            e.target.value = "";
-          }}
+        <HugeiconsIcon
+          icon={Upload04Icon}
+          size={isWide ? 28 : 22}
+          color="currentColor"
+          strokeWidth={1.5}
+          className="text-muted"
         />
-      </div>
+        <span className="text-xs font-medium text-foreground">
+          {isUploading
+            ? "Uploading…"
+            : hasActiveBrand
+              ? `Upload to ${brandName}`
+              : "Drop files or click to upload"}
+        </span>
+        <span className="max-w-[14rem] text-[10px] leading-snug text-muted">
+          {hasActiveBrand
+            ? `PNG, JPG, WEBP, TXT, MD — ${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} left`
+            : `PNG, JPG, WEBP, TXT, MD — up to ${ATTACHMENT_MAX_FILES} files`}
+        </span>
+      </button>
 
-      <CreateBrandFirstModal
-        open={createBrandModalOpen}
-        onClose={() => setCreateBrandModalOpen(false)}
+      {error ? (
+        <p
+          className="mt-1.5 text-center text-[10px] text-destructive"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      {hasActiveBrand ? (
+        <p className="mt-1.5 text-center text-[10px] text-muted">
+          Files appear under{" "}
+          <BrandGuardedLink
+            href="/images"
+            className="font-medium text-accent hover:underline"
+          >
+            Brand assets
+          </BrandGuardedLink>
+          .
+        </p>
+      ) : null}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ATTACHMENT_ACCEPT}
+        multiple
+        className="hidden"
+        disabled={isUploading}
+        onChange={(e) => {
+          void startUpload(e.target.files);
+          e.target.value = "";
+        }}
       />
-    </>
+    </div>
   );
 }

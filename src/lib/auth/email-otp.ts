@@ -26,7 +26,10 @@ export function normalizeEmail(email: string): string {
 export const OTP_SEND_SUCCESS_MESSAGE =
   "If that email can receive mail, we sent a verification code.";
 
-export function mapOtpSendError(message: string): {
+export function mapOtpSendError(
+  message: string,
+  purpose?: OtpPurpose,
+): {
   status: number;
   error: string;
 } {
@@ -36,6 +39,29 @@ export function mapOtpSendError(message: string): {
       status: 400,
       error:
         "Email sign-in is disabled in Supabase. Enable the Email provider under Authentication → Providers.",
+    };
+  }
+  if (
+    lower.includes("weak_password") ||
+    (lower.includes("password") && lower.includes("at least"))
+  ) {
+    return {
+      status: 422,
+      error:
+        "Password policy in Supabase is blocking OTP emails. Lower Authentication → Password minimum length, or contact support.",
+    };
+  }
+  if (
+    lower.includes("signups not allowed") ||
+    lower.includes("user not found") ||
+    lower.includes("no user")
+  ) {
+    return {
+      status: 422,
+      error:
+        purpose === "recovery"
+          ? "If that email is registered with a password, we sent a code. Check your inbox and spam folder."
+          : "Could not send a verification code. Try again shortly.",
     };
   }
   if (
@@ -50,6 +76,13 @@ export function mapOtpSendError(message: string): {
   }
   if (lower.includes("invalid") && lower.includes("email")) {
     return { status: 400, error: "Enter a valid email address." };
+  }
+  if (lower.includes("redirect") || lower.includes("redirect_to")) {
+    return {
+      status: 400,
+      error:
+        "Password reset is misconfigured. Add your site URL to Supabase Authentication → URL configuration → Redirect URLs.",
+    };
   }
   return {
     status: 400,

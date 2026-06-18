@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { BrandGuardedLink } from "@/contexts/require-brand-context";
 import type { LibraryTemplate } from "@/lib/library/types";
 import { libraryCategories } from "@/lib/library/templates";
 
@@ -98,12 +98,13 @@ export function LibraryTemplateModal({
             {categoryLabel}
           </p>
           <p className="mt-1 mb-3 text-sm font-medium text-foreground">{title}</p>
-          <Link
+          <BrandGuardedLink
             href={remixHref}
+            description="Create a brand first to remix library templates."
             className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90"
           >
             Remix with my brand
-          </Link>
+          </BrandGuardedLink>
         </div>
       </div>
     </div>

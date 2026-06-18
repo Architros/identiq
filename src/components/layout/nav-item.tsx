@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { NavItem as NavItemConfig } from "@/lib/navigation";
 import { useBrand } from "@/components/providers/brand-provider";
+import {
+  pathRequiresBrand,
+  useRequireBrand,
+} from "@/contexts/require-brand-context";
 import { useSupportModals } from "@/contexts/support-modals-context";
 import { useSidebarNav } from "@/contexts/sidebar-nav-context";
 
@@ -17,7 +21,9 @@ type NavItemProps = {
 
 export function NavItem({ item, compact = false }: NavItemProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { activeBrandId, hasActiveBrand, isLoading } = useBrand();
+  const { requireBrand } = useRequireBrand();
   const { openHelp, openFeedback } = useSupportModals();
   const { closeMobileNav } = useSidebarNav();
   const href =
@@ -92,7 +98,14 @@ export function NavItem({ item, compact = false }: NavItemProps) {
       href={href}
       className={className}
       aria-current={isActive ? "page" : undefined}
-      onClick={closeMobileNav}
+      onClick={(event) => {
+        closeMobileNav();
+        if (isLoading || !pathRequiresBrand(item.href)) return;
+        event.preventDefault();
+        requireBrand({
+          onAllowed: () => router.push(href),
+        });
+      }}
       title={compact ? item.label : undefined}
     >
       {content}

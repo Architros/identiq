@@ -3,6 +3,7 @@ import { BillingCancelledNotice } from "@/components/billing/billing-cancelled-n
 import { AppShellLayout } from "@/components/layout/app-shell-layout";
 import { FloatingSupportWrapper } from "@/components/home/floating-support-wrapper";
 import { BrandProvider } from "@/components/providers/brand-provider";
+import { RequireBrandProvider } from "@/contexts/require-brand-context";
 import { CreditsProvider } from "@/contexts/credits-context";
 import { SupportModalsProvider } from "@/contexts/support-modals-context";
 import { BrandAssetsProvider } from "@/contexts/brand-assets-context";
@@ -17,6 +18,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <ConnectivityProvider>
       <SessionProvider>
         <BrandProvider>
+          <RequireBrandProvider>
           <CreditsProvider>
             <SupportModalsProvider>
               <BrandAssetsProvider>
@@ -34,6 +36,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </BrandAssetsProvider>
             </SupportModalsProvider>
           </CreditsProvider>
+          </RequireBrandProvider>
         </BrandProvider>
       </SessionProvider>
     </ConnectivityProvider>

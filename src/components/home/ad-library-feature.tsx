@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LayoutGridIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HomeLibraryCollage } from "@/components/home/home-library-collage";
+import { BrandGuardedLink } from "@/contexts/require-brand-context";
 import {
   HOME_BENTO_BODY_CLASS,
   HOME_BENTO_CARD_CLASS,
@@ -43,7 +43,7 @@ export function AdLibraryFeature() {
           Browse real campaign layouts and apply them to your brand kit in one
           click.
         </p>
-        <Link
+        <BrandGuardedLink
           href="/library"
           className="inline-flex w-fit shrink-0 items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-accent"
         >
@@ -54,16 +54,16 @@ export function AdLibraryFeature() {
             color="currentColor"
             strokeWidth={1.75}
           />
-        </Link>
+        </BrandGuardedLink>
       </div>
 
-      <Link
+      <BrandGuardedLink
         href="/library"
         className="relative hidden min-h-0 min-w-0 flex-1 overflow-hidden sm:block"
         aria-label="Browse Library templates"
       >
         <HomeLibraryCollage />
-      </Link>
+      </BrandGuardedLink>
     </motion.article>
   );
 }

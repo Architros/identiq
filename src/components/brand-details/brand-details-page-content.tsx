@@ -15,6 +15,7 @@ import { FieldEditToolbar } from "@/components/brand-details/field-edit-toolbar"
 import { InlineEditActions } from "@/components/brand-details/inline-edit-actions";
 import { ToneTagsEditor } from "@/components/brand-details/tone-tags-editor";
 import { useBrand } from "@/components/providers/brand-provider";
+import { useRequireBrand } from "@/contexts/require-brand-context";
 import {
   BRAND_SECTORS,
   type BrandSector,
@@ -94,6 +95,7 @@ function previewFontFamily(fontLabel: string): string {
 
 export function BrandDetailsPageContent() {
   const router = useRouter();
+  const { requireBrand } = useRequireBrand();
   const params = useParams();
   const brandId = params.id as string;
   const { brands, getBrandKit, updateBrandKit, isLoading, hasBrands } =
@@ -172,9 +174,12 @@ export function BrandDetailsPageContent() {
 
   const handleAiRefine = useCallback(
     (prompt: string) => {
-      router.push(`/ideas?prompt=${encodeURIComponent(prompt)}`);
+      const ideasHref = `/ideas?prompt=${encodeURIComponent(prompt)}`;
+      requireBrand({
+        onAllowed: () => router.push(ideasHref),
+      });
     },
-    [router],
+    [requireBrand, router],
   );
 
   const sectorOptions = useMemo(

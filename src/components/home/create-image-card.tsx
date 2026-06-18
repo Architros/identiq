@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { BrandGuardedLink } from "@/contexts/require-brand-context";
 import { libraryTemplates } from "@/lib/library/templates";
 import {
   HOME_BENTO_BODY_CLASS,
@@ -105,7 +105,7 @@ export function CreateImageCard() {
           </p>
         </div>
 
-        <Link
+        <BrandGuardedLink
           href="/images"
           className="inline-flex w-fit shrink-0 items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
         >
@@ -116,7 +116,7 @@ export function CreateImageCard() {
             color="currentColor"
             strokeWidth={1.75}
           />
-        </Link>
+        </BrandGuardedLink>
       </div>
     </motion.article>
   );

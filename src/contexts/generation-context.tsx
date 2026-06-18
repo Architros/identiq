@@ -26,6 +26,7 @@ import { setGenerationChromeCompact } from "@/lib/generation/chrome-store";
 import { generationActivityLabel } from "@/lib/generation/generation-activity-label";
 import type { GenerationRequestBody } from "@/lib/generation/generate-request-schema";
 import { useBrandAssets } from "@/contexts/brand-assets-context";
+import { useRequireBrandOptional } from "@/contexts/require-brand-context";
 import { uploadBrandReferenceToStorage } from "@/lib/storage/upload-client";
 import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast/show-toast";
@@ -144,6 +145,7 @@ async function deleteChatSession(chatId: string) {
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const { brandKit, brandMemory, hasActiveBrand, isLoading } = useBrand();
+  const requireBrandCtx = useRequireBrandOptional();
   const { availableTokens, refreshBalance } = useCredits();
   const { registerPendingAsset, addBrandReference } = useBrandAssets();
 
@@ -759,23 +761,32 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const addPreset = useCallback(
     (preset: GenerationPreset) => {
       if (generationLockedRef.current) return;
-      const remixing = Boolean(libraryTemplateIdRef.current);
-      setSelectedPresets((prev) => {
-        if (prev.some((p) => p.id === preset.id)) {
+
+      const apply = () => {
+        const remixing = Boolean(libraryTemplateIdRef.current);
+        setSelectedPresets((prev) => {
+          if (prev.some((p) => p.id === preset.id)) {
+            setActivePresetId(preset.id);
+            setAspectRatio(preset.aspectRatio);
+            setResolution(remixing ? "1K" : preset.suggestedResolution);
+            setWithBackground(!isLogoLikePreset(preset));
+            return prev;
+          }
           setActivePresetId(preset.id);
           setAspectRatio(preset.aspectRatio);
           setResolution(remixing ? "1K" : preset.suggestedResolution);
           setWithBackground(!isLogoLikePreset(preset));
-          return prev;
-        }
-        setActivePresetId(preset.id);
-        setAspectRatio(preset.aspectRatio);
-        setResolution(remixing ? "1K" : preset.suggestedResolution);
-        setWithBackground(!isLogoLikePreset(preset));
-        return [preset];
-      });
+          return [preset];
+        });
+      };
+
+      if (!hasActiveBrand) {
+        requireBrandCtx?.requireBrand({ onAllowed: apply });
+        return;
+      }
+      apply();
     },
-    [isLogoLikePreset],
+    [hasActiveBrand, isLogoLikePreset, requireBrandCtx],
   );
 
   const removePreset = useCallback((id: string) => {
@@ -808,6 +819,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const addReferenceImage = useCallback(
     (files: FileList | File[]) => {
+      if (!hasActiveBrand) {
+        requireBrandCtx?.requireBrand();
+        return;
+      }
       const fileArray = Array.from(files);
       setReferenceImages((prev) => {
         const remaining = MAX_REFERENCE_IMAGES - prev.length;
@@ -857,11 +872,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         return [...prev, ...added];
       });
     },
-    [addBrandReference, brandKit.id],
+    [addBrandReference, brandKit.id, hasActiveBrand, requireBrandCtx],
   );
 
   const addReferenceImageFromUrl = useCallback(
     (params: { url: string; name: string }): boolean => {
+      if (!hasActiveBrand) {
+        requireBrandCtx?.requireBrand();
+        return false;
+      }
       const url = params.url.trim();
       if (!url) return false;
 
@@ -881,7 +900,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setReferenceImages(next);
       return true;
     },
-    [],
+    [hasActiveBrand, requireBrandCtx],
   );
 
   const removeReferenceImage = useCallback((id: string) => {
@@ -916,9 +935,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       return;
     }
     if (!hasActiveBrand) {
-      showErrorToast("Create a brand first to generate images.", {
-        title: "Brand required",
-        mapAsGeneration: false,
+      requireBrandCtx?.requireBrand({
+        description: "Create a brand before generating on-brand images.",
       });
       return;
     }
@@ -1051,6 +1069,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     ensureChatSession,
     hasActiveBrand,
     isLoading,
+    requireBrandCtx,
     reportGenerationError,
     status,
     chatTitle,

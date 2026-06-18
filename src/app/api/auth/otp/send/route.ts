@@ -7,6 +7,7 @@ import {
   normalizeEmail,
   otpPurposeSchema,
 } from "@/lib/auth/email-otp";
+import { getServerSiteUrl } from "@/lib/auth/site-url";
 import { createAnonClient } from "@/lib/supabase/anon";
 
 const bodySchema = z.object({
@@ -39,16 +40,18 @@ export async function POST(request: Request) {
   try {
     const supabase = createAnonClient();
 
-    // Both signup and recovery use signInWithOtp so Supabase sends the same
-    // Magic Link email template (with {{ .Token }} for a 6-digit code).
-    // resetPasswordForEmail uses a separate "Reset password" template that
-    // defaults to {{ .ConfirmationURL }} — a link, not an OTP.
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: purpose === "signup",
-      },
-    });
+    const recoveryRedirect = `${getServerSiteUrl()}/auth/callback?next=${encodeURIComponent("/login")}`;
+    const { error } =
+      purpose === "recovery"
+        ? await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: recoveryRedirect,
+          })
+        : await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              shouldCreateUser: true,
+            },
+          });
 
     if (error) {
       const forwarded = request.headers.get("x-forwarded-for");
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
         ip,
         message: error.message,
       });
-      const mapped = mapOtpSendError(error.message);
+      const mapped = mapOtpSendError(error.message, purpose);
       return NextResponse.json({ error: mapped.error }, { status: mapped.status });
     }
 

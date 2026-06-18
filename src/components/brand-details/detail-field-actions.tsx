@@ -8,6 +8,7 @@ import {
   PencilEdit01Icon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
+import { useRequireBrand } from "@/contexts/require-brand-context";
 import { copyTextToClipboard } from "@/lib/clipboard/copy-text";
 import { showInfoToast, showSuccessToast } from "@/lib/toast/show-toast";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ export function DetailFieldActions({
   copyOnly = false,
 }: DetailFieldActionsProps) {
   const router = useRouter();
+  const { requireBrand } = useRequireBrand();
   const [copying, setCopying] = useState(false);
 
   const onCopy = useCallback(async () => {
@@ -58,8 +60,11 @@ export function DetailFieldActions({
 
   const onEditWithAi = useCallback(() => {
     const prompt = `Refine the ${fieldLabel.toLowerCase()} for ${brandName}. Current value:\n\n${value}`;
-    router.push(`/ideas?prompt=${encodeURIComponent(prompt)}`);
-  }, [brandName, fieldLabel, router, value]);
+    const ideasHref = `/ideas?prompt=${encodeURIComponent(prompt)}`;
+    requireBrand({
+      onAllowed: () => router.push(ideasHref),
+    });
+  }, [brandName, fieldLabel, requireBrand, router, value]);
 
   return (
     <div

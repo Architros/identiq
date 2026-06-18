@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useGeneration } from "@/contexts/generation-context";
+import { useRequireBrand } from "@/contexts/require-brand-context";
 import { getPresetById } from "@/lib/generation/presets";
 import { getLibraryTemplate } from "@/lib/library/templates";
 import { aspectRatioForLibraryTemplate } from "@/lib/library/template-aspect-ratio";
@@ -12,6 +13,8 @@ import { aspectRatioForLibraryTemplate } from "@/lib/library/template-aspect-rat
 export function LibraryFromUrl() {
   const searchParams = useSearchParams();
   const { hasActiveBrand, isLoading } = useBrand();
+  const { requireBrand } = useRequireBrand();
+  const brandPromptedRef = useRef(false);
   const {
     isGenerating,
     showChatView,
@@ -38,6 +41,16 @@ export function LibraryFromUrl() {
     if (!libraryId) return;
     showChatView();
   }, [libraryId, showChatView]);
+
+  useEffect(() => {
+    if (!libraryId || isLoading || hasActiveBrand || brandPromptedRef.current) {
+      return;
+    }
+    brandPromptedRef.current = true;
+    requireBrand({
+      description: "Create a brand first to remix library templates.",
+    });
+  }, [libraryId, isLoading, hasActiveBrand, requireBrand]);
 
   useEffect(() => {
     if (!libraryId) return;

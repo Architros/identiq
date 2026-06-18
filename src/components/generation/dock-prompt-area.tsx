@@ -14,6 +14,7 @@ import {
   TimeScheduleIcon,
 } from "@hugeicons/core-free-icons";
 import { useGeneration } from "@/contexts/generation-context";
+import { useRequireBrand } from "@/contexts/require-brand-context";
 import { DockSettingsRow } from "@/components/generation/dock-settings-row";
 import { DockCreateButton } from "@/components/generation/dock-create-button";
 import { generationPresets } from "@/lib/generation/presets";
@@ -29,6 +30,7 @@ export function DockPromptArea({
   compact = false,
 }: DockPromptAreaProps) {
   const router = useRouter();
+  const { requireBrand } = useRequireBrand();
   const inputRef = useRef<HTMLInputElement>(null);
   const referenceChooserRef = useRef<HTMLDivElement>(null);
   const typeChooserRef = useRef<HTMLDivElement>(null);
@@ -151,7 +153,11 @@ export function DockPromptArea({
           if (activeChatId) {
             query.set("carryChatId", activeChatId);
           }
-          router.push(query.size > 0 ? `/library?${query.toString()}` : "/library");
+          const libraryHref =
+            query.size > 0 ? `/library?${query.toString()}` : "/library";
+          requireBrand({
+            onAllowed: () => router.push(libraryHref),
+          });
         }}
         className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-sidebar-active"
       >

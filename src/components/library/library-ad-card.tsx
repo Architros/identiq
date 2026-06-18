@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SparklesIcon } from "@hugeicons/core-free-icons";
+import { BrandGuardedLink } from "@/contexts/require-brand-context";
 import type { LibraryTemplate } from "@/lib/library/types";
 import { cn } from "@/lib/utils";
 
@@ -107,8 +107,9 @@ export function LibraryAdCard({
         </div>
       </button>
 
-      <Link
+      <BrandGuardedLink
         href={remixHref}
+        description="Create a brand first to remix library templates."
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "absolute right-2.5 top-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full",
@@ -126,7 +127,7 @@ export function LibraryAdCard({
           color="currentColor"
           strokeWidth={1.75}
         />
-      </Link>
+      </BrandGuardedLink>
     </div>
   );
 }

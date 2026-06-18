@@ -10,6 +10,10 @@ import {
   BulbIcon,
 } from "@hugeicons/core-free-icons";
 import { HomeBrandsPanel } from "@/components/home/home-brands-panel";
+import {
+  BrandGuardedLink,
+  pathRequiresBrand,
+} from "@/contexts/require-brand-context";
 import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +56,32 @@ function QuickActionCard({
   description,
   index,
 }: (typeof quickLinks)[number] & { index: number }) {
+  const className = cn(
+    "group flex h-[5.25rem] w-full items-center gap-3 rounded-[var(--radius-card)] border border-border",
+    "bg-sidebar-active/50 px-4 py-3 transition-colors hover:bg-sidebar-active",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+  );
+  const inner = (
+    <>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-foreground ring-1 ring-border/60 transition-colors group-hover:ring-accent/30">
+        <HugeiconsIcon
+          icon={icon}
+          size={20}
+          color="currentColor"
+          strokeWidth={1.75}
+        />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">
+          {label}
+        </span>
+        <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted">
+          {description}
+        </span>
+      </span>
+    </>
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -59,31 +89,15 @@ function QuickActionCard({
       transition={{ duration: 0.25, delay: 0.12 + index * 0.04 }}
       className="min-w-0"
     >
-      <Link
-        href={href}
-        className={cn(
-          "group flex h-[5.25rem] w-full items-center gap-3 rounded-[var(--radius-card)] border border-border",
-          "bg-sidebar-active/50 px-4 py-3 transition-colors hover:bg-sidebar-active",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-        )}
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-foreground ring-1 ring-border/60 transition-colors group-hover:ring-accent/30">
-          <HugeiconsIcon
-            icon={icon}
-            size={20}
-            color="currentColor"
-            strokeWidth={1.75}
-          />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-foreground">
-            {label}
-          </span>
-          <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted">
-            {description}
-          </span>
-        </span>
-      </Link>
+      {pathRequiresBrand(href) ? (
+        <BrandGuardedLink href={href} className={className}>
+          {inner}
+        </BrandGuardedLink>
+      ) : (
+        <Link href={href} className={className}>
+          {inner}
+        </Link>
+      )}
     </motion.div>
   );
 }

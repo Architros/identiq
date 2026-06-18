@@ -69,11 +69,10 @@ export function EmailOtpStep({
 
       try {
         const supabase = createClient();
-        // Recovery codes are sent via signInWithOtp (Magic Link template), same as signup.
         const { error } = await supabase.auth.verifyOtp({
           email: normalizeEmail(email),
           token: code,
-          type: "email",
+          type: purpose === "recovery" ? "recovery" : "email",
         });
 
         if (error) {
