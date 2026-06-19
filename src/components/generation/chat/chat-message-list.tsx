@@ -140,6 +140,9 @@ export function ChatMessageList({
         {messages.map((message, index) => {
           const isLast = index === messages.length - 1;
           const streaming = isGenerating && isLast && message.role === "assistant";
+          const isLastAssistant =
+            message.role === "assistant" &&
+            !messages.slice(index + 1).some((m) => m.role === "assistant");
 
           if (message.role === "user") {
             return (
@@ -158,6 +161,9 @@ export function ChatMessageList({
               isStreaming={streaming}
               messageIndex={index}
               hideRemixVisuals={isLibraryRemix}
+              fallbackImageResult={
+                isLastAssistant ? resolvedImageResult : null
+              }
             />
           );
         })}

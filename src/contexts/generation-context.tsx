@@ -59,6 +59,64 @@ function findLatestImageResultInMessages(
   return null;
 }
 
+function patchAssistantWithImageResult(
+  msgs: IdentiqUIMessage[],
+  result: ImageResultData,
+): IdentiqUIMessage[] {
+  const imagePart = { type: "data-image-result" as const, data: result };
+  const doneStatusPart = {
+    type: "data-generation-status" as const,
+    data: { phase: "done" as const },
+  };
+
+  let assistantIdx = -1;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === "assistant") {
+      assistantIdx = i;
+      break;
+    }
+  }
+
+  if (assistantIdx < 0) {
+    return [
+      ...msgs,
+      {
+        id: `assistant_${result.jobId}`,
+        role: "assistant" as const,
+        parts: [doneStatusPart, imagePart],
+      },
+    ];
+  }
+
+  const assistant = msgs[assistantIdx];
+  const parts = [...(assistant.parts ?? [])];
+  const imageIdx = parts.findIndex((p) => p.type === "data-image-result");
+  const statusIdx = parts.findIndex((p) => p.type === "data-generation-status");
+
+  if (imageIdx >= 0) {
+    parts[imageIdx] = imagePart;
+  } else {
+    parts.push(imagePart);
+  }
+
+  if (statusIdx >= 0) {
+    parts[statusIdx] = doneStatusPart;
+  } else {
+    parts.push(doneStatusPart);
+  }
+
+  const next = [...msgs];
+  next[assistantIdx] = { ...assistant, parts };
+  return next;
+}
+
+function hasGenerationResult(
+  msgs: IdentiqUIMessage[],
+  resultRef: ImageResultData | null,
+): boolean {
+  return Boolean(resultRef) || Boolean(findLatestImageResultInMessages(msgs));
+}
+
 export type IdeasView = "grid" | "chat";
 
 export type ReferenceImage = {
@@ -427,38 +485,42 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   );
 
   const recoverActiveChat = useCallback(async (): Promise<boolean> => {
-    if (latestImageResultRef.current) return true;
-
     const chatId = activeChatIdRef.current;
     if (!chatId) return false;
 
-    try {
-      const res = await fetch(`/api/ideas/chats/${chatId}`, {
-        credentials: "same-origin",
-      });
-      if (!res.ok) return false;
+    const tryFetch = async (): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/ideas/chats/${chatId}`, {
+          credentials: "same-origin",
+        });
+        if (!res.ok) return false;
 
-      const data = (await res.json()) as {
-        chat: { messages: IdentiqUIMessage[] };
-      };
-      const loadedMessages = data.chat.messages ?? [];
-      const imageResult = findLatestImageResultInMessages(loadedMessages);
-      if (!imageResult) return false;
+        const data = (await res.json()) as {
+          chat: { messages: IdentiqUIMessage[] };
+        };
+        const loadedMessages = data.chat.messages ?? [];
+        const imageResult = findLatestImageResultInMessages(loadedMessages);
+        if (!imageResult) return false;
 
-      setMessagesRef.current?.(loadedMessages);
-      latestImageResultRef.current = imageResult;
-      setLatestImageResult(imageResult);
-      setGenerationPhase("done");
-      setGenerationError(null);
-      lastReportedErrorRef.current = null;
-      setIsStartingGeneration(false);
-      setPendingUserTurnText(null);
-      setGenerationStartedAt(null);
-      streamInterruptedRef.current = false;
-      return true;
-    } catch {
-      return false;
-    }
+        setMessagesRef.current?.(loadedMessages);
+        latestImageResultRef.current = imageResult;
+        setLatestImageResult(imageResult);
+        setGenerationPhase("done");
+        setGenerationError(null);
+        lastReportedErrorRef.current = null;
+        setIsStartingGeneration(false);
+        setPendingUserTurnText(null);
+        setGenerationStartedAt(null);
+        streamInterruptedRef.current = false;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (await tryFetch()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return tryFetch();
   }, []);
 
   const { messages, sendMessage, stop, status, setMessages } =
@@ -472,9 +534,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setGenerationStartedAt(null);
         lastPresetPhaseRef.current = null;
 
-        const hasLocalResult =
-          Boolean(latestImageResultRef.current) ||
-          Boolean(findLatestImageResultInMessages(finishedMessages));
+        const hasLocalResult = hasGenerationResult(
+          finishedMessages,
+          latestImageResultRef.current,
+        );
         const treatAsSuccess = hasLocalResult && !isAbort;
 
         setGenerationPhase(
@@ -541,7 +604,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             lastPresetPhaseRef.current = null;
           }
           if (data.phase === "error" && data.errorMessage) {
-            reportGenerationError(data.errorMessage);
+            if (!latestImageResultRef.current) {
+              reportGenerationError(data.errorMessage);
+            }
           }
         }
 
@@ -549,6 +614,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           const data = dataPart.data as ImageResultData;
           latestImageResultRef.current = data;
           setLatestImageResult(data);
+
+          setMessages((prev) => {
+            const patched = patchAssistantWithImageResult(prev, data);
+            messagesRef.current = patched;
+            void saveMessages(patched);
+            return patched;
+          });
+          setGenerationPhase("done");
+          setGenerationError(null);
+          lastReportedErrorRef.current = null;
+          streamInterruptedRef.current = false;
+          setGenerationStartedAt(null);
+
           if (registeredJobsRef.current.has(data.jobId)) return;
           registeredJobsRef.current.add(data.jobId);
 
@@ -595,10 +673,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           );
 
         if (latestImageResultRef.current) {
+          const result = latestImageResultRef.current;
+          setMessages((prev) => patchAssistantWithImageResult(prev, result));
           setGenerationPhase("done");
           setGenerationError(null);
           lastReportedErrorRef.current = null;
           streamInterruptedRef.current = false;
+          void saveMessages(
+            patchAssistantWithImageResult(messagesRef.current, result),
+          );
           return;
         }
 
@@ -1143,7 +1226,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       ? defaultRemixPrompt(resolveRemixMode(remixTemplate?.category))
       : "";
     const fallbackPrompt = remixingLibrary
-      ? presetDefaultPrompt || remixDefaultPrompt
+      ? remixDefaultPrompt || presetDefaultPrompt
       : presetDefaultPrompt || presetSummary;
     const generationUserPrompt =
       userAuthoredPrompt ||

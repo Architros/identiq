@@ -53,6 +53,20 @@ function saveReferencesToStorage(data: StoredReferences) {
   localStorage.setItem(REFERENCES_KEY, JSON.stringify(data));
 }
 
+function mergeAssetsById(
+  local: GeneratedBrandAsset[],
+  server: GeneratedBrandAsset[],
+): GeneratedBrandAsset[] {
+  const serverIds = new Set(server.map((asset) => asset.id));
+  const merged = [
+    ...server,
+    ...local.filter((asset) => !serverIds.has(asset.id)),
+  ];
+  return merged.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
 type BrandAssetsContextValue = {
   savedAssets: GeneratedBrandAsset[];
   pendingAssets: GeneratedBrandAsset[];
@@ -113,10 +127,13 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
         };
         setAllByBrand((prev) => ({
           ...prev,
-          [brandKit.id]: data.assets.map((a) => ({
-            ...a,
-            status: a.status ?? "saved",
-          })),
+          [brandKit.id]: mergeAssetsById(
+            prev[brandKit.id] ?? [],
+            data.assets.map((a) => ({
+              ...a,
+              status: a.status ?? "saved",
+            })),
+          ),
         }));
         setReferencesByBrand((prev) => {
           const next = {

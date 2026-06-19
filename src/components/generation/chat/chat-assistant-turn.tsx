@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
+import type { ImageResultData, IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message";
 import { formatInlineGenerationError } from "@/lib/generation/format-inline-generation-error";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
@@ -16,6 +16,8 @@ type ChatAssistantTurnProps = {
   messageIndex: number;
   /** Library remix canvas owns skeleton/result display. */
   hideRemixVisuals?: boolean;
+  /** Used when stream ended before message parts were merged. */
+  fallbackImageResult?: ImageResultData | null;
 };
 
 export function ChatAssistantTurn({
@@ -23,6 +25,7 @@ export function ChatAssistantTurn({
   isStreaming,
   messageIndex,
   hideRemixVisuals = false,
+  fallbackImageResult = null,
 }: ChatAssistantTurnProps) {
   const {
     continueFromMessageIndex,
@@ -37,16 +40,18 @@ export function ChatAssistantTurn({
   const isLibraryRemix = Boolean(libraryTemplateId);
   const {
     generationStatus,
-    imageResult,
+    imageResult: messageImageResult,
     errorText,
   } = parseAssistantMessage(message);
+  const imageResult = messageImageResult ?? fallbackImageResult ?? null;
 
   const phase = generationStatus?.phase;
   const isOrchestrating =
     phase === "orchestrating" ||
     phase === "composing-prompt" ||
     (isStreaming && !imageResult && phase !== "generating-image");
-  const isFailed = phase === "error" || Boolean(errorText?.trim());
+  const isFailed =
+    (phase === "error" || Boolean(errorText?.trim())) && !imageResult;
   const showThinking = isOrchestrating && isStreaming && !isFailed;
   const showSkeleton =
     (phase === "generating-image" && !imageResult) || (isFailed && !imageResult);

@@ -368,28 +368,34 @@ export function assembleLibraryRemixPrompt(input: {
     );
   }
 
-  if (preserveDesign) {
-    sections.push(
-      [
-        "## Task",
-        `Apply "${brand.brandName}" branding to the attached library template.`,
-        "This is a brand-application task, not a redesign.",
-        "Preserve the template's design concept, form, composition, and visual structure exactly.",
-        "Only recolor using the brand palette and place the attached brand logo where a logo slot exists.",
-        "Do not invent a new mark or reinterpret the visual idea.",
-      ].join("\n"),
-    );
-  } else {
-    sections.push(
-      [
-        "## Task",
-        `Adapt the attached library template for "${brand.brandName}".`,
-        "Keep the template's layout, hierarchy, and composition.",
-        "Replace placeholder copy, colors, typography feel, and branding with this brand.",
-        "Do not invent a new layout or redesign the concept.",
-      ].join("\n"),
-    );
+  sections.push(["## Brand identity", buildCompactBrandSpec(brand)].join("\n"));
+
+  const visualInspiration = buildVisualInspirationSection({
+    feelingIds: brand.feelings ?? [],
+    sector: brand.sector,
+    hasReferenceImages: input.referenceUrls.length > 0,
+  });
+  if (visualInspiration) {
+    sections.push(visualInspiration);
   }
+
+  const layoutGuidance = preserveDesign
+    ? "Preserve the template's design concept, form, composition, and visual structure. Do not invent a new layout or redesign the concept."
+    : "Keep the template's layout, hierarchy, and composition. Do not invent a new layout or redesign the concept.";
+
+  sections.push(
+    [
+      "## Task",
+      `Adapt the attached library template for "${brand.brandName}".`,
+      layoutGuidance,
+      `Replace every visible word in the template — headlines, product names, slogans, CTAs, body copy, labels, and small print — with copy appropriate for "${brand.brandName}" and this brand's industry and description.`,
+      "Do not leave template-specific product names, unrelated industries, or source placeholder text visible in the output.",
+      "Recolor using the brand palette below. Match typography feel to the brand tone.",
+      input.hasLogoAttachment
+        ? "Place the attached brand logo only where the template shows a logo slot. Do not invent a new mark."
+        : "Do not invent a new logo mark unless the template clearly expects one.",
+    ].join("\n"),
+  );
 
   sections.push(
     [
@@ -402,18 +408,18 @@ export function assembleLibraryRemixPrompt(input: {
       .join("\n"),
   );
 
-  if (!preserveDesign) {
-    const copyHint = truncateBrandContext(
-      brand.tagline?.trim() || brand.description?.trim(),
-      120,
+  const copyContext = truncateBrandContext(
+    brand.tagline?.trim() || brand.description?.trim(),
+    200,
+  );
+  if (copyContext) {
+    sections.push(
+      [
+        "## Brand copy to use",
+        copyContext,
+        "Write all on-image text in this voice for this brand.",
+      ].join("\n"),
     );
-    if (copyHint) {
-      sections.push(
-        ["## Brand copy hint", copyHint, "Use for replacing placeholder text only."].join(
-          "\n",
-        ),
-      );
-    }
   }
 
   if (input.hasLogoAttachment) {

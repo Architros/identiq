@@ -22,7 +22,7 @@ const PRESERVE_DESIGN_CATEGORIES = new Set([
 export function resolveRemixMode(category?: string): RemixMode {
   const normalized = category?.trim().toLowerCase() ?? "";
   if (!normalized || normalized === "general") {
-    return "preserve-design";
+    return "adapt-content";
   }
   if (ADAPT_CONTENT_CATEGORIES.has(normalized)) {
     return "adapt-content";
@@ -33,11 +33,11 @@ export function resolveRemixMode(category?: string): RemixMode {
   if (normalized.startsWith("social")) {
     return "adapt-content";
   }
-  return "preserve-design";
+  return "adapt-content";
 }
 
 export function defaultRemixPrompt(mode: RemixMode): string {
   return mode === "adapt-content"
-    ? "Adapt this layout for my brand"
-    : "Apply my brand colors and logo to this design";
+    ? "Adapt this template for my brand—replace all text and apply my colors and logo."
+    : "Adapt this template for my brand—replace all visible text, then apply my colors and logo.";
 }
