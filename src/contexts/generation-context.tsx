@@ -36,6 +36,7 @@ import {
   getMessageText,
   isMeaningfulChatHistory,
 } from "@/lib/generation/chat-history";
+import { parseAssistantMessage } from "@/lib/generation/parse-assistant-message";
 import { selectCategoryMatchedLibraryReferences } from "@/lib/library/reference-selection";
 import { getLibraryTemplate } from "@/lib/library/templates";
 import {
@@ -45,6 +46,18 @@ import {
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+function findLatestImageResultInMessages(
+  msgs: IdentiqUIMessage[],
+): ImageResultData | null {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const message = msgs[i];
+    if (message.role !== "assistant") continue;
+    const { imageResult } = parseAssistantMessage(message);
+    if (imageResult) return imageResult;
+  }
+  return null;
+}
 
 export type IdeasView = "grid" | "chat";
 
@@ -201,6 +214,17 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const lastReportedErrorRef = useRef<string | null>(null);
   const submitInFlightRef = useRef(false);
   const generationLockedRef = useRef(false);
+  const latestImageResultRef = useRef<ImageResultData | null>(null);
+  const sendMessageRef = useRef<
+    ReturnType<typeof useChat<IdentiqUIMessage>>["sendMessage"] | null
+  >(null);
+  const stopRef = useRef<ReturnType<typeof useChat<IdentiqUIMessage>>["stop"] | null>(
+    null,
+  );
+  const setMessagesRef = useRef<
+    ReturnType<typeof useChat<IdentiqUIMessage>>["setMessages"] | null
+  >(null);
+  const streamInterruptedRef = useRef(false);
   const libraryRemixSessionKeyRef = useRef<string | null>(null);
   const pendingChatHydrationRef = useRef<{
     chatId: string;
@@ -402,6 +426,41 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     ],
   );
 
+  const recoverActiveChat = useCallback(async (): Promise<boolean> => {
+    if (latestImageResultRef.current) return true;
+
+    const chatId = activeChatIdRef.current;
+    if (!chatId) return false;
+
+    try {
+      const res = await fetch(`/api/ideas/chats/${chatId}`, {
+        credentials: "same-origin",
+      });
+      if (!res.ok) return false;
+
+      const data = (await res.json()) as {
+        chat: { messages: IdentiqUIMessage[] };
+      };
+      const loadedMessages = data.chat.messages ?? [];
+      const imageResult = findLatestImageResultInMessages(loadedMessages);
+      if (!imageResult) return false;
+
+      setMessagesRef.current?.(loadedMessages);
+      latestImageResultRef.current = imageResult;
+      setLatestImageResult(imageResult);
+      setGenerationPhase("done");
+      setGenerationError(null);
+      lastReportedErrorRef.current = null;
+      setIsStartingGeneration(false);
+      setPendingUserTurnText(null);
+      setGenerationStartedAt(null);
+      streamInterruptedRef.current = false;
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const { messages, sendMessage, stop, status, setMessages } =
     useChat<IdentiqUIMessage>({
       id: activeChatId ?? undefined,
@@ -411,15 +470,29 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setIsStartingGeneration(false);
         setPendingUserTurnText(null);
         setGenerationStartedAt(null);
-        setGenerationPhase(isAbort ? "stopped" : isError ? "error" : "done");
         lastPresetPhaseRef.current = null;
-        if (isError && !lastReportedErrorRef.current) {
-          reportGenerationError("Generation failed");
-        } else if (!isAbort && !isError) {
+
+        const hasLocalResult =
+          Boolean(latestImageResultRef.current) ||
+          Boolean(findLatestImageResultInMessages(finishedMessages));
+        const treatAsSuccess = hasLocalResult && !isAbort;
+
+        setGenerationPhase(
+          isAbort ? "stopped" : isError && !treatAsSuccess ? "error" : "done",
+        );
+
+        if (isError && !treatAsSuccess && !lastReportedErrorRef.current) {
+          void recoverActiveChat().then((recovered) => {
+            if (recovered) return;
+            reportGenerationError("Generation failed");
+          });
+        } else if (!isAbort && (!isError || treatAsSuccess)) {
           setGenerationError(null);
           lastReportedErrorRef.current = null;
+          streamInterruptedRef.current = false;
         }
-        if (!isAbort && !isError) {
+
+        if (!isAbort && (!isError || treatAsSuccess)) {
           const remixing = Boolean(libraryTemplateIdRef.current);
           showSuccessToast(
             remixing
@@ -433,7 +506,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             },
           );
         }
-        if (!isAbort && !isError && pendingTokenCostRef.current > 0) {
+        if (!isAbort && (!isError || treatAsSuccess) && pendingTokenCostRef.current > 0) {
           void refreshBalance();
           pendingTokenCostRef.current = 0;
         }
@@ -474,6 +547,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
         if (dataPart.type === "data-image-result") {
           const data = dataPart.data as ImageResultData;
+          latestImageResultRef.current = data;
           setLatestImageResult(data);
           if (registeredJobsRef.current.has(data.jobId)) return;
           registeredJobsRef.current.add(data.jobId);
@@ -509,6 +583,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         }
       },
       onError: (err) => {
+        streamInterruptedRef.current = true;
         setIsStartingGeneration(false);
         setPendingUserTurnText(null);
         setGenerationStartedAt(null);
@@ -518,13 +593,53 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           /timeout|timed out|failed to fetch|network|load failed|aborted/i.test(
             raw,
           );
-        reportGenerationError(
-          timedOut
-            ? "The request took too long. Try again with one preset or 1K resolution."
-            : raw || "Generation failed",
-        );
+
+        if (latestImageResultRef.current) {
+          setGenerationPhase("done");
+          setGenerationError(null);
+          lastReportedErrorRef.current = null;
+          streamInterruptedRef.current = false;
+          return;
+        }
+
+        void recoverActiveChat().then((recovered) => {
+          if (recovered) return;
+          reportGenerationError(
+            timedOut
+              ? "The request took too long. Try again with one preset or 1K resolution."
+              : raw || "Generation failed",
+          );
+        });
       },
     });
+
+  sendMessageRef.current = sendMessage;
+  stopRef.current = stop;
+  setMessagesRef.current = setMessages;
+
+  useEffect(() => {
+    latestImageResultRef.current = latestImageResult;
+  }, [latestImageResult]);
+
+  useEffect(() => {
+    if (status === "submitted" || status === "streaming") {
+      streamInterruptedRef.current = false;
+    }
+  }, [status]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!streamInterruptedRef.current) return;
+      if (latestImageResultRef.current) return;
+      void recoverActiveChat();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [recoverActiveChat]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -1046,6 +1161,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setPendingUserTurnText(chatMessageText);
       setView("chat");
       setGenerationError(null);
+      latestImageResultRef.current = null;
       setLatestImageResult(null);
       setGenerationStartedAt(Date.now());
       setGenerationPhase(
@@ -1066,7 +1182,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         reportGenerationError("Could not start chat session. Please try again.");
         return;
       }
-      await sendMessage(
+      await sendMessageRef.current!(
         {
           text: chatMessageText,
           metadata: {
@@ -1096,7 +1212,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     resolution,
     availableTokens,
     buildGenerationBody,
-    sendMessage,
     ensureChatSession,
     hasActiveBrand,
     isLoading,
@@ -1108,14 +1223,14 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   ]);
 
   const stopGeneration = useCallback(() => {
-    stop();
+    stopRef.current?.();
     pendingTokenCostRef.current = 0;
     setIsStartingGeneration(false);
     setPendingUserTurnText(null);
     setGenerationStartedAt(null);
     setGenerationPhase("stopped");
     lastPresetPhaseRef.current = null;
-  }, [stop]);
+  }, []);
 
   const setAspectRatioGuarded = useCallback((value: AspectRatio) => {
     if (generationLockedRef.current) return;
@@ -1139,15 +1254,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const closeChat = useCallback(() => {
     if (isGenerating) {
-      stop();
+      stopRef.current?.();
       pendingTokenCostRef.current = 0;
     }
     setGenerationStartedAt(null);
     setLibraryTemplateId(null);
+    latestImageResultRef.current = null;
     setLatestImageResult(null);
     setFooterComposerExpanded(true);
     setView("grid");
-  }, [isGenerating, stop, setLibraryTemplateId]);
+  }, [isGenerating, setLibraryTemplateId]);
 
   const value = useMemo(
     () => ({

@@ -27,7 +27,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         dispatchAuthSignedOut();
         return;
       }
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED fires when the tab regains focus — do not remount the
+      // tree or refetch providers; that aborts long-running generation streams.
+      if (event === "SIGNED_IN") {
         dispatchAuthSignedIn();
         router.refresh();
       }
