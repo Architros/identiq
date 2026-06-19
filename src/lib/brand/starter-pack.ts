@@ -1,6 +1,7 @@
 import {
   ASSET_CATALOG,
   expandAssetSelections,
+  getGeneratableAssetCount,
   getTotalSelectedAssets,
   type AssetCatalogItem,
 } from "@/lib/brand/asset-catalog";
@@ -48,9 +49,12 @@ export function catalogItemToStarterItem(
 
 export function calculateStarterPackTokenCost(
   selections?: Record<string, number>,
+  options?: { hasUploadedLogo?: boolean },
 ): number {
-  const normalized = selections ?? {};
-  const assetCount = getTotalSelectedAssets(normalized);
+  const assetCount = getGeneratableAssetCount(
+    selections ?? {},
+    options?.hasUploadedLogo,
+  );
   return (
     ORCHESTRATION_TOKEN_COST +
     assetCount * STARTER_PACK_PER_ASSET_TOKEN_COST
@@ -63,4 +67,8 @@ export function calculateStarterPackTokenCostLegacy(): number {
   );
 }
 
-export { expandAssetSelections, getTotalSelectedAssets };
+export {
+  expandAssetSelections,
+  getGeneratableAssetCount,
+  getTotalSelectedAssets,
+};

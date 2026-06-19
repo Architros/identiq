@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
   emailSchema,
@@ -6,6 +8,25 @@ import {
   normalizeEmail,
   otpTokenSchema,
 } from "./email-otp.js";
+
+const TEMPLATE_DIR = path.join(
+  process.cwd(),
+  "docs/supabase-email-templates",
+);
+
+describe("supabase auth email templates", () => {
+  for (const file of [
+    "magic-link.html",
+    "confirm-signup.html",
+    "recovery.html",
+  ]) {
+    it(`${file} is OTP-only (Token, no ConfirmationURL)`, () => {
+      const content = fs.readFileSync(path.join(TEMPLATE_DIR, file), "utf8");
+      assert.match(content, /\{\{\s*\.Token\s*\}\}/);
+      assert.doesNotMatch(content, /ConfirmationURL/);
+    });
+  }
+});
 
 describe("normalizeEmail", () => {
   it("trims and lowercases", () => {

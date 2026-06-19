@@ -6,6 +6,7 @@ import { AttachmentDropzone } from "@/components/brand-create/attachment-dropzon
 import { LogoUpload } from "@/components/brand-create/logo-upload";
 import { VisualInspirationHint } from "@/components/brand-create/visual-inspiration-hint";
 import { getDraftReferenceImageUrls } from "@/lib/brand/draft-media";
+import type { BrandAttachment } from "@/lib/brand/brand-project-draft";
 
 export function StepAttachments() {
   const { draft, updateDraft } = useBrandWizard();
@@ -14,12 +15,28 @@ export function StepAttachments() {
     [draft],
   );
 
+  const handleLogoChange = (logo: BrandAttachment | null) => {
+    const patch: Parameters<typeof updateDraft>[0] = { logo };
+    if (logo?.url && !logo.uploading && !logo.uploadError) {
+      patch.assetSelections = {
+        ...draft.assetSelections,
+        "brand-logo": 0,
+      };
+    } else if (!logo && (draft.assetSelections["brand-logo"] ?? 0) === 0) {
+      patch.assetSelections = {
+        ...draft.assetSelections,
+        "brand-logo": 1,
+      };
+    }
+    updateDraft(patch);
+  };
+
   return (
     <div className="space-y-6">
       <LogoUpload
         draftId={draft.id}
         logo={draft.logo}
-        onChange={(logo) => updateDraft({ logo })}
+        onChange={handleLogoChange}
       />
 
       <div className="space-y-4">

@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useCredits } from "@/contexts/credits-context";
-import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
+import { getGeneratableAssetCount } from "@/lib/brand/asset-catalog";
 import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
 import { showErrorToast } from "@/lib/toast/show-toast";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -56,14 +57,19 @@ export function BrandWizardShell() {
   const [reviewFinishError, setReviewFinishError] = useState(false);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
 
+  const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
+
   const totalAssets = useMemo(
-    () => getTotalSelectedAssets(draft.assetSelections),
-    [draft.assetSelections],
+    () => getGeneratableAssetCount(draft.assetSelections, hasUploadedLogo),
+    [draft.assetSelections, hasUploadedLogo],
   );
 
   const totalTokenCost = useMemo(
-    () => calculateStarterPackTokenCost(draft.assetSelections),
-    [draft.assetSelections],
+    () =>
+      calculateStarterPackTokenCost(draft.assetSelections, {
+        hasUploadedLogo,
+      }),
+    [draft.assetSelections, hasUploadedLogo],
   );
 
   const canAffordReview = availableTokens >= totalTokenCost;

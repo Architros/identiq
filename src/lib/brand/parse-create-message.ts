@@ -9,6 +9,7 @@ import type {
 } from "@/lib/brand/create-stream-types";
 import {
   expandAssetSelections,
+  getEffectiveAssetSelections,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
 import type { AspectRatio } from "@/lib/generation/presets";
@@ -57,9 +58,10 @@ export function parseCreateMessage(message: UIMessage): ParsedCreateStream {
 export function buildInitialAssetProgress(
   selections: Record<string, number>,
   aspectOverrides?: Record<string, AspectRatio>,
+  options?: { hasUploadedLogo?: boolean },
 ): AssetProgressData[] {
   const jobs = expandAssetSelections(
-    normalizeAssetSelections(selections),
+    getEffectiveAssetSelections(selections, options),
     aspectOverrides,
   );
   return jobs.map((job, index) => ({

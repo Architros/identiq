@@ -112,6 +112,25 @@ export function getTotalSelectedAssets(
   );
 }
 
+/** Selections with logo generation removed when the user already uploaded a logo. */
+export function getEffectiveAssetSelections(
+  selections: Record<string, number>,
+  options?: { hasUploadedLogo?: boolean },
+): Record<string, number> {
+  const normalized = normalizeAssetSelections(selections);
+  if (!options?.hasUploadedLogo) return normalized;
+  return { ...normalized, "brand-logo": 0 };
+}
+
+export function getGeneratableAssetCount(
+  selections: Record<string, number>,
+  hasUploadedLogo?: boolean,
+): number {
+  return getTotalSelectedAssets(
+    getEffectiveAssetSelections(selections, { hasUploadedLogo }),
+  );
+}
+
 export function resolveJobAspectRatio(
   item: AssetCatalogItem,
   overrides?: Record<string, AspectRatio>,

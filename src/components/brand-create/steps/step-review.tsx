@@ -17,6 +17,7 @@ import { ReviewTokenSummary } from "@/components/brand-create/review/review-toke
 import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
 import { summarizeAttachments } from "@/lib/brand/attachment-utils";
 import { attachmentDisplayUrl } from "@/lib/storage/upload-client";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 
 type StepReviewProps = {
   showFinishError?: boolean;
@@ -42,6 +43,8 @@ export function StepReview({
         : "No files",
     [draft.attachments],
   );
+
+  const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
 
   return (
     <div className="space-y-8">
@@ -146,11 +149,15 @@ export function StepReview({
       </ReviewSection>
 
       <ReviewSection title="Brand assets" onEdit={() => editFromReview(6)}>
-        <ReviewBrandAssets assetSelections={draft.assetSelections} />
+        <ReviewBrandAssets
+          assetSelections={draft.assetSelections}
+          hasUploadedLogo={hasUploadedLogo}
+        />
       </ReviewSection>
 
       <ReviewTokenSummary
         assetSelections={draft.assetSelections}
+        hasUploadedLogo={hasUploadedLogo}
         showError={showFinishError}
       />
     </div>

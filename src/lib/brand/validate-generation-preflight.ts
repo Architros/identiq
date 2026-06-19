@@ -1,9 +1,10 @@
 import {
-  getTotalSelectedAssets,
+  getGeneratableAssetCount,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
 import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 
 export type GenerationPreflightResult =
   | { ok: true; assetCount: number; tokenCost: number }
@@ -68,15 +69,18 @@ export function validateGenerationPreflight(
   }
 
   const selections = normalizeAssetSelections(draft.assetSelections);
-  const assetCount = getTotalSelectedAssets(selections);
-  if (assetCount === 0) {
+  const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
+  const assetCount = getGeneratableAssetCount(selections, hasUploadedLogo);
+  if (assetCount === 0 && !hasUploadedLogo) {
     return {
       ok: false,
       message: "Select at least one asset to generate.",
     };
   }
 
-  const tokenCost = calculateStarterPackTokenCost(selections);
+  const tokenCost = calculateStarterPackTokenCost(selections, {
+    hasUploadedLogo,
+  });
   if (availableTokens < tokenCost) {
     return {
       ok: false,

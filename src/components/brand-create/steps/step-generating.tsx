@@ -83,6 +83,7 @@ export function StepGenerating() {
     buildInitialAssetProgress(
       draft.assetSelections,
       draft.assetAspectOverrides,
+      { hasUploadedLogo: Boolean(getDraftLogoUrl(draft)) },
     ),
   );
   const itemsRef = useRef<AssetProgressData[]>(items);
@@ -226,12 +227,30 @@ export function StepGenerating() {
           });
         }
 
-        const failedAssets = itemsRef.current.filter((item) => item.status === "error");
-        if (failedAssets.length > 0 || generated.length === 0) {
+        const failedAssets = itemsRef.current.filter(
+          (item) => item.status === "error",
+        );
+        const expectedJobs = itemsRef.current;
+        const hasUploadedLogo = Boolean(uploadedLogoUrl);
+
+        if (failedAssets.length > 0) {
           throw new Error(
-            failedAssets.length > 0
-              ? "Generation failed for one or more assets. Review and try again."
-              : "Generation did not return assets. Please try again.",
+            "Generation failed for one or more assets. Review and try again.",
+          );
+        }
+
+        if (expectedJobs.length > 0) {
+          const savedJobs = expectedJobs.filter(
+            (item) => item.status === "saved",
+          );
+          if (savedJobs.length < expectedJobs.length || generated.length === 0) {
+            throw new Error(
+              "Generation did not return assets. Please try again.",
+            );
+          }
+        } else if (!hasUploadedLogo) {
+          throw new Error(
+            "Generation did not return assets. Please try again.",
           );
         }
 
@@ -372,6 +391,7 @@ export function StepGenerating() {
       buildInitialAssetProgress(
         draft.assetSelections,
         draft.assetAspectOverrides,
+        { hasUploadedLogo: Boolean(getDraftLogoUrl(draft)) },
       ),
     );
     setBrandMemory(null);

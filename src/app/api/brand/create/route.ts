@@ -10,6 +10,7 @@ import { getActiveImageModelId } from "@/lib/ai/providers";
 import { orchestrateBrandMemoryFromWizard } from "@/lib/brand/orchestrate-from-wizard";
 import {
   expandAssetSelections,
+  getEffectiveAssetSelections,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
 import { wizardOrchestrateInputSchema } from "@/lib/brand/brand-memory-schema";
@@ -67,7 +68,11 @@ export async function POST(request: Request) {
   }
 
   const input = parsed.data;
-  const selections = normalizeAssetSelections(input.assetSelections);
+  const hasUploadedLogo = Boolean(input.logoUrl);
+  const selections = getEffectiveAssetSelections(
+    normalizeAssetSelections(input.assetSelections),
+    { hasUploadedLogo },
+  );
   const jobs = sortStarterPackJobs(
     expandAssetSelections(selections, input.assetAspectOverrides),
   );
@@ -80,11 +85,7 @@ export async function POST(request: Request) {
     logoUrlRef.current = input.logoUrl;
   }
 
-  const jobsToRun = input.logoUrl
-    ? jobs.filter((j) => j.item.id !== "brand-logo")
-    : jobs;
-
-  if (jobsToRun.length === 0 && !input.logoUrl) {
+  if (jobs.length === 0 && !hasUploadedLogo) {
     return new Response(
       JSON.stringify({ error: "Select at least one asset to generate" }),
       { status: 400 },
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
       const plan = await planStarterPackPrompts(
         input,
         memory,
-        jobsToRun,
+        jobs,
         abortSignal,
       );
       const plannedByKey = plannedJobsByKey(plan);
@@ -193,12 +194,12 @@ export async function POST(request: Request) {
         id: statusId,
         data: {
           phase: "generating",
-          message: `Generating ${jobsToRun.length} asset${jobsToRun.length === 1 ? "" : "s"}…`,
+          message: `Generating ${jobs.length} asset${jobs.length === 1 ? "" : "s"}…`,
         },
       });
 
-      for (let index = 0; index < jobsToRun.length; index++) {
-        const job = jobsToRun[index]!;
+      for (let index = 0; index < jobs.length; index++) {
+        const job = jobs[index]!;
         const planned = plannedByKey.get(job.jobKey);
         const progress: AssetProgressData = {
           index,
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
       };
 
       await runStarterPackJobsLogoFirst({
-        jobs: jobsToRun,
+        jobs,
         plannedByKey,
         brandId,
         brand: brandContext,

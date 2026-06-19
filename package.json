@@ -10,6 +10,7 @@
     "test": "node --import tsx --test \"src/lib/**/*.test.ts\"",
     "library:sync": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts",
     "library:sync:brand-assets": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts",
+    "auth:templates:sync": "node --env-file=.env.local --import tsx scripts/sync-supabase-auth-templates.ts",
     "stripe:listen": "node --env-file=.env.local --import tsx scripts/stripe-listen.ts",
     "stripe": "node --env-file=.env.local --import tsx scripts/stripe-cli.ts"
   },

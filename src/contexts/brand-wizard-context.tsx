@@ -30,7 +30,7 @@ import {
   getDraftReferenceImageUrls,
 } from "@/lib/brand/draft-media";
 import { normalizeBrandDraft } from "@/lib/brand/normalize-draft";
-import { getTotalSelectedAssets } from "@/lib/brand/asset-catalog";
+import { getGeneratableAssetCount } from "@/lib/brand/asset-catalog";
 import type { WizardOrchestrateInput } from "@/lib/brand/brand-memory-schema";
 import { runDraftAttachmentUploads } from "@/lib/brand/draft-attachment-uploads";
 import {
@@ -151,8 +151,14 @@ export function validateWizardStep(
       return null;
     }
     case 6: {
-      const total = getTotalSelectedAssets(draft.assetSelections);
-      if (total === 0) return "Select at least one asset to generate";
+      const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
+      const total = getGeneratableAssetCount(
+        draft.assetSelections,
+        hasUploadedLogo,
+      );
+      if (total === 0 && !hasUploadedLogo) {
+        return "Select at least one asset to generate";
+      }
       return null;
     }
     case 7:

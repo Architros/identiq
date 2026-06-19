@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useBrandWizard } from "@/contexts/brand-wizard-context";
 import {
   ASSET_CATALOG,
+  getGeneratableAssetCount,
   resolveJobAspectRatio,
   type AssetCatalogCategory,
 } from "@/lib/brand/asset-catalog";
@@ -12,6 +13,7 @@ import {
   STARTER_PACK_PER_ASSET_TOKEN_COST,
   calculateStarterPackTokenCost,
 } from "@/lib/brand/starter-pack";
+import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { useCredits } from "@/contexts/credits-context";
 import type { AspectRatio } from "@/lib/generation/presets";
 import { cn } from "@/lib/utils";
@@ -27,19 +29,19 @@ const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
 export function StepAssets() {
   const { draft, updateDraft } = useBrandWizard();
   const { availableTokens } = useCredits();
+  const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
 
   const totalCost = useMemo(
-    () => calculateStarterPackTokenCost(draft.assetSelections),
-    [draft.assetSelections],
+    () =>
+      calculateStarterPackTokenCost(draft.assetSelections, {
+        hasUploadedLogo,
+      }),
+    [draft.assetSelections, hasUploadedLogo],
   );
 
   const totalAssets = useMemo(
-    () =>
-      Object.values(draft.assetSelections).reduce(
-        (n, q) => n + (q > 0 ? q : 0),
-        0,
-      ),
-    [draft.assetSelections],
+    () => getGeneratableAssetCount(draft.assetSelections, hasUploadedLogo),
+    [draft.assetSelections, hasUploadedLogo],
   );
 
   const setQuantity = (itemId: string, quantity: number) => {
@@ -70,10 +72,11 @@ export function StepAssets() {
       advertising: [],
     };
     for (const item of ASSET_CATALOG) {
+      if (hasUploadedLogo && item.id === "brand-logo") continue;
       groups[item.category].push(item);
     }
     return groups;
-  }, []);
+  }, [hasUploadedLogo]);
 
   return (
     <div className="space-y-8">
@@ -82,6 +85,12 @@ export function StepAssets() {
           Choose what to generate and how many of each. You pay per image from
           your token balance — mix and match freely.
         </p>
+        {hasUploadedLogo ? (
+          <p className="mt-2 text-xs text-muted">
+            Your uploaded logo is used as the brand mark — logo generation is not
+            included.
+          </p>
+        ) : null}
         <p className="mt-2 text-xs text-muted">
           {availableTokens} tokens available · {totalAssets} asset
           {totalAssets === 1 ? "" : "s"} selected · {totalCost} tokens to be

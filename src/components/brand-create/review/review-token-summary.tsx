@@ -8,12 +8,16 @@ import {
   STARTER_PACK_PER_ASSET_TOKEN_COST,
   calculateStarterPackTokenCost,
 } from "@/lib/brand/starter-pack";
-import { ASSET_CATALOG } from "@/lib/brand/asset-catalog";
+import {
+  ASSET_CATALOG,
+  getEffectiveAssetSelections,
+} from "@/lib/brand/asset-catalog";
 import { useCredits } from "@/contexts/credits-context";
 import { cn } from "@/lib/utils";
 
 type ReviewTokenSummaryProps = {
   assetSelections: Record<string, number>;
+  hasUploadedLogo?: boolean;
   showError?: boolean;
 };
 
@@ -28,22 +32,27 @@ function TokenAmount({ value }: { value: number }) {
 
 export function ReviewTokenSummary({
   assetSelections,
+  hasUploadedLogo = false,
   showError,
 }: ReviewTokenSummaryProps) {
   const { availableTokens, openBuyTokens } = useCredits();
 
   const totalCost = useMemo(
-    () => calculateStarterPackTokenCost(assetSelections),
-    [assetSelections],
+    () =>
+      calculateStarterPackTokenCost(assetSelections, { hasUploadedLogo }),
+    [assetSelections, hasUploadedLogo],
   );
 
   const selectedAssets = useMemo(() => {
+    const effective = getEffectiveAssetSelections(assetSelections, {
+      hasUploadedLogo,
+    });
     return ASSET_CATALOG.flatMap((item) => {
-      const qty = assetSelections[item.id] ?? 0;
+      const qty = effective[item.id] ?? 0;
       if (qty <= 0) return [];
       return [{ item, qty }];
     });
-  }, [assetSelections]);
+  }, [assetSelections, hasUploadedLogo]);
 
   const canAfford = availableTokens >= totalCost;
   const remaining = availableTokens - totalCost;

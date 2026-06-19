@@ -4,47 +4,44 @@ import {
   OTP_SEND_SUCCESS_MESSAGE,
   type OtpPurpose,
 } from "@/lib/auth/email-otp";
-import { getBrowserAuthOrigin } from "@/lib/auth/site-url";
-import { createClient } from "@/lib/supabase/client";
 
 export type SendEmailOtpResult =
   | { ok: true; message: string }
   | { ok: false; error: string };
 
-function recoveryRedirectTo(): string {
-  const origin = getBrowserAuthOrigin();
-  return `${origin}/auth/callback?next=${encodeURIComponent("/login")}`;
-}
-
 /**
- * Sends a 6-digit email OTP via Supabase.
- * - signup: Magic Link template (`signInWithOtp`, creates user if needed)
- * - recovery: Reset password template (`resetPasswordForEmail` — avoids 422 from
- *   `signInWithOtp` + `shouldCreateUser: false` on existing accounts)
- *
- * Both templates must include `{{ .Token }}` in Supabase Dashboard.
+ * Requests a 6-digit email OTP via `POST /api/auth/otp/send`.
+ * Server uses Supabase without `emailRedirectTo` so templates can send codes only.
  */
 export async function sendEmailOtp(
   email: string,
   purpose: OtpPurpose,
 ): Promise<SendEmailOtpResult> {
-  const supabase = createClient();
   const normalized = normalizeEmail(email);
 
-  const { error } =
-    purpose === "recovery"
-      ? await supabase.auth.resetPasswordForEmail(normalized, {
-          redirectTo: recoveryRedirectTo(),
-        })
-      : await supabase.auth.signInWithOtp({
-          email: normalized,
-          options: {
-            shouldCreateUser: true,
-          },
-        });
+  let response: Response;
+  try {
+    response = await fetch("/api/auth/otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: normalized, purpose }),
+    });
+  } catch {
+    return {
+      ok: false,
+      error: "Could not send a verification code. Check your connection and try again.",
+    };
+  }
 
-  if (error) {
-    const mapped = mapOtpSendError(error.message, purpose);
+  let body: { error?: string } = {};
+  try {
+    body = (await response.json()) as { error?: string };
+  } catch {
+    // ignore parse errors
+  }
+
+  if (!response.ok) {
+    const mapped = mapOtpSendError(body.error ?? "Request failed", purpose);
     return { ok: false, error: mapped.error };
   }
 

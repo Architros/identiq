@@ -14,9 +14,13 @@ import { ASSET_CATEGORY_LABELS } from "@/lib/brand/asset-category-labels";
 
 type ReviewBrandAssetsProps = {
   assetSelections: Record<string, number>;
+  hasUploadedLogo?: boolean;
 };
 
-export function ReviewBrandAssets({ assetSelections }: ReviewBrandAssetsProps) {
+export function ReviewBrandAssets({
+  assetSelections,
+  hasUploadedLogo = false,
+}: ReviewBrandAssetsProps) {
   const grouped = useMemo(() => {
     const groups: Record<
       AssetCatalogCategory,
@@ -28,12 +32,13 @@ export function ReviewBrandAssets({ assetSelections }: ReviewBrandAssetsProps) {
     };
 
     for (const item of ASSET_CATALOG) {
+      if (hasUploadedLogo && item.id === "brand-logo") continue;
       const qty = assetSelections[item.id] ?? 0;
       if (qty <= 0) continue;
       groups[item.category].push({ item, qty });
     }
     return groups;
-  }, [assetSelections]);
+  }, [assetSelections, hasUploadedLogo]);
 
   const presetIcons = useMemo(
     () => Object.fromEntries(generationPresets.map((p) => [p.id, p.platformIcon])),
@@ -42,7 +47,13 @@ export function ReviewBrandAssets({ assetSelections }: ReviewBrandAssetsProps) {
 
   const hasAny = Object.values(grouped).some((g) => g.length > 0);
   if (!hasAny) {
-    return <p className="text-sm text-destructive">No assets selected</p>;
+    return (
+      <p className="text-sm text-muted">
+        {hasUploadedLogo
+          ? "Your uploaded logo will be used — add social or ad assets below if you want more generated images."
+          : "No assets selected"}
+      </p>
+    );
   }
 
   return (

@@ -7,7 +7,6 @@ import {
   normalizeEmail,
   otpPurposeSchema,
 } from "@/lib/auth/email-otp";
-import { getServerSiteUrl } from "@/lib/auth/site-url";
 import { createAnonClient } from "@/lib/supabase/anon";
 
 const bodySchema = z.object({
@@ -19,6 +18,11 @@ function emailHash(email: string): string {
   return createHash("sha256").update(email).digest("hex").slice(0, 16);
 }
 
+/**
+ * Sends email OTP codes via Supabase. Templates must use `{{ .Token }}` only —
+ * never `{{ .ConfirmationURL }}`, or users receive magic links instead of codes.
+ * Sync templates with: npm run auth:templates:sync
+ */
 export async function POST(request: Request) {
   let email: string;
   let purpose: z.infer<typeof otpPurposeSchema>;
@@ -40,12 +44,9 @@ export async function POST(request: Request) {
   try {
     const supabase = createAnonClient();
 
-    const recoveryRedirect = `${getServerSiteUrl()}/auth/callback?next=${encodeURIComponent("/login")}`;
     const { error } =
       purpose === "recovery"
-        ? await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: recoveryRedirect,
-          })
+        ? await supabase.auth.resetPasswordForEmail(email)
         : await supabase.auth.signInWithOtp({
             email,
             options: {

@@ -24,7 +24,7 @@ describe("periodEndFromStripeSubscription", () => {
     const sub = {
       items: { data: [] },
       current_period_end: unix,
-    } as Stripe.Subscription & { current_period_end: number };
+    } as unknown as Stripe.Subscription & { current_period_end: number };
 
     const end = periodEndFromStripeSubscription(sub, "monthly");
     assert.equal(end.toISOString(), new Date(unix * 1000).toISOString());
