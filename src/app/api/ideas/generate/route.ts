@@ -24,7 +24,9 @@ import type { AspectRatio } from "@/lib/generation/presets";
 import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
 import { userOwnsIdeasChat } from "@/lib/db/repositories/ideas-chats";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
+
+const ORCHESTRATION_TIMEOUT_MS = 45_000;
 
 type PresetGenerationRun = {
   presetId?: string;
@@ -212,7 +214,13 @@ export async function POST(request: Request) {
           id: statusId,
           data: { phase: "orchestrating" },
         });
+        let orchestrationTimeout: ReturnType<typeof setTimeout> | undefined;
         try {
+          const orchestrationAbort = new AbortController();
+          orchestrationTimeout = setTimeout(
+            () => orchestrationAbort.abort(),
+            ORCHESTRATION_TIMEOUT_MS,
+          );
           const orchestration = streamOrchestratePrompt({
             basePrompt,
             brandMemory: gen.brandMemory,
@@ -221,7 +229,10 @@ export async function POST(request: Request) {
             userPrompt: gen.userPrompt,
             imageAssist: gen.imageAssist,
             referenceImageUrls,
-            abortSignal,
+            abortSignal: AbortSignal.any([
+              abortSignal,
+              orchestrationAbort.signal,
+            ]),
           });
 
           writer.merge(orchestration.toUIMessageStream());
@@ -260,6 +271,8 @@ export async function POST(request: Request) {
             delta: basePrompt,
           });
           writer.write({ type: "text-end", id: fallbackId });
+        } finally {
+          if (orchestrationTimeout) clearTimeout(orchestrationTimeout);
         }
       }
 

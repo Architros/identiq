@@ -30,11 +30,15 @@ export function ChatMessageList({
     quantity,
     referenceImages,
     submitGeneration,
+    pendingUserTurnText,
   } = useGeneration();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const isLibraryRemix = Boolean(libraryTemplateId);
   const lastMessage = messages[messages.length - 1];
+  const showPendingUserTurn =
+    Boolean(pendingUserTurnText?.trim()) &&
+    (messages.length === 0 || lastMessage?.role !== "user");
   const hasPendingGenerationPhase =
     generationPhase !== null &&
     generationPhase !== "error" &&
@@ -42,7 +46,7 @@ export function ChatMessageList({
     generationPhase !== "stopped";
   const showInlineProgress =
     (isGenerating || hasPendingGenerationPhase) &&
-    (!lastMessage || lastMessage.role === "user");
+    (showPendingUserTurn || !lastMessage || lastMessage.role === "user");
   const showInlineFailure =
     !isGenerating &&
     (generationPhase === "error" || Boolean(generationError?.trim())) &&
@@ -116,6 +120,14 @@ export function ChatMessageList({
         )}
       >
         {showWelcome ? <ChatWelcomeEmpty /> : null}
+
+        {showPendingUserTurn ? (
+          <div className="flex justify-end">
+            <div className="max-w-xl rounded-2xl bg-accent px-4 py-2.5 text-sm text-white">
+              {pendingUserTurnText}
+            </div>
+          </div>
+        ) : null}
 
         {showRemixCanvas ? (
           <RemixResultCanvas

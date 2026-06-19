@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -25,16 +26,47 @@ export function BrandDetailsAiDock({
 }: BrandDetailsAiDockProps) {
   const [direction, setDirection] = useState("");
 
+  useEffect(() => {
+    if (!target) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [target, onClose]);
+
+  useEffect(() => {
+    if (!target) setDirection("");
+  }, [target]);
+
   if (!target) return null;
 
   const basePrompt = `Refine the ${target.fieldLabel.toLowerCase()} for ${brandName}. Current value:\n\n${target.value}`;
 
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-6 pt-16 pointer-events-none">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center p-4 pb-6 sm:items-center sm:pb-8"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Edit with AI"
+    >
+      <button
+        type="button"
+        className="fixed inset-0 cursor-pointer bg-foreground/55 backdrop-blur-sm"
+        aria-label="Close AI editor"
+        onClick={onClose}
+      />
+
       <div
         className={cn(
-          "pointer-events-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.12)]",
+          "relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
         )}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -116,6 +148,7 @@ export function BrandDetailsAiDock({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

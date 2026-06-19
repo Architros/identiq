@@ -204,8 +204,7 @@ export function BrandDetailsPageContent() {
     <>
       <div
         className={cn(
-          "mx-auto w-full max-w-4xl space-y-8 px-6 pt-6 lg:px-8 lg:pt-8",
-          aiTarget ? "pb-52" : "pb-16",
+          "mx-auto w-full max-w-4xl space-y-8 px-6 pt-6 pb-16 lg:px-8 lg:pt-8",
         )}
       >
         <SoftSection title="Identity">

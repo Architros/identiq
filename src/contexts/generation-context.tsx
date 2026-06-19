@@ -69,6 +69,10 @@ type GenerationContextValue = {
   messages: IdentiqUIMessage[];
   chatStatus: "submitted" | "streaming" | "ready" | "error";
   isGenerating: boolean;
+  /** True from Create click until the generate stream connects. */
+  isStartingGeneration: boolean;
+  /** User turn shown immediately while the stream connects. */
+  pendingUserTurnText: string | null;
   activeChatId: string | null;
   chatTitle: string;
   generationStartedAt: number | null;
@@ -118,7 +122,7 @@ async function persistChatMessages(
   chatId: string,
   messages: IdentiqUIMessage[],
   options?: { title?: string; settingsSnapshot?: Record<string, unknown> },
-): Promise<{ removed?: boolean; title?: string } | null> {
+): Promise<{ removed?: boolean; title?: string; notFound?: boolean } | null> {
   const res = await fetch(`/api/ideas/chats/${chatId}/messages`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -130,6 +134,9 @@ async function persistChatMessages(
     }),
   });
   if (!res.ok) {
+    if (res.status === 404) {
+      return { notFound: true as const };
+    }
     console.warn("[ideas/chat] could not persist messages", res.status);
     return null;
   }
@@ -180,6 +187,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [latestImageResult, setLatestImageResult] =
     useState<ImageResultData | null>(null);
   const [footerComposerExpanded, setFooterComposerExpanded] = useState(true);
+  const [isStartingGeneration, setIsStartingGeneration] = useState(false);
+  const [pendingUserTurnText, setPendingUserTurnText] = useState<string | null>(
+    null,
+  );
   const lastPresetPhaseRef = useRef<string | null>(null);
 
   const pendingTokenCostRef = useRef(0);
@@ -364,6 +375,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           title: resolvedTitle,
           settingsSnapshot: settingsSnapshot(),
         });
+        if (result?.notFound) {
+          setActiveChatId(null);
+          activeChatIdRef.current = null;
+          return;
+        }
         if (result?.removed) {
           setActiveChatId(null);
           activeChatIdRef.current = null;
@@ -392,6 +408,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       messages: chatBootstrapMessages,
       transport,
       onFinish: ({ isAbort, isError, messages: finishedMessages }) => {
+        setIsStartingGeneration(false);
+        setPendingUserTurnText(null);
         setGenerationStartedAt(null);
         setGenerationPhase(isAbort ? "stopped" : isError ? "error" : "done");
         lastPresetPhaseRef.current = null;
@@ -491,9 +509,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         }
       },
       onError: (err) => {
+        setIsStartingGeneration(false);
+        setPendingUserTurnText(null);
         setGenerationStartedAt(null);
         lastPresetPhaseRef.current = null;
-        reportGenerationError(err.message);
+        const raw = err.message ?? "";
+        const timedOut =
+          /timeout|timed out|failed to fetch|network|load failed|aborted/i.test(
+            raw,
+          );
+        reportGenerationError(
+          timedOut
+            ? "The request took too long. Try again with one preset or 1K resolution."
+            : raw || "Generation failed",
+        );
       },
     });
 
@@ -509,7 +538,14 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     pendingChatHydrationRef.current = null;
   }, [activeChatId, setMessages]);
 
-  const isGenerating = status === "submitted" || status === "streaming";
+  useEffect(() => {
+    if (status === "submitted" || status === "streaming") {
+      setPendingUserTurnText(null);
+    }
+  }, [status]);
+
+  const isGenerating =
+    isStartingGeneration || status === "submitted" || status === "streaming";
   const isLibraryRemix = Boolean(libraryTemplateId);
 
   useEffect(() => {
@@ -975,21 +1011,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     }
 
     lastReportedErrorRef.current = null;
-    setGenerationError(null);
-    setLatestImageResult(null);
     pendingTokenCostRef.current = tokenCost;
-    setGenerationStartedAt(Date.now());
-    setGenerationPhase(
-      remixingLibrary ? "generating-image" : "orchestrating",
-    );
     lastPresetPhaseRef.current = null;
     setGenerationPresetTitle(selectedPresets[0]?.title);
-
-    const onImagesPage =
-      typeof window !== "undefined" && window.location.pathname === "/images";
-    if (!onImagesPage) {
-      setView("chat");
-    }
 
     const userAuthoredPrompt = prompt.trim();
     const presetSummary = selectedPresets.map((p) => p.title).join(" · ");
@@ -1017,6 +1041,18 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         : generationUserPrompt;
     const userPromptDraft = userAuthoredPrompt;
 
+    flushSync(() => {
+      setIsStartingGeneration(true);
+      setPendingUserTurnText(chatMessageText);
+      setView("chat");
+      setGenerationError(null);
+      setLatestImageResult(null);
+      setGenerationStartedAt(Date.now());
+      setGenerationPhase(
+        remixingLibrary ? "generating-image" : "orchestrating",
+      );
+    });
+
     submitInFlightRef.current = true;
     setPrompt("");
     try {
@@ -1025,6 +1061,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       );
       if (!chatId) {
         setPrompt(userPromptDraft);
+        setIsStartingGeneration(false);
+        setPendingUserTurnText(null);
         reportGenerationError("Could not start chat session. Please try again.");
         return;
       }
@@ -1043,20 +1081,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           },
         },
       );
-      queueMicrotask(() => {
-        const draftMessages = messagesRef.current;
-        const chatIdForDraft = activeChatIdRef.current;
-        if (!chatIdForDraft || draftMessages.length === 0) return;
-        void persistChatMessages(chatIdForDraft, draftMessages, {
-          title: remixingLibrary ? "Library remix" : chatTitle,
-          settingsSnapshot: settingsSnapshot(),
-        });
-      });
     } catch {
       setPrompt(userPromptDraft);
+      setPendingUserTurnText(null);
       reportGenerationError("Generation failed to start. Please try again.");
     } finally {
       submitInFlightRef.current = false;
+      setIsStartingGeneration(false);
     }
   }, [
     selectedPresets,
@@ -1079,6 +1110,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const stopGeneration = useCallback(() => {
     stop();
     pendingTokenCostRef.current = 0;
+    setIsStartingGeneration(false);
+    setPendingUserTurnText(null);
     setGenerationStartedAt(null);
     setGenerationPhase("stopped");
     lastPresetPhaseRef.current = null;
@@ -1130,6 +1163,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       messages,
       chatStatus: status,
       isGenerating,
+      isStartingGeneration,
+      pendingUserTurnText,
       activeChatId,
       chatTitle,
       generationStartedAt,
@@ -1184,6 +1219,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       messages,
       status,
       isGenerating,
+      isStartingGeneration,
+      pendingUserTurnText,
       activeChatId,
       chatTitle,
       generationStartedAt,
