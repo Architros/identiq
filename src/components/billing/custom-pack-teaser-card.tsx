@@ -79,7 +79,7 @@ export function CustomPackTeaserCard({
         className="mt-6"
         innerClassName="w-full py-2.5"
       >
-        Customize pack
+        Get Scale
       </TextureButton>
     </div>
   );

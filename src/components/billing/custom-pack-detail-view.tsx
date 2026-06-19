@@ -209,7 +209,7 @@ export function CustomPackDetailView({
             className="mt-8"
             innerClassName="flex w-full py-3 text-sm font-semibold"
           >
-            {loading ? "…" : "Upgrade"}
+            {loading ? "…" : "Get Scale"}
           </TextureButton>
 
           <p className="mt-4 text-center text-xs text-muted">

@@ -73,7 +73,7 @@ export function PlanPackCard({
 
         <TextureButton
           type="button"
-          variant={highlighted ? "accent" : "primary"}
+          variant="accent"
           shape="card"
           fullWidth
           disabled={loading}
@@ -81,7 +81,7 @@ export function PlanPackCard({
           className="relative z-10 mt-4"
           innerClassName="w-full py-2.5"
         >
-          {loading ? "…" : "Buy tokens"}
+          {loading ? "…" : `Get ${pack.name}`}
         </TextureButton>
 
         <p className="relative z-10 mt-3 text-sm text-muted">{pack.tagline}</p>
