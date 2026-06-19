@@ -6,17 +6,22 @@ import { Coins01Icon } from "@hugeicons/core-free-icons";
 import {
   ORCHESTRATION_TOKEN_COST,
   STARTER_PACK_PER_ASSET_TOKEN_COST,
-  calculateStarterPackTokenCost,
 } from "@/lib/brand/starter-pack";
 import {
   ASSET_CATALOG,
   getEffectiveAssetSelections,
 } from "@/lib/brand/asset-catalog";
+import {
+  calculateBrandCreationTokenCost,
+  getBrandCreationJobs,
+} from "@/lib/brand/brand-creation-flow";
 import { useCredits } from "@/contexts/credits-context";
 import { cn } from "@/lib/utils";
+import type { AspectRatio } from "@/lib/generation/presets";
 
 type ReviewTokenSummaryProps = {
   assetSelections: Record<string, number>;
+  aspectOverrides?: Record<string, AspectRatio>;
   hasUploadedLogo?: boolean;
   showError?: boolean;
 };
@@ -32,15 +37,27 @@ function TokenAmount({ value }: { value: number }) {
 
 export function ReviewTokenSummary({
   assetSelections,
+  aspectOverrides,
   hasUploadedLogo = false,
   showError,
 }: ReviewTokenSummaryProps) {
   const { availableTokens, openBuyTokens } = useCredits();
 
-  const totalCost = useMemo(
+  const creationCost = useMemo(
     () =>
-      calculateStarterPackTokenCost(assetSelections, { hasUploadedLogo }),
-    [assetSelections, hasUploadedLogo],
+      calculateBrandCreationTokenCost(assetSelections, {
+        hasUploadedLogo,
+        aspectOverrides,
+      }),
+    [assetSelections, aspectOverrides, hasUploadedLogo],
+  );
+
+  const creationJobs = useMemo(
+    () =>
+      getBrandCreationJobs(assetSelections, aspectOverrides, {
+        hasUploadedLogo,
+      }),
+    [assetSelections, aspectOverrides, hasUploadedLogo],
   );
 
   const selectedAssets = useMemo(() => {
@@ -54,14 +71,19 @@ export function ReviewTokenSummary({
     });
   }, [assetSelections, hasUploadedLogo]);
 
-  const canAfford = availableTokens >= totalCost;
-  const remaining = availableTokens - totalCost;
+  const laterAssets = selectedAssets.filter(
+    ({ item }) =>
+      !creationJobs.some((job) => job.item.id === item.id),
+  );
+
+  const canAfford = availableTokens >= creationCost;
+  const remaining = availableTokens - creationCost;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="flex items-center justify-between gap-4 border-b border-border bg-sidebar-active/40 px-5 py-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Tokens to be consumed
+          Tokens at creation
         </h3>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-semibold tabular-nums text-accent">
           <HugeiconsIcon
@@ -70,28 +92,44 @@ export function ReviewTokenSummary({
             color="currentColor"
             strokeWidth={1.75}
           />
-          {totalCost}
+          {creationCost}
         </span>
       </div>
 
       <ul className="divide-y divide-border px-5">
         <li className="flex items-center justify-between gap-4 py-3">
-          <span className="text-sm text-foreground">Brand System</span>
+          <span className="text-sm text-foreground">Brand system</span>
           <TokenAmount value={ORCHESTRATION_TOKEN_COST} />
         </li>
-        {selectedAssets.map(({ item, qty }) => (
+        {creationJobs.map((job) => (
           <li
-            key={item.id}
+            key={job.jobKey}
             className="flex items-center justify-between gap-4 py-3"
           >
             <span className="min-w-0 text-sm text-foreground">
-              {item.title}
-              <span className="ml-1.5 text-muted">× {qty}</span>
+              {job.item.title}
+              <span className="ml-1.5 text-xs text-accent">· generates now</span>
             </span>
-            <TokenAmount value={qty * STARTER_PACK_PER_ASSET_TOKEN_COST} />
+            <TokenAmount value={STARTER_PACK_PER_ASSET_TOKEN_COST} />
           </li>
         ))}
       </ul>
+
+      {laterAssets.length > 0 ? (
+        <div className="border-t border-border bg-background px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Also in your pack (generate later)
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {laterAssets.map(({ item, qty }) => (
+              <li key={item.id} className="text-sm text-muted">
+                {item.title}
+                <span className="ml-1.5">× {qty}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div
         className={cn(
@@ -111,11 +149,11 @@ export function ReviewTokenSummary({
           </span>
           {canAfford ? (
             <span className="text-xs text-muted">
-              {remaining} left after generation
+              {remaining} left after creation
             </span>
           ) : (
             <span className="text-xs font-medium text-destructive">
-              Need {totalCost - availableTokens} more
+              Need {creationCost - availableTokens} more
             </span>
           )}
         </div>

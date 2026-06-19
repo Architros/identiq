@@ -49,7 +49,7 @@ export function StepReview({
   return (
     <div className="space-y-8">
       <p className="text-sm text-muted">
-        Review your brand foundation and asset plan before generation.
+        Review your brand foundation and pack plan before creation.
       </p>
 
       {generationError ? (
@@ -157,6 +157,7 @@ export function StepReview({
 
       <ReviewTokenSummary
         assetSelections={draft.assetSelections}
+        aspectOverrides={draft.assetAspectOverrides}
         hasUploadedLogo={hasUploadedLogo}
         showError={showFinishError}
       />

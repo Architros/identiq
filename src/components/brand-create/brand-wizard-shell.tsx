@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useCredits } from "@/contexts/credits-context";
 import { getGeneratableAssetCount } from "@/lib/brand/asset-catalog";
-import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
+import { calculateBrandCreationTokenCost } from "@/lib/brand/brand-creation-flow";
 import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
 import { showErrorToast } from "@/lib/toast/show-toast";
@@ -66,10 +66,11 @@ export function BrandWizardShell() {
 
   const totalTokenCost = useMemo(
     () =>
-      calculateStarterPackTokenCost(draft.assetSelections, {
+      calculateBrandCreationTokenCost(draft.assetSelections, {
         hasUploadedLogo,
+        aspectOverrides: draft.assetAspectOverrides,
       }),
-    [draft.assetSelections, hasUploadedLogo],
+    [draft.assetSelections, draft.assetAspectOverrides, hasUploadedLogo],
   );
 
   const canAffordReview = availableTokens >= totalTokenCost;
@@ -299,7 +300,7 @@ export function BrandWizardShell() {
                     !isReady || totalAssets === 0 || attachmentsUploading
                   }
                 >
-                  Finish & generate
+                  Create brand
                 </Button>
               ) : (
                 <Button

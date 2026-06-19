@@ -2,7 +2,10 @@ import {
   getGeneratableAssetCount,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
-import { calculateStarterPackTokenCost } from "@/lib/brand/starter-pack";
+import {
+  calculateBrandCreationTokenCost,
+  getBrandCreationJobs,
+} from "@/lib/brand/brand-creation-flow";
 import type { BrandProjectDraft } from "@/lib/brand/brand-project-draft";
 import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 
@@ -68,25 +71,33 @@ export function validateGenerationPreflight(
     };
   }
 
-  const selections = normalizeAssetSelections(draft.assetSelections);
   const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
-  const assetCount = getGeneratableAssetCount(selections, hasUploadedLogo);
-  if (assetCount === 0 && !hasUploadedLogo) {
+  const selections = normalizeAssetSelections(draft.assetSelections);
+  const packAssetCount = getGeneratableAssetCount(selections, hasUploadedLogo);
+
+  if (packAssetCount === 0 && !hasUploadedLogo) {
     return {
       ok: false,
-      message: "Select at least one asset to generate.",
+      message: "Select at least one asset for your brand pack.",
     };
   }
 
-  const tokenCost = calculateStarterPackTokenCost(selections, {
+  const creationJobs = getBrandCreationJobs(
+    selections,
+    draft.assetAspectOverrides,
+    { hasUploadedLogo },
+  );
+  const tokenCost = calculateBrandCreationTokenCost(selections, {
     hasUploadedLogo,
+    aspectOverrides: draft.assetAspectOverrides,
   });
+
   if (availableTokens < tokenCost) {
     return {
       ok: false,
-      message: `You need ${tokenCost} tokens but only have ${availableTokens}. Buy more tokens or reduce your asset pack.`,
+      message: `You need ${tokenCost} tokens but only have ${availableTokens}. Buy more tokens to create your brand.`,
     };
   }
 
-  return { ok: true, assetCount, tokenCost };
+  return { ok: true, assetCount: creationJobs.length, tokenCost };
 }

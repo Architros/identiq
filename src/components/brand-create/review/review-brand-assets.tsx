@@ -58,6 +58,10 @@ export function ReviewBrandAssets({
 
   return (
     <div className="space-y-5">
+      <p className="text-xs text-muted">
+        Only one image generates during brand creation (your logo if you did not
+        upload one). Generate the rest from Studio after your brand is saved.
+      </p>
       {(Object.keys(grouped) as AssetCatalogCategory[]).map((category) => {
         const items = grouped[category];
         if (items.length === 0) return null;

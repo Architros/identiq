@@ -13,6 +13,10 @@ import {
   STARTER_PACK_PER_ASSET_TOKEN_COST,
   calculateStarterPackTokenCost,
 } from "@/lib/brand/starter-pack";
+import {
+  BRAND_CREATION_MAX_GENERATIONS,
+  calculateBrandCreationTokenCost,
+} from "@/lib/brand/brand-creation-flow";
 import { getDraftLogoUrl } from "@/lib/brand/draft-media";
 import { useCredits } from "@/contexts/credits-context";
 import type { AspectRatio } from "@/lib/generation/presets";
@@ -30,6 +34,15 @@ export function StepAssets() {
   const { draft, updateDraft } = useBrandWizard();
   const { availableTokens } = useCredits();
   const hasUploadedLogo = Boolean(getDraftLogoUrl(draft));
+
+  const creationCost = useMemo(
+    () =>
+      calculateBrandCreationTokenCost(draft.assetSelections, {
+        hasUploadedLogo,
+        aspectOverrides: draft.assetAspectOverrides,
+      }),
+    [draft.assetSelections, draft.assetAspectOverrides, hasUploadedLogo],
+  );
 
   const totalCost = useMemo(
     () =>
@@ -82,8 +95,12 @@ export function StepAssets() {
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted">
-          Choose what to generate and how many of each. You pay per image from
-          your token balance — mix and match freely.
+          Plan your starter pack — choose what you want for this brand. During
+          creation we only generate{" "}
+          {hasUploadedLogo
+            ? "your brand system (no images)"
+            : `up to ${BRAND_CREATION_MAX_GENERATIONS} image (your logo if you did not upload one)`}
+          . Generate the rest later from Studio or the Library.
         </p>
         {hasUploadedLogo ? (
           <p className="mt-2 text-xs text-muted">
@@ -93,8 +110,10 @@ export function StepAssets() {
         ) : null}
         <p className="mt-2 text-xs text-muted">
           {availableTokens} tokens available · {totalAssets} asset
-          {totalAssets === 1 ? "" : "s"} selected · {totalCost} tokens to be
-          consumed
+          {totalAssets === 1 ? "" : "s"} in your pack · {creationCost} tokens now
+          {totalCost > creationCost
+            ? ` · ${totalCost} tokens if you generated everything today`
+            : ""}
         </p>
       </div>
 
@@ -203,11 +222,23 @@ export function StepAssets() {
 
       <div className="rounded-2xl border border-border bg-sidebar-active/40 p-4 text-sm text-muted">
         <p>
-          <span className="font-medium text-foreground">Estimate: </span>
-          {ORCHESTRATION_TOKEN_COST} tokens (brand system) + {totalAssets} ×{" "}
-          {STARTER_PACK_PER_ASSET_TOKEN_COST} tokens (assets) ={" "}
-          <span className="font-medium text-foreground">{totalCost} total</span>
+          <span className="font-medium text-foreground">At creation: </span>
+          {ORCHESTRATION_TOKEN_COST} tokens (brand system)
+          {!hasUploadedLogo
+            ? ` + ${STARTER_PACK_PER_ASSET_TOKEN_COST} tokens (1 logo)`
+            : ""}{" "}
+          ={" "}
+          <span className="font-medium text-foreground">{creationCost} tokens</span>
         </p>
+        {totalCost > creationCost ? (
+          <p className="mt-2">
+            <span className="font-medium text-foreground">Full pack: </span>
+            {totalAssets} × {STARTER_PACK_PER_ASSET_TOKEN_COST} tokens + brand
+            system ={" "}
+            <span className="font-medium text-foreground">{totalCost} tokens</span>{" "}
+            if you generate every selected asset later.
+          </p>
+        ) : null}
       </div>
     </div>
   );

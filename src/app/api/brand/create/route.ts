@@ -8,34 +8,24 @@ import {
 } from "@/lib/auth/guard-api";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { orchestrateBrandMemoryFromWizard } from "@/lib/brand/orchestrate-from-wizard";
-import {
-  expandAssetSelections,
-  getEffectiveAssetSelections,
-  normalizeAssetSelections,
-} from "@/lib/brand/asset-catalog";
+import { normalizeAssetSelections } from "@/lib/brand/asset-catalog";
+import { getBrandCreationJobs } from "@/lib/brand/brand-creation-flow";
 import { wizardOrchestrateInputSchema } from "@/lib/brand/brand-memory-schema";
 import type { BrandMemory } from "@/lib/brand/types";
 import {
   planStarterPackPrompts,
   plannedJobsByKey,
 } from "@/lib/brand/plan-starter-pack-prompts";
-import { sortStarterPackJobs } from "@/lib/brand/sort-starter-pack-jobs";
 import {
   runStarterPackJobsLogoFirst,
   type LogoUrlRef,
   type StarterPackStreamWriter,
 } from "@/lib/brand/run-starter-pack-job";
 import type { AssetProgressData } from "@/lib/brand/create-stream-types";
-import {
-  ORCHESTRATION_TOKEN_COST,
-  STARTER_PACK_PER_ASSET_TOKEN_COST,
-} from "@/lib/brand/starter-pack";
+import { ORCHESTRATION_TOKEN_COST, STARTER_PACK_PER_ASSET_TOKEN_COST } from "@/lib/brand/starter-pack";
 import { deductTokens } from "@/lib/db/repositories/credits";
 import { brandContextFromWizard } from "@/lib/brand/prompt-structure";
 
-export const maxDuration = 300;
-
-/** ~15 assets at 3 concurrent ≈ 5 waves; increase via background jobs if catalog grows. */
 const ASSET_GENERATION_CONCURRENCY = 3;
 
 function jobTitle(
@@ -69,12 +59,10 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
   const hasUploadedLogo = Boolean(input.logoUrl);
-  const selections = getEffectiveAssetSelections(
+  const jobs = getBrandCreationJobs(
     normalizeAssetSelections(input.assetSelections),
+    input.assetAspectOverrides,
     { hasUploadedLogo },
-  );
-  const jobs = sortStarterPackJobs(
-    expandAssetSelections(selections, input.assetAspectOverrides),
   );
   const attachmentNames = input.attachmentNames ?? [];
   const attachmentUrls = input.attachmentUrls ?? [];
@@ -83,13 +71,6 @@ export async function POST(request: Request) {
 
   if (input.logoUrl) {
     logoUrlRef.current = input.logoUrl;
-  }
-
-  if (jobs.length === 0 && !hasUploadedLogo) {
-    return new Response(
-      JSON.stringify({ error: "Select at least one asset to generate" }),
-      { status: 400 },
-    );
   }
 
   const abortSignal = request.signal;
@@ -110,6 +91,16 @@ export async function POST(request: Request) {
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       const statusId = "create-status";
+
+      writer.write({
+        type: "data-create-init",
+        id: "create-init",
+        data: {
+          brandId,
+          domain,
+          displayName: input.name,
+        },
+      });
 
       writer.write({
         type: "data-create-status",
@@ -162,116 +153,118 @@ export async function POST(request: Request) {
         },
       });
 
-      writer.write({
-        type: "data-create-status",
-        id: statusId,
-        data: {
-          phase: "planning",
-          message: "Planning your asset pack…",
-        },
-      });
-
-      const plan = await planStarterPackPrompts(
-        input,
-        memory,
-        jobs,
-        abortSignal,
-      );
-      const plannedByKey = plannedJobsByKey(plan);
-      const brandContext = brandContextFromWizard(input, memory);
-
-      if (abortSignal.aborted) {
+      if (jobs.length > 0) {
         writer.write({
           type: "data-create-status",
           id: statusId,
-          data: { phase: "stopped" },
+          data: {
+            phase: "planning",
+            message: "Planning your logo…",
+          },
         });
-        return;
-      }
 
-      writer.write({
-        type: "data-create-status",
-        id: statusId,
-        data: {
-          phase: "generating",
-          message: `Generating ${jobs.length} asset${jobs.length === 1 ? "" : "s"}…`,
-        },
-      });
+        const plan = await planStarterPackPrompts(
+          input,
+          memory,
+          jobs,
+          abortSignal,
+        );
+        const plannedByKey = plannedJobsByKey(plan);
+        const brandContext = brandContextFromWizard(input, memory);
 
-      for (let index = 0; index < jobs.length; index++) {
-        const job = jobs[index]!;
-        const planned = plannedByKey.get(job.jobKey);
-        const progress: AssetProgressData = {
-          index,
-          itemId: job.jobKey,
-          catalogId: job.item.id,
-          title: jobTitle(job),
-          variantLabel: planned?.variantLabel,
-          aspectRatio: job.aspectRatio,
-          category: job.item.category,
-          status: "queued",
-        };
-        writer.write({
-          type: "data-asset-progress",
-          id: `asset-${job.jobKey}`,
-          data: progress,
-        });
-      }
-
-      const streamWriter: StarterPackStreamWriter = {
-        writeProgress: (data) => {
-          writer.write({
-            type: "data-asset-progress",
-            id: `asset-${data.itemId}`,
-            data,
-          });
-        },
-        writeComplete: (data) => {
-          writer.write({
-            type: "data-asset-complete",
-            id: `asset-done-${data.itemId}`,
-            data,
-          });
-        },
-      };
-
-      await runStarterPackJobsLogoFirst({
-        jobs,
-        plannedByKey,
-        brandId,
-        brand: brandContext,
-        writer: streamWriter,
-        abortSignal,
-        otherConcurrency: ASSET_GENERATION_CONCURRENCY,
-        attachmentNames,
-        attachmentUrls,
-        logoUrlRef,
-        referenceImageUrls,
-        onJobStatusMessage: (message) => {
+        if (abortSignal.aborted) {
           writer.write({
             type: "data-create-status",
             id: statusId,
-            data: { phase: "generating", message },
+            data: { phase: "stopped" },
           });
-        },
-        onAssetGenerated: async (jobKey) => {
-          await deductTokens({
-            userId: user.id,
-            amount: STARTER_PACK_PER_ASSET_TOKEN_COST,
-            referenceType: "brand_asset",
-            referenceId: `${brandId}_${jobKey}`,
-            idempotencyKey: `asset_${brandId}_${jobKey}`,
-          });
-        },
-      });
+          return;
+        }
 
-      if (abortSignal.aborted) {
         writer.write({
           type: "data-create-status",
           id: statusId,
-          data: { phase: "stopped" },
+          data: {
+            phase: "generating",
+            message: "Generating your logo…",
+          },
         });
-        return;
+
+        for (let index = 0; index < jobs.length; index++) {
+          const job = jobs[index]!;
+          const planned = plannedByKey.get(job.jobKey);
+          const progress: AssetProgressData = {
+            index,
+            itemId: job.jobKey,
+            catalogId: job.item.id,
+            title: jobTitle(job),
+            variantLabel: planned?.variantLabel,
+            aspectRatio: job.aspectRatio,
+            category: job.item.category,
+            status: "queued",
+          };
+          writer.write({
+            type: "data-asset-progress",
+            id: `asset-${job.jobKey}`,
+            data: progress,
+          });
+        }
+
+        const streamWriter: StarterPackStreamWriter = {
+          writeProgress: (data) => {
+            writer.write({
+              type: "data-asset-progress",
+              id: `asset-${data.itemId}`,
+              data,
+            });
+          },
+          writeComplete: (data) => {
+            writer.write({
+              type: "data-asset-complete",
+              id: `asset-done-${data.itemId}`,
+              data,
+            });
+          },
+        };
+
+        await runStarterPackJobsLogoFirst({
+          jobs,
+          plannedByKey,
+          brandId,
+          brand: brandContext,
+          writer: streamWriter,
+          abortSignal,
+          otherConcurrency: ASSET_GENERATION_CONCURRENCY,
+          attachmentNames,
+          attachmentUrls,
+          logoUrlRef,
+          referenceImageUrls,
+          onJobStatusMessage: (message) => {
+            writer.write({
+              type: "data-create-status",
+              id: statusId,
+              data: { phase: "generating", message },
+            });
+          },
+          onAssetGenerated: async (jobKey) => {
+            await deductTokens({
+              userId: user.id,
+              amount: STARTER_PACK_PER_ASSET_TOKEN_COST,
+              referenceType: "brand_asset",
+              referenceId: `${brandId}_${jobKey}`,
+              idempotencyKey: `asset_${brandId}_${jobKey}`,
+            });
+          },
+        });
+
+        if (abortSignal.aborted) {
+          writer.write({
+            type: "data-create-status",
+            id: statusId,
+            data: { phase: "stopped" },
+          });
+          return;
+        }
       }
 
       writer.write({

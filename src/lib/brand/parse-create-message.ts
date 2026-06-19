@@ -9,9 +9,9 @@ import type {
 } from "@/lib/brand/create-stream-types";
 import {
   expandAssetSelections,
-  getEffectiveAssetSelections,
   normalizeAssetSelections,
 } from "@/lib/brand/asset-catalog";
+import { getBrandCreationJobs } from "@/lib/brand/brand-creation-flow";
 import type { AspectRatio } from "@/lib/generation/presets";
 
 export type ParsedCreateStream = {
@@ -60,9 +60,10 @@ export function buildInitialAssetProgress(
   aspectOverrides?: Record<string, AspectRatio>,
   options?: { hasUploadedLogo?: boolean },
 ): AssetProgressData[] {
-  const jobs = expandAssetSelections(
-    getEffectiveAssetSelections(selections, options),
+  const jobs = getBrandCreationJobs(
+    normalizeAssetSelections(selections),
     aspectOverrides,
+    options,
   );
   return jobs.map((job, index) => ({
     index,

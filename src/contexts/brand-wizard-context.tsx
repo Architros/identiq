@@ -157,7 +157,7 @@ export function validateWizardStep(
         hasUploadedLogo,
       );
       if (total === 0 && !hasUploadedLogo) {
-        return "Select at least one asset to generate";
+        return "Select at least one asset for your brand pack";
       }
       return null;
     }

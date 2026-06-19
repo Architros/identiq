@@ -59,6 +59,12 @@ export type BrandMemoryStreamData = {
   typography?: WizardTypography;
 };
 
+export type CreateInitData = {
+  brandId: string;
+  domain: string;
+  displayName: string;
+};
+
 export type CreateCompleteData = {
   brandId: string;
   domain: string;
@@ -70,6 +76,7 @@ export type CreateCompleteData = {
 
 export type IdentiqCreateUIDataTypes = {
   "create-status": CreateStatusData;
+  "create-init": CreateInitData;
   "brand-memory": BrandMemoryStreamData;
   "asset-progress": AssetProgressData;
   "asset-complete": AssetCompleteData;

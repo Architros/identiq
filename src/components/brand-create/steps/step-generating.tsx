@@ -25,26 +25,22 @@ import type {
   AssetProgressData,
   BrandMemoryStreamData,
   CreateCompleteData,
+  CreateInitData,
   CreateStreamPhase,
 } from "@/lib/brand/create-stream-types";
-import {
-  getCatalogItem,
-  parseCatalogIdFromJobKey,
-} from "@/lib/brand/asset-catalog";
-import type { BrandReference } from "@/lib/brand/types";
 import {
   ORCHESTRATION_TOKEN_COST,
   STARTER_PACK_PER_ASSET_TOKEN_COST,
 } from "@/lib/brand/starter-pack";
 import { validateGenerationPreflight } from "@/lib/brand/validate-generation-preflight";
 import { deleteDraft } from "@/lib/brand/brand-storage";
-import { formatDisplayDate } from "@/lib/format-display-date";
-import { generatedImagePreviewUrl } from "@/lib/storage/upload-client";
-import type { BrandAsset, BrandKit } from "@/lib/brand/types";
-import type { BrandSummary } from "@/lib/brand/brands";
+import {
+  buildBrandFromWizard,
+  buildMemoryFromDraft,
+} from "@/lib/brand/brand-creation-flow";
 import { Button } from "@/components/ui/button";
 import { UserFacingErrorAlert } from "@/components/shared/user-facing-error-alert";
-import { showSuccessToast } from "@/lib/toast/show-toast";
+import { showSuccessToast, showErrorToast } from "@/lib/toast/show-toast";
 
 function resetGenerationRunState(refs: {
   startedRef: React.MutableRefObject<boolean>;
@@ -95,6 +91,7 @@ export function StepGenerating() {
   );
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [draftSavedNotice, setDraftSavedNotice] = useState(false);
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
 
   const startedRef = useRef(false);
   const preflightHandledRef = useRef(false);
@@ -103,6 +100,8 @@ export function StepGenerating() {
   const completedRef = useRef(false);
   const failureHandledRef = useRef(false);
   const assetResultsRef = useRef<Map<string, AssetCompleteData>>(new Map());
+  const createInitRef = useRef<CreateInitData | null>(null);
+  const [createInit, setCreateInit] = useState<CreateInitData | null>(null);
   const runRefs = useMemo(
     () => ({
       startedRef,
@@ -137,162 +136,93 @@ export function StepGenerating() {
       await persistDraft();
       setDraftSavedNotice(true);
       showSuccessToast(
-        "Your brand wizard progress was saved as a draft. You can adjust details and try again.",
+        "Progress saved. You can save your brand now or try generation again.",
         { title: "Draft saved", dedupeKey: "wizard-draft-saved-on-failure" },
       );
     },
     [persistDraft, setGenerationError],
   );
 
+  const persistCreatedBrand = useCallback(
+    async (params: {
+      brandId: string;
+      domain: string;
+      displayName: string;
+      memory: CreateCompleteData["memory"];
+      imageModel?: string;
+      uploadedLogoUrl?: string;
+      requireLogo?: boolean;
+    }) => {
+      const built = buildBrandFromWizard({
+        draft,
+        brandId: params.brandId,
+        domain: params.domain,
+        displayName: params.displayName,
+        memory: params.memory,
+        imageModel: params.imageModel,
+        uploadedLogoUrl: params.uploadedLogoUrl,
+        assetResults: assetResultsRef.current,
+        requireLogo: params.requireLogo ?? false,
+      });
+
+      if (!built.ok) {
+        throw new Error(built.error);
+      }
+
+      await createBrand(built.kit, built.summary);
+      if (built.generated.length > 0) {
+        saveAssetsForBrand(params.brandId, built.generated);
+      }
+      if (built.references.length > 0) {
+        saveReferencesForBrand(params.brandId, built.references);
+      }
+      deleteDraft(draft.id);
+      updateDraft({ status: "completed" });
+      clearGenerationError();
+      await refreshBalance();
+      router.push("/");
+    },
+    [
+      createBrand,
+      draft,
+      router,
+      saveAssetsForBrand,
+      saveReferencesForBrand,
+      updateDraft,
+      refreshBalance,
+      clearGenerationError,
+    ],
+  );
+
   const finalizeBrand = useCallback(
     async (complete: CreateCompleteData & { imageModel?: string }) => {
       try {
-        const imageModel = complete.imageModel ?? "openai/gpt-5.4-image-2";
-        const kitAssets: BrandAsset[] = [];
-        let logoSaved = false;
-        const generated: Parameters<typeof saveAssetsForBrand>[1] = [];
-        const now = new Date().toISOString();
-
-        const references: BrandReference[] = draft.attachments
-          .filter((a) => Boolean(a.url))
-          .map((a) => ({
-            id: a.id,
-            brandId: complete.brandId,
-            name: a.name,
-            type: a.type,
-            url: a.url!,
-            source: "wizard" as const,
-            createdAt: now,
-          }));
-
-        const uploadedLogoUrl =
-          getDraftLogoUrl(draft) ?? complete.uploadedLogoUrl;
-        if (uploadedLogoUrl) {
-          kitAssets.push({
-            type: "logo_primary",
-            url: uploadedLogoUrl,
-            label: "Brand logo",
-          });
-          logoSaved = true;
-          if (
-            draft.logo?.url &&
-            !references.some((r) => r.id === draft.logo!.id)
-          ) {
-            references.unshift({
-              id: draft.logo.id,
-              brandId: complete.brandId,
-              name: draft.logo.name,
-              type: draft.logo.type,
-              url: draft.logo.url,
-              source: "wizard",
-              createdAt: now,
-            });
-          }
-        }
-
-        for (const [jobKey, result] of assetResultsRef.current) {
-          const catalogId = parseCatalogIdFromJobKey(jobKey);
-          const catalogItem = getCatalogItem(catalogId);
-          if (!catalogItem) continue;
-
-          const previewUrl =
-            generatedImagePreviewUrl(result) ??
-            `data:${result.mediaType};base64,${result.base64 ?? ""}`;
-
-          if (catalogId === "brand-logo" && !logoSaved) {
-            kitAssets.push({
-              type: "logo_primary",
-              url: previewUrl,
-              label: "Brand logo",
-            });
-            logoSaved = true;
-          }
-
-          generated.push({
-            id: `asset_${complete.brandId}_${jobKey}`,
-            brandId: complete.brandId,
-            jobId: jobKey,
-            catalogId,
-            category: catalogItem.category,
-            source: "starter-pack",
-            presetId: catalogItem.presetId,
-            presetTitle: result.title,
-            prompt: result.composedPrompt ?? catalogItem.prompt,
-            composedPrompt: result.composedPrompt ?? catalogItem.prompt,
-            previewUrl,
-            mediaType: result.mediaType,
-            aspectRatio: result.aspectRatio,
-            model: imageModel,
-            createdAt: now,
-          });
-        }
-
-        const failedAssets = itemsRef.current.filter(
-          (item) => item.status === "error",
+        const hasUploadedLogo = Boolean(
+          getDraftLogoUrl(draft) ?? complete.uploadedLogoUrl,
         );
-        const expectedJobs = itemsRef.current;
-        const hasUploadedLogo = Boolean(uploadedLogoUrl);
+        const logoJobs = itemsRef.current.filter(
+          (item) => item.catalogId === "brand-logo",
+        );
+        const failedLogo = logoJobs.some((item) => item.status === "error");
 
-        if (failedAssets.length > 0) {
-          throw new Error(
-            "Generation failed for one or more assets. Review and try again.",
-          );
-        }
-
-        if (expectedJobs.length > 0) {
-          const savedJobs = expectedJobs.filter(
-            (item) => item.status === "saved",
-          );
-          if (savedJobs.length < expectedJobs.length || generated.length === 0) {
+        if (!hasUploadedLogo) {
+          const logoSaved = logoJobs.some((item) => item.status === "saved");
+          if (failedLogo || (logoJobs.length > 0 && !logoSaved)) {
             throw new Error(
-              "Generation did not return assets. Please try again.",
+              "Logo generation did not finish. Try again or save your brand without waiting for the logo.",
             );
           }
-        } else if (!hasUploadedLogo) {
-          throw new Error(
-            "Generation did not return assets. Please try again.",
-          );
         }
 
-        const kit: BrandKit = {
-          id: complete.brandId,
+        await persistCreatedBrand({
+          brandId: complete.brandId,
           domain: complete.domain,
           displayName: complete.displayName,
           memory: complete.memory,
-          assets: kitAssets,
-          references,
-          description:
-            draft.description.trim() || draft.websiteSummary.trim() || undefined,
-          tagline: draft.tagline || undefined,
-          sector: draft.sector || undefined,
-          feelings: draft.feelings,
-        };
-
-        const summary: BrandSummary = {
-          id: complete.brandId,
-          domain: complete.domain,
-          displayName: complete.displayName,
-          avatar: {
-            bg: complete.memory.primary_color,
-            color: "#ffffff",
-            letter: complete.displayName.charAt(0).toUpperCase(),
-          },
-          imageCount: generated.length,
-          updatedAt: formatDisplayDate(new Date()),
-        };
-
-        await createBrand(kit, summary);
-        if (generated.length > 0) {
-          saveAssetsForBrand(complete.brandId, generated);
-        }
-        if (references.length > 0) {
-          saveReferencesForBrand(complete.brandId, references);
-        }
-        deleteDraft(draft.id);
-        updateDraft({ status: "completed" });
-        clearGenerationError();
-        await refreshBalance();
-        router.push("/");
+          imageModel: complete.imageModel,
+          uploadedLogoUrl: complete.uploadedLogoUrl,
+          requireLogo: !hasUploadedLogo,
+        });
       } catch (err) {
         const message =
           err instanceof Error
@@ -303,24 +233,50 @@ export function StepGenerating() {
         await handleGenerationFailure(message);
       }
     },
-    [
-      createBrand,
-      draft.attachments,
-      draft.description,
-      draft.feelings,
-      draft.id,
-      draft.logo,
-      draft.sector,
-      draft.tagline,
-      router,
-      saveAssetsForBrand,
-      saveReferencesForBrand,
-      updateDraft,
-      refreshBalance,
-      handleGenerationFailure,
-      clearGenerationError,
-    ],
+    [draft, handleGenerationFailure, persistCreatedBrand],
   );
+
+  const saveBrandNow = useCallback(async () => {
+    const init = createInitRef.current ?? createInit;
+    if (!init) {
+      showErrorToast("Brand setup has not started yet. Try again in a moment.");
+      return;
+    }
+
+    const memory =
+      brandMemory?.memory ??
+      (() => {
+        const fallback = buildMemoryFromDraft(draft);
+        return fallback;
+      })();
+
+    setIsSavingBrand(true);
+    try {
+      await persistCreatedBrand({
+        brandId: init.brandId,
+        domain: init.domain,
+        displayName: init.displayName,
+        memory,
+        uploadedLogoUrl: getDraftLogoUrl(draft),
+        requireLogo: false,
+      });
+      showSuccessToast("Your brand has been saved.", {
+        title: "Brand saved",
+        dedupeKey: "wizard-brand-saved-manually",
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message === "subscription_required"
+            ? "An active subscription is required to save your brand."
+            : err.message
+          : "We couldn't save your brand.";
+      showErrorToast(message, { title: "Save failed" });
+      setGenerationError(message);
+    } finally {
+      setIsSavingBrand(false);
+    }
+  }, [brandMemory, createInit, draft, persistCreatedBrand, setGenerationError]);
 
   const transport = useMemo(
     () =>
@@ -334,6 +290,11 @@ export function StepGenerating() {
     useChat<UIMessage>({
       transport,
       onData: (dataPart) => {
+        if (dataPart.type === "data-create-init") {
+          const data = dataPart.data as CreateInitData;
+          createInitRef.current = data;
+          setCreateInit(data);
+        }
         if (dataPart.type === "data-create-status") {
           const data = dataPart.data as { phase?: string; message?: string };
           if (data.phase === "generating" && !orchestrationChargedRef.current) {
@@ -396,6 +357,8 @@ export function StepGenerating() {
     );
     setBrandMemory(null);
     setResults(new Map());
+    setCreateInit(null);
+    createInitRef.current = null;
     setGenerationStartedAt(null);
     startedRef.current = true;
     sendMessage({ text: "Create brand" }, { body: toOrchestrateInput() });
@@ -443,22 +406,25 @@ export function StepGenerating() {
     void handleGenerationFailure(streamErrorText);
   }, [streamErrorText, handleGenerationFailure]);
 
-  const statusMessage =
-    parsed?.status?.message ??
-    (phase === "planning"
-      ? "Planning distinct prompts for each asset…"
-      : isOrchestrating
-        ? "Analyzing your brand inputs…"
-        : brandMemory
-          ? "Generating your brand assets in parallel…"
-          : "Preparing generation…");
-
   const savedCount = items.filter((i) => i.status === "saved").length;
   const activeCount = items.filter(
     (i) => i.status === "generating" || i.status === "uploading",
   ).length;
   const hasLogoJob = items.some((i) => i.catalogId === "brand-logo");
   const uploadedLogo = Boolean(getDraftLogoUrl(draft));
+
+  const statusMessage =
+    parsed?.status?.message ??
+    (phase === "planning"
+      ? "Planning your logo…"
+      : isOrchestrating
+        ? "Analyzing your brand inputs…"
+        : brandMemory
+          ? hasLogoJob
+            ? "Generating your logo…"
+            : "Saving your brand…"
+          : "Preparing creation…");
+
   const elapsed = useGenerationElapsed(generationStartedAt);
 
   useEffect(() => {
@@ -477,6 +443,7 @@ export function StepGenerating() {
     null;
 
   const isRecoverable = Boolean(displayError) && !isStreaming && !completedRef.current;
+  const canSaveBrand = Boolean(createInit) && !completedRef.current;
 
   const handleCancelStream = () => {
     stop();
@@ -541,10 +508,18 @@ export function StepGenerating() {
           <div className="flex items-center gap-2">
             {isRecoverable ? (
               <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!canSaveBrand || isSavingBrand}
+                  onClick={() => void saveBrandNow()}
+                >
+                  {isSavingBrand ? "Saving…" : "Save brand"}
+                </Button>
                 <Button variant="secondary" size="sm" onClick={handleBackToReview}>
                   Back to review
                 </Button>
-                <Button variant="primary" size="sm" onClick={handleRetry}>
+                <Button variant="secondary" size="sm" onClick={handleRetry}>
                   Try again
                 </Button>
               </>
@@ -570,15 +545,25 @@ export function StepGenerating() {
             />
             {draftSavedNotice ? (
               <p className="text-sm text-muted">
-                Your answers and asset selections are saved as a draft. Use{" "}
+                Your answers are saved as a draft. Use{" "}
+                <strong className="font-medium text-foreground">Save brand</strong>{" "}
+                to finish without rerunning generation,{" "}
                 <strong className="font-medium text-foreground">Try again</strong>{" "}
-                to rerun generation, or{" "}
+                to rerun logo generation, or{" "}
                 <strong className="font-medium text-foreground">Back to review</strong>{" "}
-                to adjust your brand before retrying.
+                to adjust details.
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" size="sm" onClick={handleRetry}>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!canSaveBrand || isSavingBrand}
+                onClick={() => void saveBrandNow()}
+              >
+                {isSavingBrand ? "Saving…" : "Save brand"}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleRetry}>
                 Try again
               </Button>
               <Button variant="secondary" size="sm" onClick={handleBackToReview}>
