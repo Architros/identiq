@@ -17,21 +17,21 @@ describe("resolvePack", () => {
     assert.deepEqual(resolvePack("starter", "monthly"), {
       planId: "starter",
       name: "Starter",
-      tokenAmount: 120,
-      amountCents: 700,
+      tokenAmount: 75,
+      amountCents: 900,
       interval: "monthly",
     });
     assert.deepEqual(resolvePack("pro", "monthly"), {
       planId: "pro",
       name: "Pro",
-      tokenAmount: 550,
+      tokenAmount: 240,
       amountCents: 2900,
       interval: "monthly",
     });
     assert.deepEqual(resolvePack("studio", "monthly"), {
       planId: "studio",
       name: "Studio",
-      tokenAmount: 1100,
+      tokenAmount: 400,
       amountCents: 4900,
       interval: "monthly",
     });
@@ -41,14 +41,14 @@ describe("resolvePack", () => {
     assert.deepEqual(resolvePack("starter", "annual"), {
       planId: "starter",
       name: "Starter",
-      tokenAmount: 1440,
-      amountCents: 7000,
+      tokenAmount: 900,
+      amountCents: 9000,
       interval: "annual",
     });
     assert.deepEqual(resolvePack("pro", "annual"), {
       planId: "pro",
       name: "Pro",
-      tokenAmount: 6600,
+      tokenAmount: 2880,
       amountCents: 29000,
       interval: "annual",
     });
@@ -58,7 +58,7 @@ describe("resolvePack", () => {
     assert.deepEqual(resolvePack("welcome", "monthly"), {
       planId: "welcome",
       name: "Welcome offer",
-      tokenAmount: 80,
+      tokenAmount: 40,
       amountCents: 500,
       interval: "monthly",
     });
@@ -78,19 +78,19 @@ describe("computeCustomPack", () => {
       tokenAmount: 300,
       amountCents: 3900,
     });
-    assert.deepEqual(computeCustomPack(500, "monthly"), {
-      tokenAmount: 500,
+    assert.deepEqual(computeCustomPack(480, "monthly"), {
+      tokenAmount: 480,
       amountCents: 5900,
     });
-    assert.deepEqual(computeCustomPack(1000, "monthly"), {
-      tokenAmount: 1000,
+    assert.deepEqual(computeCustomPack(800, "monthly"), {
+      tokenAmount: 800,
       amountCents: 9900,
     });
   });
 
   it("annual custom grants 12× tier tokens at 10× monthly charge", () => {
-    assert.deepEqual(computeCustomPack(500, "annual"), {
-      tokenAmount: 6000,
+    assert.deepEqual(computeCustomPack(480, "annual"), {
+      tokenAmount: 5760,
       amountCents: 59000,
     });
     assert.deepEqual(computeCustomPack(300, "annual"), {
@@ -117,14 +117,14 @@ describe("storage entitlements", () => {
 
   it("tiers custom packs by monthly token slider", () => {
     assert.equal(resolveCustomPackStorageLimit(300), PACK_STORED_ASSET_LIMITS.starter);
-    assert.equal(resolveCustomPackStorageLimit(500), PACK_STORED_ASSET_LIMITS.pro);
-    assert.equal(resolveCustomPackStorageLimit(1000), PACK_STORED_ASSET_LIMITS.studio);
+    assert.equal(resolveCustomPackStorageLimit(480), PACK_STORED_ASSET_LIMITS.pro);
+    assert.equal(resolveCustomPackStorageLimit(800), PACK_STORED_ASSET_LIMITS.studio);
   });
 
   it("infers monthly basis from annual custom grants", () => {
-    assert.equal(monthlyTokenBasisFromGrantedCustomTokens(6000), 500);
+    assert.equal(monthlyTokenBasisFromGrantedCustomTokens(5760), 480);
     assert.equal(
-      resolveStorageLimitForPlan("custom", { customMonthlyTokenBasis: 500 }),
+      resolveStorageLimitForPlan("custom", { customMonthlyTokenBasis: 480 }),
       500,
     );
   });
@@ -144,7 +144,7 @@ describe("storage entitlements", () => {
 describe("custom pack pricing", () => {
   it("computes tier amounts from catalog fallback", () => {
     assert.equal(
-      computeCustomPack(1000, "monthly").amountCents,
+      computeCustomPack(800, "monthly").amountCents,
       9900,
     );
   });

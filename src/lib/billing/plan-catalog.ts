@@ -11,8 +11,8 @@ export type PackPlanId = "starter" | "pro" | "studio" | "welcome" | "custom";
 
 export type PlanBadge = "most_popular" | "best_value";
 
-/** Typical 2K Ideas generation ≈ 3 tokens. */
-export const TOKENS_PER_IMAGE_ESTIMATE = 3;
+/** Typical 2K Ideas generation (no reference images) ≈ 4 tokens. */
+export const TOKENS_PER_IMAGE_ESTIMATE = 4;
 
 const ANNUAL_MONTHS_CHARGED = 10;
 const ANNUAL_MONTHS_GRANTED = 12;
@@ -34,11 +34,11 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     id: "starter",
     name: "Starter",
     tagline: "Get started.",
-    monthlyTokens: 120,
-    monthlyPriceCents: 700,
+    monthlyTokens: 75,
+    monthlyPriceCents: 900,
     storedAssetLimit: PACK_STORED_ASSET_LIMITS.starter,
     features: [
-      "120 tokens per pack",
+      "75 tokens per pack",
       "Studio presets & library remix",
       "2K image output",
       "Unlimited brands",
@@ -49,11 +49,11 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     name: "Pro",
     tagline: "Ship daily.",
     badge: "most_popular",
-    monthlyTokens: 550,
+    monthlyTokens: 240,
     monthlyPriceCents: 2900,
     storedAssetLimit: PACK_STORED_ASSET_LIMITS.pro,
     features: [
-      "550 tokens per pack",
+      "240 tokens per pack",
       "Brand starter pack generation",
       "2K image output",
       "Unlimited brands",
@@ -64,11 +64,11 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
     name: "Studio",
     tagline: "Run at volume.",
     badge: "best_value",
-    monthlyTokens: 1100,
+    monthlyTokens: 400,
     monthlyPriceCents: 4900,
     storedAssetLimit: PACK_STORED_ASSET_LIMITS.studio,
     features: [
-      "1,100 tokens per pack",
+      "400 tokens per pack",
       "Highest volume for teams",
       "2K image output",
       "Unlimited brands",
@@ -79,10 +79,10 @@ const PACK_DEFINITIONS: CatalogPackDefinition[] = [
 export const WELCOME_PACK = {
   id: "welcome" as const,
   name: "Welcome offer",
-  tokenAmount: 80,
+  tokenAmount: 40,
   priceCents: 500,
   storedAssetLimit: PACK_STORED_ASSET_LIMITS.welcome,
-  features: ["80 tokens", "2K image output", "One-time for new customers"],
+  features: ["40 tokens", "2K image output", "One-time for new customers"],
 };
 
 export { formatStoredAssetsLimit, resolveCustomPackStorageLimit };

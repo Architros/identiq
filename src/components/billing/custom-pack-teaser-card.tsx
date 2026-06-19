@@ -26,7 +26,7 @@ export function CustomPackTeaserCard({
   onCustomize,
 }: CustomPackTeaserCardProps) {
   const minTokens = scaleTiers[0]?.monthlyTokens ?? 300;
-  const maxTokens = scaleTiers[scaleTiers.length - 1]?.monthlyTokens ?? 5000;
+  const maxTokens = scaleTiers[scaleTiers.length - 1]?.monthlyTokens ?? 2900;
   const fromPrice = scaleTiers[0]?.monthlyPriceCents ?? 3900;
 
   return (

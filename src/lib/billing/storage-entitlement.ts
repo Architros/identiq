@@ -22,8 +22,8 @@ export function formatStoredAssetsLimit(limit: number): string {
 /** Custom pack storage tier from monthly token slider (annual uses same basis). */
 export function resolveCustomPackStorageLimit(monthlyTokenBasis: number): number {
   const tokens = Math.round(monthlyTokenBasis);
-  if (tokens >= 1_000) return PACK_STORED_ASSET_LIMITS.studio;
-  if (tokens >= 500) return PACK_STORED_ASSET_LIMITS.pro;
+  if (tokens >= 800) return PACK_STORED_ASSET_LIMITS.studio;
+  if (tokens >= 480) return PACK_STORED_ASSET_LIMITS.pro;
   return PACK_STORED_ASSET_LIMITS.starter;
 }
 

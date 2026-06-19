@@ -7,13 +7,13 @@ describe("resolveSubscriptionGrant", () => {
 
   it("grants monthly tokens expiring at period end", () => {
     const g = resolveSubscriptionGrant("pro", "monthly", periodEnd);
-    assert.equal(g.tokenAmount, 550);
+    assert.equal(g.tokenAmount, 240);
     assert.equal(g.expiresAt.toISOString(), periodEnd.toISOString());
   });
 
   it("grants 12× monthly tokens for annual expiring at period end", () => {
     const g = resolveSubscriptionGrant("starter", "annual", periodEnd);
-    assert.equal(g.tokenAmount, 1440);
+    assert.equal(g.tokenAmount, 900);
     assert.equal(g.expiresAt.toISOString(), periodEnd.toISOString());
   });
 });

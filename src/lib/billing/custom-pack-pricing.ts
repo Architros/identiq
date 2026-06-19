@@ -3,10 +3,10 @@ import type { BillingInterval } from "@/lib/billing/plan-catalog";
 /** Discrete monthly token tiers — slider snaps to these only (agency volume pricing). */
 export const CUSTOM_PACK_TIERS = [
   { monthlyTokens: 300, monthlyPriceCents: 3_900 },
-  { monthlyTokens: 500, monthlyPriceCents: 5_900 },
-  { monthlyTokens: 1_000, monthlyPriceCents: 9_900 },
-  { monthlyTokens: 2_000, monthlyPriceCents: 16_900 },
-  { monthlyTokens: 5_000, monthlyPriceCents: 34_900 },
+  { monthlyTokens: 480, monthlyPriceCents: 5_900 },
+  { monthlyTokens: 800, monthlyPriceCents: 9_900 },
+  { monthlyTokens: 1_400, monthlyPriceCents: 16_900 },
+  { monthlyTokens: 2_900, monthlyPriceCents: 34_900 },
 ] as const;
 
 export type CustomPackTier = (typeof CUSTOM_PACK_TIERS)[number];

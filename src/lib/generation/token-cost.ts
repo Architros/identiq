@@ -16,8 +16,9 @@ export function calculateGenerationTokenCost(input: TokenCostInput): number {
   if (!hasWork) return 0;
 
   const jobs = Math.max(input.presetCount, 1);
-  const resolutionMultiplier = input.resolution === "2K" ? 2 : 1;
-  const referenceCost = input.referenceImageCount;
+  /** 2K maps to high-quality image output (~4× API cost vs 1K). */
+  const resolutionMultiplier = input.resolution === "2K" ? 4 : 1;
+  const referenceCost = input.referenceImageCount * 2;
 
   return jobs * input.quantity * resolutionMultiplier + referenceCost;
 }
