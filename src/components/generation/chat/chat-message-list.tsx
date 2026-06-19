@@ -39,18 +39,6 @@ export function ChatMessageList({
   const showPendingUserTurn =
     Boolean(pendingUserTurnText?.trim()) &&
     (messages.length === 0 || lastMessage?.role !== "user");
-  const hasPendingGenerationPhase =
-    generationPhase !== null &&
-    generationPhase !== "error" &&
-    generationPhase !== "done" &&
-    generationPhase !== "stopped";
-  const showInlineProgress =
-    (isGenerating || hasPendingGenerationPhase) &&
-    (showPendingUserTurn || !lastMessage || lastMessage.role === "user");
-  const showInlineFailure =
-    !isGenerating &&
-    (generationPhase === "error" || Boolean(generationError?.trim())) &&
-    (!lastMessage || lastMessage.role === "user");
 
   const imageResultFromMessages = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -63,9 +51,29 @@ export function ChatMessageList({
   }, [messages]);
 
   const resolvedImageResult = latestImageResult ?? imageResultFromMessages;
+
+  const hasPendingGenerationPhase =
+    generationPhase !== null &&
+    generationPhase !== "error" &&
+    generationPhase !== "done" &&
+    generationPhase !== "stopped";
+  const generationActive = isGenerating || hasPendingGenerationPhase;
+  const showInlineProgress =
+    generationActive &&
+    (!resolvedImageResult ||
+      showPendingUserTurn ||
+      !lastMessage ||
+      lastMessage.role === "user");
+  const showInlineFailure =
+    !generationActive &&
+    !resolvedImageResult &&
+    (generationPhase === "error" || Boolean(generationError?.trim()));
+
   const showRemixCanvas =
     isLibraryRemix &&
-    (showInlineProgress || showInlineFailure || Boolean(resolvedImageResult));
+    (generationActive ||
+      showInlineFailure ||
+      Boolean(resolvedImageResult));
 
   const showWelcome =
     messages.length === 0 &&
@@ -129,21 +137,6 @@ export function ChatMessageList({
           </div>
         ) : null}
 
-        {showRemixCanvas ? (
-          <RemixResultCanvas
-            imageResult={resolvedImageResult}
-            aspectRatio={aspectRatio}
-            quantity={quantity}
-            remixPreviewUrl={remixPreviewUrl}
-            presetTitle={generationPresetTitle}
-            isGenerating={showInlineProgress}
-            isFailed={showInlineFailure}
-            errorMessage={generationError}
-            elapsedStartedAt={generationStartedAt}
-            onRetry={() => void submitGeneration()}
-          />
-        ) : null}
-
         {messages.map((message, index) => {
           const isLast = index === messages.length - 1;
           const streaming = isGenerating && isLast && message.role === "assistant";
@@ -168,6 +161,23 @@ export function ChatMessageList({
             />
           );
         })}
+
+        {showRemixCanvas ? (
+          <div className="flex w-full justify-start">
+            <RemixResultCanvas
+              imageResult={resolvedImageResult}
+              aspectRatio={aspectRatio}
+              quantity={quantity}
+              remixPreviewUrl={remixPreviewUrl}
+              presetTitle={generationPresetTitle}
+              isGenerating={generationActive && !resolvedImageResult}
+              isFailed={showInlineFailure}
+              errorMessage={generationError}
+              elapsedStartedAt={generationStartedAt}
+              onRetry={() => void submitGeneration()}
+            />
+          </div>
+        ) : null}
 
         {!isLibraryRemix && (showInlineProgress || showInlineFailure) ? (
           <ChatGenerationProgress phase={generationPhase} />
