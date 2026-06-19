@@ -57,6 +57,9 @@ export function StepAttachments() {
           draftId={draft.id}
           attachments={draft.attachments}
           onChange={(attachments) => updateDraft({ attachments })}
+          acceptGlobalImagePaste={Boolean(
+            draft.logo?.url && !draft.logo.uploading && !draft.logo.uploadError,
+          )}
         />
       </div>
     </div>

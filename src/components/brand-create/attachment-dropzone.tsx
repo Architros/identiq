@@ -22,6 +22,7 @@ import {
   ATTACHMENT_MAX_BYTES,
   ATTACHMENT_MAX_FILES,
   formatAttachmentSize,
+  imageFileFromClipboard,
   isAllowedAttachmentFile,
 } from "@/lib/brand/attachment-utils";
 import {
@@ -36,6 +37,8 @@ type AttachmentDropzoneProps = {
   draftId: string;
   attachments: BrandAttachment[];
   onChange: (attachments: BrandAttachment[]) => void;
+  /** When true, pasted images on this step are added here (logo slot already filled). */
+  acceptGlobalImagePaste?: boolean;
 };
 
 function AttachmentCardMeta({
@@ -99,6 +102,7 @@ export function AttachmentDropzone({
   draftId,
   attachments,
   onChange,
+  acceptGlobalImagePaste = false,
 }: AttachmentDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const attachmentsRef = useRef(attachments);
@@ -263,6 +267,52 @@ export function AttachmentDropzone({
   const uploadingCount = attachments.filter((a) => a.uploading).length;
   const atMaxFiles = attachments.length >= ATTACHMENT_MAX_FILES;
 
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent) => {
+      if (atMaxFiles) return;
+      const file = imageFileFromClipboard(event.clipboardData);
+      if (!file) return;
+      event.preventDefault();
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      void addFiles(transfer.files);
+    },
+    [addFiles, atMaxFiles],
+  );
+
+  const addPastedImageFile = useCallback(
+    (file: File) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      void addFiles(transfer.files);
+    },
+    [addFiles],
+  );
+
+  useEffect(() => {
+    if (!acceptGlobalImagePaste || atMaxFiles) return;
+
+    const onDocumentPaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable="true"], [role="textbox"]',
+        )
+      ) {
+        return;
+      }
+
+      const file = imageFileFromClipboard(event.clipboardData);
+      if (!file) return;
+
+      event.preventDefault();
+      addPastedImageFile(file);
+    };
+
+    document.addEventListener("paste", onDocumentPaste);
+    return () => document.removeEventListener("paste", onDocumentPaste);
+  }, [acceptGlobalImagePaste, atMaxFiles, addPastedImageFile]);
+
   return (
     <>
       <div className="space-y-4">
@@ -281,6 +331,7 @@ export function AttachmentDropzone({
             e.preventDefault();
             void addFiles(e.dataTransfer.files);
           }}
+          onPaste={handlePaste}
           className={cn(
             "flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center transition-colors hover:border-accent/50 hover:bg-sidebar-active/30",
             atMaxFiles && "pointer-events-none opacity-60",
@@ -294,7 +345,7 @@ export function AttachmentDropzone({
             className="text-muted"
           />
           <span className="text-sm font-medium text-foreground">
-            Drop files or click to upload
+            Drop files, paste an image, or click to upload
           </span>
           <span className="text-xs text-muted">
             PNG, JPG, WEBP, TXT, MD — up to {ATTACHMENT_MAX_FILES} files,

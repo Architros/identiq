@@ -59,6 +59,35 @@ export function isAllowedRasterImageType(type: string, name?: string): boolean {
   return /\.(png|jpe?g|webp)$/.test(normalizedName);
 }
 
+export function firstAllowedRasterImageFile(
+  files: FileList | File[],
+): File | null {
+  for (const file of Array.from(files)) {
+    if (isAllowedRasterImageType(file.type, file.name)) {
+      return file;
+    }
+  }
+  return null;
+}
+
+export function imageFileFromClipboard(
+  clipboardData: DataTransfer | null,
+): File | null {
+  if (!clipboardData) return null;
+
+  const items = clipboardData.items;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.kind !== "file") continue;
+    const file = item.getAsFile();
+    if (file && isAllowedRasterImageType(file.type, file.name)) {
+      return file;
+    }
+  }
+
+  return firstAllowedRasterImageFile(clipboardData.files);
+}
+
 export function isAllowedAttachmentFile(file: File): boolean {
   if (file.size > ATTACHMENT_MAX_BYTES) return false;
   if (isBlockedAttachmentType(file.type, file.name)) return false;

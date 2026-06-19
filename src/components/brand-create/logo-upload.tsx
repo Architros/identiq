@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Upload04Icon,
@@ -15,7 +15,11 @@ import {
   uploadReferenceToStorage,
 } from "@/lib/storage/upload-client";
 import { AttachmentUploadThumbnail } from "@/components/brand-create/attachment-upload-thumbnail";
-import { isAllowedRasterImageType } from "@/lib/brand/attachment-utils";
+import {
+  firstAllowedRasterImageFile,
+  imageFileFromClipboard,
+  isAllowedRasterImageType,
+} from "@/lib/brand/attachment-utils";
 import { cn } from "@/lib/utils";
 
 type LogoUploadProps = {
@@ -26,8 +30,10 @@ type LogoUploadProps = {
 
 export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const uploadLogo = useCallback(
     async (file: File) => {
@@ -91,6 +97,46 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
     [draftId, logo?.id, onChange],
   );
 
+  const acceptLogoFile = useCallback(
+    (file: File | null) => {
+      if (!file || logo?.uploading) return;
+      void uploadLogo(file);
+    },
+    [logo?.uploading, uploadLogo],
+  );
+
+  const handlePaste = useCallback(
+    (event: ClipboardEvent) => {
+      if (logo?.uploading) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable="true"], [role="textbox"]',
+        )
+      ) {
+        return;
+      }
+
+      const file = imageFileFromClipboard(event.clipboardData);
+      if (!file) return;
+
+      const inLogoSection = Boolean(
+        target && sectionRef.current?.contains(target),
+      );
+      if (!inLogoSection && logo) return;
+
+      event.preventDefault();
+      acceptLogoFile(file);
+    },
+    [acceptLogoFile, logo, logo?.uploading],
+  );
+
+  useEffect(() => {
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [handlePaste]);
+
   const removeLogo = () => {
     abortRef.current?.abort();
     if (logo?.previewUrl?.startsWith("blob:")) {
@@ -102,14 +148,60 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
 
   const thumb = logo ? attachmentDisplayUrl(logo) : undefined;
   const isComplete = Boolean(logo?.url) && !logo?.uploading;
+  const canAcceptFiles = !logo?.uploading;
+
+  const handleDragOver = (event: React.DragEvent) => {
+    if (!canAcceptFiles) return;
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    if (
+      sectionRef.current &&
+      event.relatedTarget instanceof Node &&
+      sectionRef.current.contains(event.relatedTarget)
+    ) {
+      return;
+    }
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    if (!canAcceptFiles) return;
+    acceptLogoFile(firstAllowedRasterImageFile(event.dataTransfer.files));
+  };
+
+  const handleLocalPaste = (event: React.ClipboardEvent) => {
+    if (!canAcceptFiles) return;
+    const file = imageFileFromClipboard(event.clipboardData);
+    if (!file) return;
+    event.preventDefault();
+    acceptLogoFile(file);
+  };
 
   return (
-    <section className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+    <section
+      ref={sectionRef}
+      tabIndex={-1}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onPaste={handleLocalPaste}
+      className={cn(
+        "space-y-3 rounded-2xl border bg-surface p-4 outline-none transition-colors",
+        isDragOver
+          ? "border-accent bg-accent/5"
+          : "border-border",
+      )}
+    >
       <div>
         <h3 className="text-sm font-medium text-foreground">Your logo</h3>
         <p className="mt-1 text-xs text-muted">
-          Optional. If you upload a logo, we use it as the brand mark and apply it
-          across generated assets instead of generating a new logo.
+          Optional. Upload, paste, or drop a PNG, JPG, or WEBP — we use it as the
+          brand mark across generated assets instead of generating a new logo.
         </p>
       </div>
 
@@ -167,10 +259,11 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
       ) : (
         <button
           type="button"
-          disabled={false}
+          disabled={!canAcceptFiles}
           onClick={() => inputRef.current?.click()}
           className={cn(
             "flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-center transition-colors hover:border-accent/50 hover:bg-sidebar-active/30",
+            isDragOver && "border-accent bg-accent/5",
           )}
         >
           <HugeiconsIcon
@@ -180,7 +273,7 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
             className="text-muted"
           />
           <span className="text-sm font-medium text-foreground">
-            Upload your logo
+            Drop your logo, paste an image, or click to upload
           </span>
           <span className="text-xs text-muted">PNG, JPG, or WEBP</span>
         </button>
@@ -198,8 +291,7 @@ export function LogoUpload({ draftId, logo, onChange }: LogoUploadProps) {
         accept="image/png,image/jpeg,image/webp"
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void uploadLogo(file);
+          acceptLogoFile(e.target.files?.[0] ?? null);
           e.target.value = "";
         }}
       />
