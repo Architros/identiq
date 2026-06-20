@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AUTH_SIGNED_IN_EVENT,
-  AUTH_SIGNED_OUT_EVENT,
   dispatchAuthSignedIn,
   dispatchAuthSignedOut,
 } from "@/lib/auth/client-storage";
@@ -19,28 +17,39 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const supabase = createClient();
+    let hasActiveSession = false;
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        hasActiveSession = false;
         dispatchAuthSignedOut();
         return;
       }
-      // TOKEN_REFRESHED fires when the tab regains focus — do not remount the
-      // tree or refetch providers; that aborts long-running generation streams.
+
+      const sessionPresent = Boolean(session);
+
+      // TOKEN_REFRESHED (and INITIAL_SESSION) can fire when the tab regains focus.
+      // Do not remount providers or refetch header data — that aborts generation.
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        hasActiveSession = sessionPresent;
+        return;
+      }
+
       if (event === "SIGNED_IN") {
-        dispatchAuthSignedIn();
-        router.refresh();
+        if (!hasActiveSession && sessionPresent) {
+          hasActiveSession = true;
+          dispatchAuthSignedIn();
+          router.refresh();
+        } else if (sessionPresent) {
+          hasActiveSession = true;
+        }
       }
     });
 
-    const onSignedIn = () => router.refresh();
-    window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
-
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
     };
   }, [router]);
 

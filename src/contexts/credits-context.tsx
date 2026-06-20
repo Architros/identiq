@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -54,7 +55,10 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
   const [assetStorage, setAssetStorage] =
     useState<AssetStorageUsage>(DEFAULT_STORAGE);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
   const connectivity = useConnectivityOptional();
+  const connectivityRef = useRef(connectivity);
+  connectivityRef.current = connectivity;
 
   const refreshBalance = useCallback(async (balance?: number) => {
     if (typeof balance === "number") {
@@ -68,11 +72,11 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (isServiceUnavailableResponse(res)) {
-        connectivity?.reportServiceUnavailable();
+        connectivityRef.current?.reportServiceUnavailable();
         return;
       }
       if (res.ok) {
-        connectivity?.clearConnectivityIssue();
+        connectivityRef.current?.clearConnectivityIssue();
         const data = (await res.json()) as {
           balance: number;
           storage?: AssetStorageUsage;
@@ -85,25 +89,30 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Keep current balance when API is unavailable.
     }
-  }, [connectivity]);
+  }, []);
 
   useEffect(() => {
     void (async () => {
-      setIsLoading(true);
+      if (!hasLoadedRef.current) setIsLoading(true);
       await refreshBalance();
+      hasLoadedRef.current = true;
       setIsLoading(false);
     })();
   }, [refreshBalance]);
 
   useEffect(() => {
     const onSignedOut = () => {
+      hasLoadedRef.current = false;
       setAvailableTokens(0);
       setAssetStorage(DEFAULT_STORAGE);
       setIsLoading(false);
     };
     const onSignedIn = () => {
-      setIsLoading(true);
-      void refreshBalance().finally(() => setIsLoading(false));
+      if (!hasLoadedRef.current) setIsLoading(true);
+      void refreshBalance().finally(() => {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
+      });
     };
     window.addEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
     window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { BrandSummary } from "@/lib/brand/brands";
@@ -73,7 +74,10 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const [userKits, setUserKits] = useState<Record<string, BrandKit>>({});
   const [userSummaries, setUserSummaries] = useState<BrandSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
   const connectivity = useConnectivityOptional();
+  const connectivityRef = useRef(connectivity);
+  connectivityRef.current = connectivity;
 
   const refreshBrands = useCallback(async () => {
     try {
@@ -89,9 +93,9 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (isServiceUnavailableResponse(res)) {
-        connectivity?.reportServiceUnavailable();
+        connectivityRef.current?.reportServiceUnavailable();
       } else if (res.ok) {
-        connectivity?.clearConnectivityIssue();
+        connectivityRef.current?.clearConnectivityIssue();
         const data = (await res.json()) as {
           kits: BrandKit[];
           summaries: BrandSummary[];
@@ -119,25 +123,31 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       if (next !== NO_BRAND_ID) writeLastActiveBrandId(next);
       return next;
     });
-  }, [connectivity]);
+  }, []);
 
   useEffect(() => {
     void (async () => {
+      if (!hasLoadedRef.current) setIsLoading(true);
       await refreshBrands();
+      hasLoadedRef.current = true;
       setIsLoading(false);
     })();
   }, [refreshBrands]);
 
   useEffect(() => {
     const onSignedOut = () => {
+      hasLoadedRef.current = false;
       setUserKits({});
       setUserSummaries([]);
       setActiveBrandId(NO_BRAND_ID);
       setIsLoading(false);
     };
     const onSignedIn = () => {
-      setIsLoading(true);
-      void refreshBrands().finally(() => setIsLoading(false));
+      if (!hasLoadedRef.current) setIsLoading(true);
+      void refreshBrands().finally(() => {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
+      });
     };
     window.addEventListener(AUTH_SIGNED_OUT_EVENT, onSignedOut);
     window.addEventListener(AUTH_SIGNED_IN_EVENT, onSignedIn);
@@ -266,7 +276,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok) {
         if (isServiceUnavailableResponse(res)) {
-          connectivity?.reportServiceUnavailable();
+          connectivityRef.current?.reportServiceUnavailable();
           saveUserBrand(kit, summary);
         } else {
           throw new Error("Failed to save brand");
@@ -281,7 +291,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       setActiveBrandId(kit.id);
       writeLastActiveBrandId(kit.id);
     },
-    [connectivity],
+    [],
   );
 
   const value = useMemo(
