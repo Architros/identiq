@@ -6,13 +6,38 @@ import { BILLING_ACCESS_COOKIE } from "@/lib/billing/billing-access-cookie";
 import { geistSans, displayFont } from "@/lib/fonts";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+  "https://app.tryidentiq.com";
+
+const thumbnail = {
+  url: "/thumbnail.png",
+  width: 500,
+  height: 274,
+  alt: "identiq — Generate Everything On-brand",
+} as const;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "identiq — AI Brand System",
   description: "Generate cohesive brand assets with AI.",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
     apple: "/favicon.ico",
+  },
+  openGraph: {
+    title: "identiq — AI Brand System",
+    description: "Generate cohesive brand assets with AI.",
+    type: "website",
+    images: [thumbnail],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "identiq — AI Brand System",
+    description: "Generate cohesive brand assets with AI.",
+    images: [thumbnail.url],
   },
 };
 
