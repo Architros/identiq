@@ -39,6 +39,23 @@ export async function upsertUserSubscription(params: {
   currentPeriodEnd?: Date | null;
 }): Promise<void> {
   const admin = createServiceRoleClient();
+
+  const { data: existing } = await admin
+    .from("subscriptions")
+    .select("stripe_customer_id, stripe_subscription_id")
+    .eq("user_id", params.userId)
+    .maybeSingle();
+
+  const stripeCustomerId =
+    params.stripeCustomerId !== undefined
+      ? params.stripeCustomerId
+      : ((existing?.stripe_customer_id as string | null) ?? null);
+
+  const stripeSubscriptionId =
+    params.stripeSubscriptionId !== undefined
+      ? params.stripeSubscriptionId
+      : ((existing?.stripe_subscription_id as string | null) ?? null);
+
   const { error } = await admin.from("subscriptions").upsert(
     {
       user_id: params.userId,
@@ -46,8 +63,8 @@ export async function upsertUserSubscription(params: {
       billing_interval: params.billingInterval,
       plan: legacyPlanColumn(params.planId),
       status: params.status,
-      stripe_customer_id: params.stripeCustomerId ?? null,
-      stripe_subscription_id: params.stripeSubscriptionId ?? null,
+      stripe_customer_id: stripeCustomerId,
+      stripe_subscription_id: stripeSubscriptionId,
       current_period_end:
         params.currentPeriodEnd && isValidDate(params.currentPeriodEnd)
           ? params.currentPeriodEnd.toISOString()
@@ -56,6 +73,38 @@ export async function upsertUserSubscription(params: {
     },
     { onConflict: "user_id" },
   );
+  if (error) throw error;
+}
+
+/** Persist Stripe customer id before checkout completes (welcome / first visit). */
+export async function saveStripeCustomerIdForUser(
+  userId: string,
+  stripeCustomerId: string,
+): Promise<void> {
+  const admin = createServiceRoleClient();
+  const existing = await getUserSubscription(userId);
+
+  if (existing) {
+    const { error } = await admin
+      .from("subscriptions")
+      .update({
+        stripe_customer_id: stripeCustomerId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await admin.from("subscriptions").insert({
+    user_id: userId,
+    plan: "free",
+    plan_id: null,
+    billing_interval: "monthly",
+    status: "inactive",
+    stripe_customer_id: stripeCustomerId,
+  });
+
   if (error) throw error;
 }
 

@@ -7,6 +7,10 @@ import {
   resolveScaleStripePriceId,
 } from "@/lib/db/repositories/scale-plan-prices";
 import { getStripeClient } from "@/lib/billing/stripe-client";
+import {
+  ensureStripeCustomerForUser,
+  stripeCustomerIdFromCheckoutSession,
+} from "@/lib/billing/stripe-customer";
 import { getTokenBalance } from "@/lib/db/repositories/credits";
 import { grantSubscriptionTokens } from "@/lib/db/repositories/subscription-billing";
 import {
@@ -17,6 +21,7 @@ import {
 } from "@/lib/db/repositories/billing";
 import {
   ensureUserSubscriptionRecord,
+  saveStripeCustomerIdForUser,
   upsertUserSubscription,
 } from "@/lib/db/repositories/subscriptions";
 import { periodEndFromStripeSubscription } from "@/lib/billing/stripe-subscription-period";
@@ -87,11 +92,15 @@ export const stripeBillingProvider: BillingProvider = {
 
     const stripe = getStripeClient();
     const successUrl = `${siteUrl()}/billing/complete?session=${internal.id}`;
+    const stripeCustomerId = await ensureStripeCustomerForUser({
+      userId,
+      userEmail,
+    });
 
     if (planId === "welcome") {
       const stripeSession = await stripe.checkout.sessions.create({
         mode: "payment",
-        customer_email: userEmail ?? undefined,
+        customer: stripeCustomerId,
         line_items: [
           {
             price_data: {
@@ -132,7 +141,7 @@ export const stripeBillingProvider: BillingProvider = {
 
     const stripeSession = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer_email: userEmail ?? undefined,
+      customer: stripeCustomerId,
       line_items: buildStripeSubscriptionLineItems(
         plan,
         billingInterval,
@@ -191,8 +200,19 @@ export const stripeBillingProvider: BillingProvider = {
     const interval = (row.billing_interval ?? "monthly") as BillingInterval;
 
     if (planId === "welcome") {
+      if (row.stripe_checkout_session_id) {
+        const stripe = getStripeClient();
+        const cs = await stripe.checkout.sessions.retrieve(
+          row.stripe_checkout_session_id as string,
+        );
+        const customerId = stripeCustomerIdFromCheckoutSession(cs.customer);
+        if (customerId) {
+          await saveStripeCustomerIdForUser(userId, customerId);
+        }
+      }
       return completeCheckoutSession(sessionId, userId, {
         billingInterval: interval,
+        stripeCheckoutSessionId: row.stripe_checkout_session_id as string | undefined,
       });
     }
 
@@ -279,6 +299,13 @@ export const stripeBillingProvider: BillingProvider = {
         throw new Error("Checkout session missing identiq metadata.");
       }
 
+      const checkoutCustomerId = stripeCustomerIdFromCheckoutSession(
+        session.customer,
+      );
+      if (checkoutCustomerId) {
+        await saveStripeCustomerIdForUser(userId, checkoutCustomerId);
+      }
+
       if (identiqSessionId) {
         await linkStripeCheckoutSession(identiqSessionId, session.id);
       }
@@ -355,6 +382,8 @@ export const stripeBillingProvider: BillingProvider = {
       const customBasis = sub.metadata?.identiq_custom_tokens
         ? Number(sub.metadata.identiq_custom_tokens)
         : undefined;
+      const customerId =
+        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
 
       await grantSubscriptionTokens({
         userId,
@@ -371,6 +400,7 @@ export const stripeBillingProvider: BillingProvider = {
         planId,
         billingInterval: interval,
         status: sub.status,
+        stripeCustomerId: customerId,
         stripeSubscriptionId: sub.id,
         currentPeriodEnd: periodEnd,
       });
@@ -391,11 +421,14 @@ export const stripeBillingProvider: BillingProvider = {
       if (!userId || !planId) return;
 
       const periodEnd = periodEndFromStripeSubscription(sub, interval);
+      const customerId =
+        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
       await upsertUserSubscription({
         userId,
         planId,
         billingInterval: interval,
         status: sub.status,
+        stripeCustomerId: customerId,
         stripeSubscriptionId: sub.id,
         currentPeriodEnd: periodEnd,
       });
