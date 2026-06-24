@@ -2,6 +2,7 @@
 
 import { ChatGenerationProgress } from "@/components/generation/chat/chat-generation-progress";
 import { CollapsibleFooterComposer } from "@/components/generation/collapsible-footer-composer";
+import { CollapsibleStickyComposer } from "@/components/generation/collapsible-sticky-composer";
 import { GenerationDock } from "@/components/generation/generation-dock";
 import { useGeneration } from "@/contexts/generation-context";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,7 @@ export function GenerationComposer({
             : "py-2 sm:py-3"
           : compact
             ? "py-2"
-            : "pb-3 pt-6 max-md:pb-2 max-md:pt-4 md:pb-4 md:pt-14",
+            : "pb-2 pt-2 max-md:pb-2 md:pb-3",
       )}
     >
       <GenerationDock variant="images" compact={compact} />
@@ -86,7 +87,7 @@ export function GenerationComposer({
           <ChatGenerationProgress />
         </div>
       ) : null}
-      {dock}
+      <CollapsibleStickyComposer>{dock}</CollapsibleStickyComposer>
     </div>
   );
 }

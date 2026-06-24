@@ -69,6 +69,7 @@ export function ImagesPageContent() {
     addReferenceImageFromUrl,
     historyOpen,
     setHistoryOpen,
+    setImagesComposerExpanded,
   } = useGeneration();
 
   const [tab, setTab] = useState<ImagesTab>("generated");
@@ -80,10 +81,11 @@ export function ImagesPageContent() {
   );
 
   const scrollToComposer = useCallback(() => {
+    setImagesComposerExpanded(true);
     document
       .getElementById("images-generation-composer")
       ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, []);
+  }, [setImagesComposerExpanded]);
 
   const attachToChat = useCallback(
     (url: string, name: string) => {

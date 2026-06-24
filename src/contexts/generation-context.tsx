@@ -176,6 +176,9 @@ type GenerationContextValue = {
   latestImageResult: ImageResultData | null;
   footerComposerExpanded: boolean;
   setFooterComposerExpanded: (expanded: boolean) => void;
+  /** Brand assets page sticky dock — default minimized. */
+  imagesComposerExpanded: boolean;
+  setImagesComposerExpanded: (expanded: boolean) => void;
   libraryTemplateId: string | null;
   historyOpen: boolean;
   setHistoryOpen: (open: boolean) => void;
@@ -280,6 +283,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [latestImageResult, setLatestImageResult] =
     useState<ImageResultData | null>(null);
   const [footerComposerExpanded, setFooterComposerExpanded] = useState(true);
+  const [imagesComposerExpanded, setImagesComposerExpanded] = useState(false);
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [pendingUserTurnText, setPendingUserTurnText] = useState<string | null>(
     null,
@@ -1457,6 +1461,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       latestImageResult,
       footerComposerExpanded,
       setFooterComposerExpanded,
+      imagesComposerExpanded,
+      setImagesComposerExpanded,
       libraryTemplateId,
       historyOpen,
       setHistoryOpen,
@@ -1512,6 +1518,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       generationError,
       latestImageResult,
       footerComposerExpanded,
+      imagesComposerExpanded,
       libraryTemplateId,
       historyOpen,
       setLibraryTemplateId,
