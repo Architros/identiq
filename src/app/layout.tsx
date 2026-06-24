@@ -12,9 +12,9 @@ const siteUrl =
   "https://app.tryidentiq.com";
 
 const thumbnail = {
-  url: "/thumbnail.png",
-  width: 500,
-  height: 274,
+  url: "/thumbnail-larger.png",
+  width: 4000,
+  height: 2192,
   alt: "identiq — Generate Everything On-brand",
 } as const;
 
