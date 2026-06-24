@@ -9,7 +9,7 @@ import { GeneratedImageCard } from "@/components/generation/chat/generated-image
 import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGeneration } from "@/contexts/generation-context";
 import { generationProgressTexts } from "@/lib/generation/generation-progress-texts";
-import { GenerationStepList } from "@/components/generation/chat/generation-step-list";
+import type { GenerationPhase } from "@/lib/generation/chat-message-types";
 
 type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
@@ -20,6 +20,17 @@ type ChatAssistantTurnProps = {
   /** Used when stream ended before message parts were merged. */
   fallbackImageResult?: ImageResultData | null;
 };
+
+const ACTIVE_GENERATION_PHASES: GenerationPhase[] = [
+  "composing-prompt",
+  "orchestrating",
+  "generating-image",
+  "finalizing-asset",
+];
+
+function isActiveGenerationPhase(phase?: GenerationPhase | string | null): boolean {
+  return Boolean(phase && ACTIVE_GENERATION_PHASES.includes(phase as GenerationPhase));
+}
 
 export function ChatAssistantTurn({
   message,
@@ -48,18 +59,17 @@ export function ChatAssistantTurn({
   const imageResult = messageImageResult ?? fallbackImageResult ?? null;
 
   const phase = generationStatus?.phase;
-  const isOrchestrating =
-    phase === "orchestrating" ||
-    phase === "composing-prompt" ||
-    (isStreaming && !imageResult && phase !== "generating-image" && phase !== "finalizing-asset");
   const isFailed =
     (phase === "error" || Boolean(errorText?.trim())) && !imageResult;
-  const showThinking = isOrchestrating && isStreaming && !isFailed;
-  const showSkeleton =
-    ((phase === "generating-image" || phase === "finalizing-asset") &&
-      !imageResult) ||
-    (isFailed && !imageResult);
   const showStopped = phase === "stopped";
+  const showProgressSkeleton =
+    !hideRemixVisuals &&
+    !imageResult &&
+    !showStopped &&
+    (isFailed ||
+      (isStreaming &&
+        (isActiveGenerationPhase(phase) ||
+          (!phase && !imageResult))));
   const skeletonAspectRatio =
     generationStatus?.aspectRatio ?? sessionAspectRatio;
   const skeletonQuantity = generationStatus?.quantity ?? sessionQuantity;
@@ -67,19 +77,10 @@ export function ChatAssistantTurn({
     errorText ?? generationStatus?.errorMessage,
   );
 
-  const thinkingTexts = useMemo(
+  const progressTexts = useMemo(
     () =>
       generationProgressTexts({
         phase: phase ?? "orchestrating",
-        presetTitle: generationStatus?.presetTitle,
-        isLibraryRemix,
-      }),
-    [phase, generationStatus?.presetTitle, isLibraryRemix],
-  );
-  const renderingTexts = useMemo(
-    () =>
-      generationProgressTexts({
-        phase: phase === "finalizing-asset" ? "finalizing-asset" : "generating-image",
         presetTitle: generationStatus?.presetTitle,
         isLibraryRemix,
       }),
@@ -106,19 +107,7 @@ export function ChatAssistantTurn({
           </div>
         ) : null}
 
-        {showThinking ? (
-          <div className="space-y-2">
-            <GenerationStepList phase={phase} />
-            <AITextLoading
-              texts={thinkingTexts}
-              size="sm"
-              compact
-              interval={1400}
-            />
-          </div>
-        ) : null}
-
-        {showSkeleton && !hideRemixVisuals ? (
+        {showProgressSkeleton ? (
           <div className="space-y-2">
             {isFailed ? (
               <p className="text-sm text-muted">{inlineError}</p>
@@ -131,12 +120,12 @@ export function ChatAssistantTurn({
               imageModel={generationStatus?.imageModel}
               displayDimensions={generationStatus?.displayDimensions}
               elapsedStartedAt={isFailed ? null : generationStartedAt}
-              animated={!isFailed && phase !== "finalizing-asset"}
+              animated={!isFailed}
               failed={isFailed}
               centered={false}
               onRetry={isFailed ? () => void submitGeneration() : undefined}
-              progressTexts={isFailed ? undefined : renderingTexts}
-              phase={phase}
+              progressTexts={isFailed ? undefined : progressTexts}
+              phase={phase ?? "orchestrating"}
               resolution={resolution}
             />
             {generationStatus?.warningMessage ? (
@@ -153,13 +142,12 @@ export function ChatAssistantTurn({
           <p className="text-sm text-muted">Generation stopped.</p>
         ) : null}
 
-        {!showThinking &&
-        !showSkeleton &&
+        {!showProgressSkeleton &&
         !imageResult &&
         !showStopped &&
         isStreaming ? (
           <AITextLoading
-            texts={thinkingTexts}
+            texts={progressTexts}
             size="sm"
             compact
             interval={1400}

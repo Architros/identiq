@@ -631,7 +631,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             const phaseKey = data.presetId ?? "default";
             if (lastPresetPhaseRef.current !== phaseKey) {
               lastPresetPhaseRef.current = phaseKey;
-              setGenerationStartedAt(Date.now());
             }
           }
           if (data.phase === "done" || data.phase === "error" || data.phase === "stopped") {

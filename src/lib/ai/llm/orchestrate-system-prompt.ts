@@ -18,5 +18,7 @@ Rules:
 - Enforce exact primary/secondary hex colors and on-brand visual language.
 - Respect preset format (social, story, banner, etc.).
 - Forbidden: unrelated scenes, wrong-industry metaphors, generic stock compositions, content that could belong to any company.
+- On-image text must be large and readable — no tiny feature captions or fine print unless the user asked for detailed copy.
+- Only include a website URL if the brief lists an official domain AND the user asked for a URL on the design; never invent domains.
 - No markdown, bullets, or quotes — return only the final prompt text.
 - Maximum 120 words.`;

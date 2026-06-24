@@ -17,6 +17,7 @@ export type StreamOrchestratePromptInput = {
   sector?: string;
   description?: string;
   tagline?: string;
+  brandDomain?: string;
   chatThreadContext?: string;
   isLibraryRemix?: boolean;
 };
@@ -49,6 +50,9 @@ export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
       input.tagline?.trim() && input.description?.trim()
         ? `Tagline: ${input.tagline.trim()}`
         : "",
+      input.brandDomain?.trim()
+        ? `Official website: ${input.brandDomain.trim()} (only show on image if user asks for a URL)`
+        : "Official website: none (do not add URLs unless user explicitly requests)",
       input.userPrompt.trim()
         ? `User direction (highest priority): ${input.userPrompt.trim()}`
         : "",

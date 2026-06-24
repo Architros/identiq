@@ -251,6 +251,36 @@ function buildIdeasOutputConstraintsSection(): string {
   ].join("\n");
 }
 
+/** Legibility rules for on-image copy in Ideas / social assets. */
+export function buildCopyLegibilityRules(): string {
+  return [
+    "## On-image copy (legibility rules)",
+    "- All text must be large and readable at the target size — no tiny captions, footnotes, fine print, or micro-labels.",
+    "- Use one strong headline plus at most 1–2 short supporting lines; avoid dense feature grids with small explanatory subtext.",
+    "- Do NOT add small feature blurbs, bullet explanations, or caption-sized text unless the user explicitly asked for detailed copy.",
+    "- Prefer bold headlines and icons over paired title+subtitle blocks when space is limited.",
+  ].join("\n");
+}
+
+/** Official domain guidance — prevents invented URLs. */
+export function buildBrandWebsiteGuidance(brand: BrandPromptContext): string {
+  const domain = brand.domain?.trim();
+  if (domain) {
+    return [
+      "## Official website",
+      `Official website: ${domain}`,
+      "- Only show this URL on the image if the user explicitly asks for a website, link, or domain on the design.",
+      "- Never substitute a different or made-up domain.",
+    ].join("\n");
+  }
+  return [
+    "## Official website",
+    "Official website: none",
+    "- Do NOT add any URL or domain to the image unless the user explicitly requests one.",
+    "- Never invent placeholder domains (e.g. example.com, random .io links).",
+  ].join("\n");
+}
+
 /** Strict relevance block appended to Ideas prompts and post-orchestration. */
 export function buildBrandRelevanceGuardrails(brand: BrandPromptContext): string {
   const summary =
@@ -269,7 +299,7 @@ export function buildBrandRelevanceGuardrails(brand: BrandPromptContext): string
     "- If the request is ambiguous, default to the brand's core offering — not a generic template.",
   ];
 
-  return lines.filter(Boolean).join("\n");
+  return [...lines.filter(Boolean), "", buildBrandWebsiteGuidance(brand), "", buildCopyLegibilityRules()].join("\n");
 }
 
 /** Refresh stale years/copyright in remix and template-adapt flows. */

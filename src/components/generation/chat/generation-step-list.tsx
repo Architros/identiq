@@ -22,6 +22,7 @@ type GenerationStepListProps = {
 
 function phaseIndex(phase?: GenerationPhase | string | null): number {
   if (!phase) return -1;
+  if (phase === "composing-prompt") return 0;
   return PHASE_ORDER.indexOf(phase as GenerationPhase);
 }
 

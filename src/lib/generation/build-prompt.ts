@@ -28,6 +28,7 @@ export type BuildPromptInput = {
   description?: string;
   tagline?: string;
   feelings?: string[];
+  domain?: string;
   templateCategory?: string;
   chatThreadContext?: string;
 };
@@ -40,6 +41,7 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     sector: input.sector,
     feelings: input.feelings,
     tagline: input.tagline,
+    domain: input.domain,
   };
 
   const presetLines =

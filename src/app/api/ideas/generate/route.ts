@@ -248,6 +248,7 @@ export async function POST(request: Request) {
         tagline: brandPromptContext.tagline,
         sector: brandPromptContext.sector,
         feelings: brandPromptContext.feelings,
+        domain: brandPromptContext.domain,
         templateCategory: libraryTemplate?.category,
         chatThreadContext,
       });
@@ -297,6 +298,7 @@ export async function POST(request: Request) {
             sector: brandPromptContext.sector,
             description: brandPromptContext.description,
             tagline: brandPromptContext.tagline,
+            brandDomain: brandPromptContext.domain,
             chatThreadContext,
             isLibraryRemix,
           });

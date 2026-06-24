@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { ImageSkeletonGrid } from "@/components/generation/chat/image-skeleton-grid";
 import { useGeneration } from "@/contexts/generation-context";
 import type { GenerationPhase } from "@/lib/generation/chat-message-types";
@@ -38,19 +37,11 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
   const effectivePhase = pendingLibraryStart
     ? ("composing-prompt" as const)
     : activePhase;
-  const isComposingEffective =
-    !isFailed &&
-    (effectivePhase === "composing-prompt" ||
-      effectivePhase === "orchestrating");
-  const isRenderingEffective =
-    !isFailed &&
-    (effectivePhase === "generating-image" ||
-      effectivePhase === "finalizing-asset");
 
   const progressTexts = useMemo(
     () =>
       generationProgressTexts({
-        phase: effectivePhase ?? undefined,
+        phase: effectivePhase ?? "orchestrating",
         presetTitle: generationPresetTitle ?? undefined,
         isLibraryRemix,
       }),
@@ -106,27 +97,18 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
         isLibraryRemix && "flex flex-col items-start text-left",
       )}
     >
-      {isComposingEffective || isRenderingEffective ? (
-        <ImageSkeletonGrid
-          aspectRatio={aspectRatio}
-          quantity={quantity}
-          mediaTypeLabel={generationPresetTitle}
-          remixPreviewUrl={remixPreviewUrl}
-          elapsedStartedAt={generationStartedAt}
-          progressTexts={progressTexts}
-          phase={effectivePhase ?? undefined}
-          resolution={resolution}
-          animated={effectivePhase !== "finalizing-asset"}
-          centered={false}
-        />
-      ) : (
-        <AITextLoading
-          texts={progressTexts}
-          size="sm"
-          compact
-          interval={1400}
-        />
-      )}
+      <ImageSkeletonGrid
+        aspectRatio={aspectRatio}
+        quantity={quantity}
+        mediaTypeLabel={generationPresetTitle}
+        remixPreviewUrl={remixPreviewUrl}
+        elapsedStartedAt={generationStartedAt}
+        progressTexts={progressTexts}
+        phase={effectivePhase ?? "orchestrating"}
+        resolution={resolution}
+        animated
+        centered={false}
+      />
     </div>
   );
 }
