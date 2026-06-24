@@ -1,5 +1,11 @@
 import type { GenerationPhase } from "@/lib/generation/chat-message-types";
 
+export function generationEtaHint(resolution?: string): string | undefined {
+  if (resolution === "2K") return "Usually ~60–120s";
+  if (resolution === "1K") return "Usually ~30–60s";
+  return undefined;
+}
+
 export function generationProgressTexts(input: {
   phase?: GenerationPhase | string;
   presetTitle?: string;
@@ -13,7 +19,7 @@ export function generationProgressTexts(input: {
         ? ["Adapting the layout…"]
         : ["Preparing your prompt…"];
     case "orchestrating":
-      return ["Preparing generation…"];
+      return ["Analyzing brand…", "Building prompt…"];
     case "generating-image": {
       if (presetTitle) {
         return [`Rendering ${presetTitle}…`];
@@ -22,6 +28,8 @@ export function generationProgressTexts(input: {
         ? ["Rendering your remix…"]
         : ["Rendering your image…"];
     }
+    case "finalizing-asset":
+      return ["Finalizing asset…"];
     default:
       return isLibraryRemix
         ? ["Starting library remix…"]

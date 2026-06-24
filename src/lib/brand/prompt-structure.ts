@@ -241,6 +241,48 @@ function buildOutputConstraintsSection(input: ImagePromptAssemblyInput): string 
   ].join("\n");
 }
 
+function buildIdeasOutputConstraintsSection(): string {
+  return [
+    "## Output requirements",
+    "Production-quality, on-brand, ready for marketing use.",
+    "No watermarks, no placeholder text like 'Lorem ipsum', no off-brand or unrelated subject matter.",
+    "Composition should read clearly at a glance on the target platform.",
+    "Every visual and headline must reflect what this brand actually does — not generic stock imagery.",
+  ].join("\n");
+}
+
+/** Strict relevance block appended to Ideas prompts and post-orchestration. */
+export function buildBrandRelevanceGuardrails(brand: BrandPromptContext): string {
+  const summary =
+    brand.description?.trim() || brand.websiteSummary?.trim() || undefined;
+
+  const lines = [
+    "## What this brand does (mandatory context)",
+    brand.sector ? `- Sector: ${brand.sector}` : "",
+    summary ? `- Summary: ${summary}` : "",
+    brand.tagline ? `- Tagline: ${brand.tagline}` : "",
+    "",
+    "## Relevance rules (strict)",
+    "- Depict only subjects, products, services, and messaging aligned with what this brand does.",
+    "- Do NOT add unrelated industries, random stock scenes, or generic lifestyle imagery unless the user explicitly asked for it.",
+    "- On-image copy must match this brand's voice and offering — no placeholder lorem, no off-topic headlines.",
+    "- If the request is ambiguous, default to the brand's core offering — not a generic template.",
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
+/** Refresh stale years/copyright in remix and template-adapt flows. */
+export function buildTemporalFreshnessSection(now = new Date()): string {
+  const year = now.getFullYear();
+  return [
+    "## Temporal text (mandatory)",
+    `Current year is ${year} (use server date at generation time).`,
+    `Replace any outdated years, copyright lines, "© 20xx", event dates, or past-year style text from the template with ${year} or a current, plausible date.`,
+    "Do NOT copy stale years from the template literally.",
+  ].join("\n");
+}
+
 /**
  * Final prompt sent to the image model (after planner brief + runtime refs/logo).
  */
@@ -383,6 +425,9 @@ export function assembleLibraryRemixPrompt(input: {
     ? "Preserve the template's design concept, form, composition, and visual structure. Do not invent a new layout or redesign the concept."
     : "Keep the template's layout, hierarchy, and composition. Do not invent a new layout or redesign the concept.";
 
+  sections.push(buildBrandRelevanceGuardrails(brand));
+  sections.push(buildTemporalFreshnessSection());
+
   sections.push(
     [
       "## Task",
@@ -474,6 +519,7 @@ export function assembleIdeasGenerationPrompt(input: {
       `Create on-brand imagery for "${input.brand.brandName}".`,
     ].join("\n"),
     buildCompactBrandSpec(input.brand),
+    buildBrandRelevanceGuardrails(input.brand),
   );
 
   if (input.brandAssetRefs?.length) {
@@ -510,7 +556,7 @@ export function assembleIdeasGenerationPrompt(input: {
     if (visualInspiration) sections.push(visualInspiration);
   }
 
-  sections.push(buildOutputConstraintsSection({ brand: input.brand, creativeBrief: "", assetTitle: "Image" }));
+  sections.push(buildIdeasOutputConstraintsSection());
 
   return sections.join("\n\n");
 }

@@ -42,6 +42,7 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
   const [hidden, setHidden] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const first = data.images[0];
   if (!first || hidden) return null;
 
@@ -95,8 +96,12 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
         src={previewUrl}
         alt="Generated brand asset"
         fill
-        className="object-contain"
+        className={cn(
+          "object-contain transition-opacity duration-500",
+          imageLoaded ? "opacity-100" : "opacity-0",
+        )}
         unoptimized
+        onLoad={() => setImageLoaded(true)}
       />
     </button>
   );

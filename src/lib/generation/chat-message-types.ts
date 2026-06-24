@@ -4,6 +4,7 @@ export type GenerationPhase =
   | "composing-prompt"
   | "orchestrating"
   | "generating-image"
+  | "finalizing-asset"
   | "done"
   | "error"
   | "stopped";
@@ -18,6 +19,7 @@ export type GenerationStatusData = {
   displayDimensions?: string;
   size?: string;
   errorMessage?: string;
+  warningMessage?: string;
 };
 
 export type StreamImageResult = {

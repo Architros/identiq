@@ -13,6 +13,12 @@ export type StreamOrchestratePromptInput = {
   imageAssist: boolean;
   referenceImageUrls?: string[];
   abortSignal?: AbortSignal;
+  brandName?: string;
+  sector?: string;
+  description?: string;
+  tagline?: string;
+  chatThreadContext?: string;
+  isLibraryRemix?: boolean;
 };
 
 export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
@@ -26,19 +32,37 @@ export function streamOrchestratePrompt(input: StreamOrchestratePromptInput) {
       ? `${input.referenceImageUrls.length} reference image(s) will be attached at generation. Your final prompt must explicitly require matching their palette, lighting, and composition — this is the highest priority visual constraint.`
       : "";
 
+  const whatTheyDo =
+    input.description?.trim() ||
+    input.tagline?.trim() ||
+    "See brand brief below.";
+
   return streamText({
     model: llmModel,
-    maxOutputTokens: 600,
+    maxOutputTokens: 800,
     system: ORCHESTRATE_SYSTEM_PROMPT,
     abortSignal: input.abortSignal,
     prompt: [
+      input.brandName ? `Brand name: ${input.brandName}` : "",
+      input.sector ? `Brand sector: ${input.sector}` : "",
+      `What they do: ${whatTheyDo}`,
+      input.tagline?.trim() && input.description?.trim()
+        ? `Tagline: ${input.tagline.trim()}`
+        : "",
       input.userPrompt.trim()
         ? `User direction (highest priority): ${input.userPrompt.trim()}`
+        : "",
+      input.chatThreadContext?.trim() ? input.chatThreadContext.trim() : "",
+      input.presets.length > 0
+        ? `Preset format: ${input.presets.map((p) => `${p.title} (${p.aspectRatio})`).join(", ")}`
         : "",
       "Brand brief:",
       input.basePrompt,
       referenceNote,
       assetNote,
+      input.isLibraryRemix
+        ? "This is a library remix — update any stale years or copyright dates to the current year."
+        : "",
       "Write the final image generation prompt:",
     ]
       .filter(Boolean)

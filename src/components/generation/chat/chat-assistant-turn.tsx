@@ -9,6 +9,7 @@ import { GeneratedImageCard } from "@/components/generation/chat/generated-image
 import { AITextLoading } from "@/components/ui/ai-text-loading";
 import { useGeneration } from "@/contexts/generation-context";
 import { generationProgressTexts } from "@/lib/generation/generation-progress-texts";
+import { GenerationStepList } from "@/components/generation/chat/generation-step-list";
 
 type ChatAssistantTurnProps = {
   message: IdentiqUIMessage;
@@ -35,6 +36,7 @@ export function ChatAssistantTurn({
     aspectRatio: sessionAspectRatio,
     quantity: sessionQuantity,
     submitGeneration,
+    resolution,
     referenceImages,
   } = useGeneration();
   const isLibraryRemix = Boolean(libraryTemplateId);
@@ -49,12 +51,14 @@ export function ChatAssistantTurn({
   const isOrchestrating =
     phase === "orchestrating" ||
     phase === "composing-prompt" ||
-    (isStreaming && !imageResult && phase !== "generating-image");
+    (isStreaming && !imageResult && phase !== "generating-image" && phase !== "finalizing-asset");
   const isFailed =
     (phase === "error" || Boolean(errorText?.trim())) && !imageResult;
   const showThinking = isOrchestrating && isStreaming && !isFailed;
   const showSkeleton =
-    (phase === "generating-image" && !imageResult) || (isFailed && !imageResult);
+    ((phase === "generating-image" || phase === "finalizing-asset") &&
+      !imageResult) ||
+    (isFailed && !imageResult);
   const showStopped = phase === "stopped";
   const skeletonAspectRatio =
     generationStatus?.aspectRatio ?? sessionAspectRatio;
@@ -75,11 +79,11 @@ export function ChatAssistantTurn({
   const renderingTexts = useMemo(
     () =>
       generationProgressTexts({
-        phase: "generating-image",
+        phase: phase === "finalizing-asset" ? "finalizing-asset" : "generating-image",
         presetTitle: generationStatus?.presetTitle,
         isLibraryRemix,
       }),
-    [generationStatus?.presetTitle, isLibraryRemix],
+    [phase, generationStatus?.presetTitle, isLibraryRemix],
   );
   const remixPreviewUrl = isLibraryRemix
     ? referenceImages.find((img) => img.name === "Template")?.previewUrl ??
@@ -103,12 +107,15 @@ export function ChatAssistantTurn({
         ) : null}
 
         {showThinking ? (
-          <AITextLoading
-            texts={thinkingTexts}
-            size="sm"
-            compact
-            interval={1400}
-          />
+          <div className="space-y-2">
+            <GenerationStepList phase={phase} />
+            <AITextLoading
+              texts={thinkingTexts}
+              size="sm"
+              compact
+              interval={1400}
+            />
+          </div>
         ) : null}
 
         {showSkeleton && !hideRemixVisuals ? (
@@ -124,12 +131,17 @@ export function ChatAssistantTurn({
               imageModel={generationStatus?.imageModel}
               displayDimensions={generationStatus?.displayDimensions}
               elapsedStartedAt={isFailed ? null : generationStartedAt}
-              animated={!isFailed}
+              animated={!isFailed && phase !== "finalizing-asset"}
               failed={isFailed}
               centered={false}
               onRetry={isFailed ? () => void submitGeneration() : undefined}
               progressTexts={isFailed ? undefined : renderingTexts}
+              phase={phase}
+              resolution={resolution}
             />
+            {generationStatus?.warningMessage ? (
+              <p className="text-xs text-muted">{generationStatus.warningMessage}</p>
+            ) : null}
           </div>
         ) : null}
 

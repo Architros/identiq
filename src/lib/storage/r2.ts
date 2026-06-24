@@ -115,6 +115,30 @@ export async function uploadIdeasGeneratedImage(params: {
   });
 }
 
+export async function uploadWithRetry<T>(
+  fn: () => Promise<T>,
+  options?: { attempts?: number; baseDelayMs?: number },
+): Promise<T> {
+  const attempts = options?.attempts ?? 3;
+  const baseDelayMs = options?.baseDelayMs ?? 400;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, baseDelayMs * (attempt + 1)),
+        );
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function deleteObject(key: string): Promise<void> {
   const config = getR2Config();
   if (!config) return;

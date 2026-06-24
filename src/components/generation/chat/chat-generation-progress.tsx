@@ -24,6 +24,7 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
     generationError,
     submitGeneration,
     referenceImages,
+    resolution,
   } = useGeneration();
 
   const isLibraryRemix = Boolean(libraryTemplateId);
@@ -42,7 +43,9 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
     (effectivePhase === "composing-prompt" ||
       effectivePhase === "orchestrating");
   const isRenderingEffective =
-    !isFailed && effectivePhase === "generating-image";
+    !isFailed &&
+    (effectivePhase === "generating-image" ||
+      effectivePhase === "finalizing-asset");
 
   const progressTexts = useMemo(
     () =>
@@ -111,6 +114,9 @@ export function ChatGenerationProgress({ phase }: ChatGenerationProgressProps) {
           remixPreviewUrl={remixPreviewUrl}
           elapsedStartedAt={generationStartedAt}
           progressTexts={progressTexts}
+          phase={effectivePhase ?? undefined}
+          resolution={resolution}
+          animated={effectivePhase !== "finalizing-asset"}
           centered={false}
         />
       ) : (

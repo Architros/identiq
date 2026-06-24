@@ -37,7 +37,9 @@ export function resolveRemixMode(category?: string): RemixMode {
 }
 
 export function defaultRemixPrompt(mode: RemixMode): string {
+  const temporal =
+    "Update any outdated years or copyright lines to the current year.";
   return mode === "adapt-content"
-    ? "Adapt this template for my brand—replace all text and apply my colors and logo."
-    : "Adapt this template for my brand—replace all visible text, then apply my colors and logo.";
+    ? `Adapt this template for my brand—replace all text and apply my colors and logo. ${temporal}`
+    : `Adapt this template for my brand—replace all visible text, then apply my colors and logo. ${temporal}`;
 }

@@ -3,9 +3,16 @@ import "server-only";
 const MAX_REFERENCE_IMAGES = 4;
 const FETCH_TIMEOUT_MS = 15_000;
 
+export type LoadReferenceImagesResult = {
+  buffers: Uint8Array[];
+  loaded: number;
+  failed: number;
+  requested: number;
+};
+
 export async function loadReferenceImagesFromUrls(
   urls: string[],
-): Promise<Uint8Array[]> {
+): Promise<LoadReferenceImagesResult> {
   const unique = [...new Set(urls.filter(Boolean))].slice(0, MAX_REFERENCE_IMAGES);
 
   const results = await Promise.all(
@@ -25,8 +32,16 @@ export async function loadReferenceImagesFromUrls(
   );
 
   const buffers: Uint8Array[] = [];
+  let failed = 0;
   for (const buf of results) {
     if (buf) buffers.push(buf);
+    else failed += 1;
   }
-  return buffers;
+
+  return {
+    buffers,
+    loaded: buffers.length,
+    failed,
+    requested: unique.length,
+  };
 }

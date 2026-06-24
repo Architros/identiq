@@ -29,6 +29,7 @@ export type BuildPromptInput = {
   tagline?: string;
   feelings?: string[];
   templateCategory?: string;
+  chatThreadContext?: string;
 };
 
 export function buildComposedPrompt(input: BuildPromptInput): string {
@@ -63,7 +64,7 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
       input.referenceImageNames ??
       urls.map((_, i) => `Reference ${i + 1}`);
     const remixMode = resolveRemixMode(input.templateCategory);
-    return assembleLibraryRemixPrompt({
+    const remixPrompt = assembleLibraryRemixPrompt({
       brand,
       userDirection: input.userPrompt,
       presetLines,
@@ -72,6 +73,9 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
       hasLogoAttachment: input.hasLogoAttachment ?? false,
       remixMode,
     });
+    return input.chatThreadContext?.trim()
+      ? `${remixPrompt}\n\n${input.chatThreadContext.trim()}`
+      : remixPrompt;
   }
 
   const composed = assembleIdeasGenerationPrompt({
@@ -82,9 +86,13 @@ export function buildComposedPrompt(input: BuildPromptInput): string {
     referenceImageUrls: input.referenceImageUrls,
   });
 
+  const withThread = input.chatThreadContext?.trim()
+    ? `${composed}\n\n${input.chatThreadContext.trim()}`
+    : composed;
+
   if ((input.referenceImageUrls?.length ?? 0) > 0) {
-    return `${composed}\n\nStyle guidance: Use the attached references as inspiration for composition and visual language while preserving a classic, distinctive, and original result.`;
+    return `${withThread}\n\nStyle guidance: Use the attached references as inspiration for composition and visual language while preserving a classic, distinctive, and original result.`;
   }
 
-  return composed;
+  return withThread;
 }

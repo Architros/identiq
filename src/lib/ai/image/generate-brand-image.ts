@@ -13,10 +13,13 @@ export type GeneratedImage = {
   mediaType: string;
 };
 
+import type { LoadReferenceImagesResult } from "@/lib/ai/image/load-reference-images";
+
 export type GenerateBrandImageResult = {
   images: GeneratedImage[];
   modelId: string;
   output: ReturnType<typeof mapGenerationSettings>;
+  referenceLoad: LoadReferenceImagesResult;
 };
 
 export async function generateBrandImage(input: {
@@ -30,15 +33,15 @@ export async function generateBrandImage(input: {
   const modelId = getActiveImageModelId();
   const useGptSize = shouldPassGptSizeToProvider(modelId);
 
-  const referenceBuffers = await loadReferenceImagesFromUrls(
+  const referenceLoad = await loadReferenceImagesFromUrls(
     input.referenceImageUrls ?? [],
   );
 
   const promptPayload =
-    referenceBuffers.length > 0
+    referenceLoad.buffers.length > 0
       ? ({
           text: input.prompt,
-          images: referenceBuffers,
+          images: referenceLoad.buffers,
         } as const)
       : input.prompt;
 
@@ -70,5 +73,5 @@ export async function generateBrandImage(input: {
     throw new Error("Image model returned no images");
   }
 
-  return { images: results, modelId, output: mapped };
+  return { images: results, modelId, output: mapped, referenceLoad };
 }

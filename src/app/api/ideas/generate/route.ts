@@ -13,7 +13,7 @@ import { streamOrchestratePrompt } from "@/lib/ai/llm/stream-orchestrate-prompt"
 import { generateBrandImage } from "@/lib/ai/image/generate-brand-image";
 import { getActiveImageModelId } from "@/lib/ai/providers";
 import { isR2Configured } from "@/lib/storage/r2-config";
-import { uploadIdeasGeneratedImage } from "@/lib/storage/r2";
+import { uploadIdeasGeneratedImage, uploadWithRetry } from "@/lib/storage/r2";
 import { getBrandForUser } from "@/lib/db/repositories/brands";
 import { listReferencesForBrand } from "@/lib/db/repositories/assets";
 import { mergeGenerationReferenceUrls } from "@/lib/generation/merge-reference-urls";
@@ -21,6 +21,18 @@ import { getLibraryTemplate } from "@/lib/library/templates";
 import type { AspectRatio } from "@/lib/generation/presets";
 import { toUserFacingGenerationError } from "@/lib/errors/user-facing";
 import { userOwnsIdeasChat } from "@/lib/db/repositories/ideas-chats";
+import { buildBrandRelevanceGuardrails } from "@/lib/brand/prompt-structure";
+import { buildChatThreadContext } from "@/lib/generation/chat-thread-context";
+import {
+  claimGenerationAttempt,
+  finishGenerationAttempt,
+} from "@/lib/db/repositories/ideas-generation-attempts";
+import {
+  imageGenerationTimeoutMs,
+  isPromptTooVague,
+  mergePriorImageReference,
+  resolveServerBrandContext,
+} from "@/lib/generation/resolve-server-brand";
 
 export const maxDuration = 300;
 
@@ -71,9 +83,11 @@ export async function POST(request: Request) {
     imageAssist?: boolean;
     referenceImageCount?: number;
     settings?: unknown;
+    generationId?: string;
   };
 
   const parsed = generationRequestSchema.safeParse({
+    generationId: (body as { generationId?: string }).generationId,
     chatId: (body as { chatId?: string }).chatId,
     brandId: body.brandId,
     brandDisplayName: (body as { brandDisplayName?: string }).brandDisplayName,
@@ -98,6 +112,22 @@ export async function POST(request: Request) {
 
   const gen = parsed.data;
 
+  if (gen.generationId) {
+    const claim = await claimGenerationAttempt(user.id, gen.generationId);
+    if (!claim.ok) {
+      return new Response(
+        JSON.stringify({
+          error: "generation_in_progress",
+          message:
+            claim.reason === "duplicate_completed"
+              ? "This generation was already completed."
+              : "Generation already in progress.",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  }
+
   if (gen.chatId) {
     const ownsChat = await userOwnsIdeasChat(user.id, gen.chatId);
     if (!ownsChat) {
@@ -109,17 +139,23 @@ export async function POST(request: Request) {
   }
 
   const kit = await getBrandForUser(user.id, gen.brandId);
-  const brandDisplayName = gen.brandDisplayName ?? kit?.displayName ?? "Brand";
+  const {
+    brandMemory,
+    brandAssets,
+    brandDisplayName,
+    brandPromptContext,
+  } = resolveServerBrandContext(kit, gen);
 
   const refs = await listReferencesForBrand(user.id, gen.brandId);
-  const logoUrl = kit?.assets.find((a) => a.type.startsWith("logo_"))?.url;
+  const logoUrl = brandAssets.find((a) => a.type.startsWith("logo_"))?.url;
   const mergedRefs = mergeGenerationReferenceUrls({
     composerReferenceImages: gen.composerReferenceImages,
     libraryTemplateId: gen.libraryTemplateId,
     dbReferences: refs,
     logoUrl,
   });
-  const referenceImageUrls = mergedRefs.urls;
+  let referenceImageUrls = mergedRefs.urls;
+  let referenceImageNames = mergedRefs.names;
   const isLibraryRemix = mergedRefs.isLibraryRemix;
   const libraryTemplate = gen.libraryTemplateId
     ? getLibraryTemplate(gen.libraryTemplateId)
@@ -140,6 +176,25 @@ export async function POST(request: Request) {
   }
 
   const messages = body.messages ?? [];
+  const { block: chatThreadContext, priorImageUrl } = buildChatThreadContext(
+    messages,
+    gen.userPrompt,
+  );
+
+  if (
+    priorImageUrl &&
+    !isLibraryRemix &&
+    gen.composerReferenceImages.length === 0
+  ) {
+    const merged = mergePriorImageReference(
+      referenceImageUrls,
+      referenceImageNames,
+      priorImageUrl,
+    );
+    referenceImageUrls = merged.urls;
+    referenceImageNames = merged.names;
+  }
+
   const abortSignal = request.signal;
   const runs = isLibraryRemix
     ? buildGenerationRuns([], gen.settings.aspectRatio as AspectRatio)
@@ -176,26 +231,30 @@ export async function POST(request: Request) {
     originalMessages: messages,
     execute: async ({ writer }) => {
       const statusId = "generation-status";
+      let streamFailed = false;
 
       const basePrompt = buildComposedPrompt({
         brandDisplayName,
-        brandMemory: gen.brandMemory,
-        brandAssets: gen.brandAssets,
+        brandMemory,
+        brandAssets,
         presets: gen.presets,
         userPrompt: gen.userPrompt,
         imageAssist: gen.imageAssist,
         referenceImageUrls,
-        referenceImageNames: mergedRefs.names,
+        referenceImageNames,
         mode: isLibraryRemix ? "library-remix" : "default",
         hasLogoAttachment,
-        description: kit?.description,
-        tagline: kit?.tagline,
-        sector: kit?.sector,
-        feelings: kit?.feelings,
+        description: brandPromptContext.description,
+        tagline: brandPromptContext.tagline,
+        sector: brandPromptContext.sector,
+        feelings: brandPromptContext.feelings,
         templateCategory: libraryTemplate?.category,
+        chatThreadContext,
       });
 
       let finalPrompt = basePrompt;
+      const relevanceGuardrails =
+        buildBrandRelevanceGuardrails(brandPromptContext);
 
       if (isLibraryRemix) {
         writer.write({
@@ -224,8 +283,8 @@ export async function POST(request: Request) {
           );
           const orchestration = streamOrchestratePrompt({
             basePrompt,
-            brandMemory: gen.brandMemory,
-            brandAssets: gen.brandAssets,
+            brandMemory,
+            brandAssets,
             presets: gen.presets,
             userPrompt: gen.userPrompt,
             imageAssist: gen.imageAssist,
@@ -234,6 +293,12 @@ export async function POST(request: Request) {
               abortSignal,
               orchestrationAbort.signal,
             ]),
+            brandName: brandDisplayName,
+            sector: brandPromptContext.sector,
+            description: brandPromptContext.description,
+            tagline: brandPromptContext.tagline,
+            chatThreadContext,
+            isLibraryRemix,
           });
 
           writer.merge(orchestration.toUIMessageStream());
@@ -241,7 +306,7 @@ export async function POST(request: Request) {
           const text = await orchestration.text;
           const trimmed = text.trim();
           if (trimmed) {
-            finalPrompt = trimmed;
+            finalPrompt = `${trimmed}\n\n${relevanceGuardrails}`;
           }
         } catch (orchestrateError) {
           if (abortSignal.aborted) {
@@ -277,6 +342,19 @@ export async function POST(request: Request) {
         }
       }
 
+      if (
+        isPromptTooVague(
+          finalPrompt,
+          brandDisplayName,
+          brandPromptContext.sector,
+        )
+      ) {
+        console.warn(
+          "[ideas/generate] final prompt too vague, using base prompt fallback",
+        );
+        finalPrompt = basePrompt;
+      }
+
       if (gen.settings.withBackground === false) {
         finalPrompt = `${finalPrompt}\n\nBackground requirement: transparent background only. Do not add any solid, gradient, scene, or texture background.`;
       }
@@ -308,21 +386,73 @@ export async function POST(request: Request) {
           });
 
           const remixResolution = isLibraryRemix ? "1K" : gen.settings.resolution;
+          const imageTimeoutMs = imageGenerationTimeoutMs(remixResolution);
+          const imageTimeout = new AbortController();
+          const imageTimeoutHandle = setTimeout(
+            () => imageTimeout.abort(),
+            imageTimeoutMs,
+          );
 
-          const { images, modelId, output } = await generateBrandImage({
-            prompt: finalPrompt,
-            settings: {
-              aspectRatio: run.aspectRatio,
-              resolution: remixResolution,
-              quantity: gen.settings.quantity,
-              presetId: run.presetId,
-              withBackground: gen.settings.withBackground,
-            },
-            referenceImageUrls,
-            abortSignal,
-          });
+          let imageResult: Awaited<ReturnType<typeof generateBrandImage>>;
+          try {
+            imageResult = await generateBrandImage({
+              prompt: finalPrompt,
+              settings: {
+                aspectRatio: run.aspectRatio,
+                resolution: remixResolution,
+                quantity: gen.settings.quantity,
+                presetId: run.presetId,
+                withBackground: gen.settings.withBackground,
+              },
+              referenceImageUrls,
+              abortSignal: AbortSignal.any([
+                abortSignal,
+                imageTimeout.signal,
+              ]),
+            });
+          } catch (imageGenError) {
+            if (imageTimeout.signal.aborted && !abortSignal.aborted) {
+              throw new Error(
+                "Image generation timed out. Try 1K resolution or fewer references.",
+              );
+            }
+            throw imageGenError;
+          } finally {
+            clearTimeout(imageTimeoutHandle);
+          }
+
+          const { images, modelId, output, referenceLoad } = imageResult;
+
+          if (referenceLoad.failed > 0) {
+            writer.write({
+              type: "data-generation-status",
+              id: statusId,
+              data: {
+                phase: "generating-image",
+                aspectRatio: run.aspectRatio,
+                quantity: gen.settings.quantity,
+                imageModel: modelId,
+                presetId: run.presetId,
+                presetTitle: run.presetTitle,
+                warningMessage: `${referenceLoad.failed} reference image${referenceLoad.failed === 1 ? "" : "s"} could not be loaded`,
+              },
+            });
+          }
 
           if (abortSignal.aborted) break;
+
+          writer.write({
+            type: "data-generation-status",
+            id: statusId,
+            data: {
+              phase: "finalizing-asset",
+              aspectRatio: run.aspectRatio,
+              quantity: gen.settings.quantity,
+              imageModel: modelId,
+              presetId: run.presetId,
+              presetTitle: run.presetTitle,
+            },
+          });
 
           const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
           const previewImages = await Promise.all(
@@ -331,12 +461,14 @@ export async function POST(request: Request) {
                 images.length > 1 ? `${jobId}_${index}` : jobId;
               if (isR2Configured()) {
                 try {
-                  const uploaded = await uploadIdeasGeneratedImage({
-                    brandId: gen.brandId,
-                    jobId: imageJobId,
-                    base64: img.base64,
-                    mediaType: img.mediaType,
-                  });
+                  const uploaded = await uploadWithRetry(() =>
+                    uploadIdeasGeneratedImage({
+                      brandId: gen.brandId,
+                      jobId: imageJobId,
+                      base64: img.base64,
+                      mediaType: img.mediaType,
+                    }),
+                  );
                   return {
                     url: uploaded.url,
                     storageKey: uploaded.key,
@@ -389,7 +521,10 @@ export async function POST(request: Request) {
           id: statusId,
           data: { phase: "done" },
         });
+
+        await finishGenerationAttempt(user.id, gen.generationId, "completed");
       } catch (imageError) {
+        streamFailed = true;
         if (abortSignal.aborted) {
           writer.write({
             type: "data-generation-status",
@@ -423,6 +558,12 @@ export async function POST(request: Request) {
         });
 
         writer.write({ type: "error", errorText: userMessage });
+
+        await finishGenerationAttempt(user.id, gen.generationId, "failed");
+      } finally {
+        if (!streamFailed && abortSignal.aborted) {
+          await finishGenerationAttempt(user.id, gen.generationId, "failed");
+        }
       }
     },
     onError: (error) =>

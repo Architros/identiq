@@ -47,6 +47,27 @@ import type { IdeasAssetBilling } from "@/lib/brand/asset-storage";
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const SESSION_GENERATION_KEY = "identiq_active_generation";
+
+type ActiveGenerationSession = {
+  generationId?: string;
+  phase: GenerationPhase | null;
+  chatId: string | null;
+  startedAt: number | null;
+};
+
+function writeActiveGenerationSession(session: ActiveGenerationSession | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!session) {
+      sessionStorage.removeItem(SESSION_GENERATION_KEY);
+      return;
+    }
+    sessionStorage.setItem(SESSION_GENERATION_KEY, JSON.stringify(session));
+  } catch {
+    // non-blocking
+  }
+}
 
 function findLatestImageResultInMessages(
   msgs: IdentiqUIMessage[],
@@ -298,6 +319,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationError(message);
     setGenerationPhase("error");
     setGenerationStartedAt(null);
+    writeActiveGenerationSession(null);
   }, []);
 
   const setLibraryTemplateId = useCallback((id: string | null) => {
@@ -515,6 +537,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setPendingUserTurnText(null);
         setGenerationStartedAt(null);
         streamInterruptedRef.current = false;
+        writeActiveGenerationSession(null);
         return true;
       } catch {
         return false;
@@ -586,6 +609,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           };
           if (data.phase) {
             setGenerationPhase(data.phase);
+            if (
+              data.phase === "done" ||
+              data.phase === "error" ||
+              data.phase === "stopped"
+            ) {
+              writeActiveGenerationSession(null);
+            } else {
+              writeActiveGenerationSession({
+                generationId: pendingBillingRef.current?.generationId,
+                phase: data.phase,
+                chatId: activeChatIdRef.current,
+                startedAt: Date.now(),
+              });
+            }
           }
           if (data.presetTitle) {
             setGenerationPresetTitle(data.presetTitle);
@@ -625,6 +662,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           lastReportedErrorRef.current = null;
           streamInterruptedRef.current = false;
           setGenerationStartedAt(null);
+          writeActiveGenerationSession(null);
 
           if (registeredJobsRef.current.has(data.jobId)) return;
           registeredJobsRef.current.add(data.jobId);
@@ -705,6 +743,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           setGenerationError(null);
           lastReportedErrorRef.current = null;
           streamInterruptedRef.current = false;
+          writeActiveGenerationSession(null);
           void saveMessages(
             patchAssistantWithImageResult(messagesRef.current, result),
           );
@@ -1246,6 +1285,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       resolution: remixingLibrary ? "1K" : resolution,
       referenceImageCount: composerReferences.length,
     };
+    writeActiveGenerationSession({
+      generationId: pendingBillingRef.current.generationId,
+      phase: remixingLibrary ? "generating-image" : "orchestrating",
+      chatId: activeChatIdRef.current,
+      startedAt: Date.now(),
+    });
     lastPresetPhaseRef.current = null;
     setGenerationPresetTitle(selectedPresets[0]?.title);
 
@@ -1350,6 +1395,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setGenerationStartedAt(null);
     setGenerationPhase("stopped");
     lastPresetPhaseRef.current = null;
+    writeActiveGenerationSession(null);
   }, []);
 
   const setAspectRatioGuarded = useCallback((value: AspectRatio) => {

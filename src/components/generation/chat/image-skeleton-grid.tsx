@@ -12,6 +12,8 @@ import {
   parseAspectRatio,
 } from "@/lib/generation/aspect-ratio-styles";
 import type { AspectRatio } from "@/lib/generation/presets";
+import { generationEtaHint } from "@/lib/generation/generation-progress-texts";
+import { GenerationStepList } from "@/components/generation/chat/generation-step-list";
 import { cn } from "@/lib/utils";
 
 function skeletonSizeClass(ratio: AspectRatio, centered: boolean): string {
@@ -48,6 +50,10 @@ type ImageSkeletonGridProps = {
   elapsedStartedAt?: number | null;
   /** Rotating status lines shown while rendering. */
   progressTexts?: string[];
+  /** Current generation phase for step indicator. */
+  phase?: string;
+  /** Resolution hint for ETA copy (1K / 2K). */
+  resolution?: string;
   /** @deprecated Use progressTexts */
   activityLabel?: string;
   /** When false, skeleton is static (e.g. after a failed generation). */
@@ -66,6 +72,8 @@ export function ImageSkeletonGrid({
   displayDimensions,
   elapsedStartedAt = null,
   progressTexts,
+  phase,
+  resolution,
   activityLabel,
   animated = true,
   failed = false,
@@ -87,8 +95,11 @@ export function ImageSkeletonGrid({
 
   const showProgressOverlay = animated && !failed;
 
+  const etaHint = generationEtaHint(resolution);
+
   const progressOverlay = (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 px-4 text-center">
+      <GenerationStepList phase={phase} className="mb-1 justify-center" />
       <AITextLoading
         texts={statusTexts}
         size="sm"
@@ -96,11 +107,13 @@ export function ImageSkeletonGrid({
         interval={1500}
         className="justify-center"
       />
-      {displayDimensions || elapsed ? (
+      {displayDimensions || elapsed || etaHint ? (
         <p className="text-xs text-muted">
           {displayDimensions ? `${displayDimensions}` : null}
-          {displayDimensions && elapsed ? " · " : null}
+          {displayDimensions && (elapsed || etaHint) ? " · " : null}
           {elapsed ? `${elapsed}` : null}
+          {!elapsed && etaHint ? etaHint : null}
+          {elapsed && etaHint ? ` · ${etaHint}` : null}
         </p>
       ) : null}
     </div>
