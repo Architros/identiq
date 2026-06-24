@@ -8,6 +8,8 @@ import {
   ImageLightboxModal,
   type LightboxImage,
 } from "@/components/images/image-lightbox-modal";
+import { AppModal } from "@/components/shared/app-modal";
+import { Button } from "@/components/ui/button";
 import type { ImageResultData } from "@/lib/generation/chat-message-types";
 import { formatRelativeTime } from "@/lib/generation/format-elapsed";
 import {
@@ -38,6 +40,7 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
   const { discardAsset } = useBrandAssets();
   const { closeChat, libraryTemplateId, referenceImages } = useGeneration();
   const [hidden, setHidden] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
   const first = data.images[0];
   if (!first || hidden) return null;
@@ -98,6 +101,12 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
     </button>
   );
 
+  const confirmDiscard = () => {
+    discardAsset(data.jobId);
+    setHidden(true);
+    setDiscardOpen(false);
+  };
+
   return (
     <div className="space-y-3">
       {remixTemplateUrl ? (
@@ -152,20 +161,34 @@ export function GeneratedImageCard({ data }: GeneratedImageCardProps) {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => {
-            const ok = window.confirm(
-              "Discard this generated image from Brand assets?",
-            );
-            if (!ok) return;
-            discardAsset(data.jobId);
-            setHidden(true);
-          }}
+          onClick={() => setDiscardOpen(true)}
           className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-sidebar-active hover:text-foreground"
         >
           Discard
         </button>
       </div>
+
+      <AppModal
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Discard this image?"
+        description="It will be removed from Brand assets. This cannot be undone."
+        panelClassName="max-w-md"
+        titleId="discard-image-title"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => setDiscardOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button variant="primary" size="md" onClick={confirmDiscard}>
+            Discard
+          </Button>
+        </div>
+      </AppModal>
     </div>
   );
 }
-

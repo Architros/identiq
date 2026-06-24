@@ -3,10 +3,8 @@ import {
   createUIMessageStreamResponse,
   generateId,
 } from "ai";
-import {
-  deductTokensOrResponse,
-  requireApiUserResponse,
-} from "@/lib/auth/guard-api";
+import { requireApiUserResponse } from "@/lib/auth/guard-api";
+import { getTokenBalance } from "@/lib/db/repositories/credits";
 import type { IdentiqUIMessage } from "@/lib/generation/chat-message-types";
 import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import { generationRequestSchema } from "@/lib/generation/generate-request-schema";
@@ -143,7 +141,6 @@ export async function POST(request: Request) {
 
   const messages = body.messages ?? [];
   const abortSignal = request.signal;
-  const generationId = generateId();
   const runs = isLibraryRemix
     ? buildGenerationRuns([], gen.settings.aspectRatio as AspectRatio)
     : buildGenerationRuns(
@@ -161,14 +158,18 @@ export async function POST(request: Request) {
   });
 
   if (tokenCost > 0) {
-    const deduct = await deductTokensOrResponse({
-      userId: user.id,
-      amount: tokenCost,
-      referenceType: "ideas_generate",
-      referenceId: generationId,
-      idempotencyKey: `ideas_${generationId}`,
-    });
-    if (deduct) return deduct;
+    const balance = await getTokenBalance(user.id);
+    if (balance < tokenCost) {
+      return new Response(
+        JSON.stringify({
+          error: "insufficient_tokens",
+          message:
+            "You do not have enough tokens for this generation. Buy more tokens or reduce presets and quantity.",
+          balance,
+        }),
+        { status: 402, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
   const stream = createUIMessageStream<IdentiqUIMessage>({
@@ -324,10 +325,33 @@ export async function POST(request: Request) {
           if (abortSignal.aborted) break;
 
           const jobId = `job_${crypto.randomUUID().slice(0, 8)}`;
-          const previewImages = images.map((img) => ({
-            base64: img.base64,
-            mediaType: img.mediaType,
-          }));
+          const previewImages = await Promise.all(
+            images.map(async (img, index) => {
+              const imageJobId =
+                images.length > 1 ? `${jobId}_${index}` : jobId;
+              if (isR2Configured()) {
+                try {
+                  const uploaded = await uploadIdeasGeneratedImage({
+                    brandId: gen.brandId,
+                    jobId: imageJobId,
+                    base64: img.base64,
+                    mediaType: img.mediaType,
+                  });
+                  return {
+                    url: uploaded.url,
+                    storageKey: uploaded.key,
+                    mediaType: img.mediaType,
+                  };
+                } catch (uploadError) {
+                  console.warn("[ideas/generate] R2 upload failed", uploadError);
+                }
+              }
+              return {
+                base64: img.base64,
+                mediaType: img.mediaType,
+              };
+            }),
+          );
 
           writer.write({
             type: "data-image-result",
@@ -349,24 +373,6 @@ export async function POST(request: Request) {
               completedAt: new Date().toISOString(),
             },
           });
-
-          if (isR2Configured()) {
-            void Promise.all(
-              images.map(async (img, index) => {
-                const id = images.length > 1 ? `${jobId}_${index}` : jobId;
-                try {
-                  await uploadIdeasGeneratedImage({
-                    brandId: gen.brandId,
-                    jobId: id,
-                    base64: img.base64,
-                    mediaType: img.mediaType,
-                  });
-                } catch (uploadError) {
-                  console.warn("[ideas/generate] R2 upload failed", uploadError);
-                }
-              }),
-            );
-          }
         }
 
         if (abortSignal.aborted) {

@@ -4,6 +4,7 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { LibraryFromUrl } from "@/components/library/library-from-url";
 import Link from "next/link";
 import { BrandAssetCard } from "@/components/images/brand-asset-card";
+import { AssetGridSkeleton } from "@/components/images/asset-grid-skeleton";
 import { DownloadZipButton } from "@/components/images/download-zip-button";
 import { GenerationComposer } from "@/components/generation/generation-composer";
 import { IdeasChatView } from "@/components/generation/ideas-chat-view";
@@ -61,7 +62,7 @@ function referenceUsageLabel(ref: BrandReference): string {
 
 export function ImagesPageContent() {
   const { brandKit } = useBrand();
-  const { savedAssets, brandReferences } = useBrandAssets();
+  const { savedAssets, brandReferences, isLoadingAssets } = useBrandAssets();
   const {
     view,
     referenceImages,
@@ -194,7 +195,9 @@ export function ImagesPageContent() {
         </div>
 
         {tab === "generated" ? (
-          generatedByCategory.length === 0 ? (
+          isLoadingAssets ? (
+            <AssetGridSkeleton count={8} />
+          ) : generatedByCategory.length === 0 ? (
             <EmptyState
               title="No generated assets yet"
               description="Use the prompt at the bottom to create images, or open Studio for presets."
@@ -259,6 +262,8 @@ export function ImagesPageContent() {
               ))}
             </div>
           )
+        ) : isLoadingAssets ? (
+          <AssetGridSkeleton count={6} ratio="4:5" />
         ) : brandReferences.length === 0 ? (
           <EmptyState
             title="No uploaded references"

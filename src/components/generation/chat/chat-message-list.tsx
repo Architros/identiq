@@ -58,12 +58,15 @@ export function ChatMessageList({
     generationPhase !== "done" &&
     generationPhase !== "stopped";
   const generationActive = isGenerating || hasPendingGenerationPhase;
+  const assistantShowsProgress =
+    lastMessage?.role === "assistant" &&
+    generationActive &&
+    !resolvedImageResult;
   const showInlineProgress =
     generationActive &&
-    (!resolvedImageResult ||
-      showPendingUserTurn ||
-      !lastMessage ||
-      lastMessage.role === "user");
+    !resolvedImageResult &&
+    !assistantShowsProgress &&
+    (showPendingUserTurn || !lastMessage || lastMessage.role === "user");
   const showInlineFailure =
     !generationActive &&
     !resolvedImageResult &&

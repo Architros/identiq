@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useBrand } from "@/components/providers/brand-provider";
@@ -14,23 +15,18 @@ import {
   dedupeBrandReferencesByUrl,
   normalizeReferenceUrl,
 } from "@/lib/brand/reference-url";
+import {
+  type IdeasAssetBilling,
+  loadAssetsFromStorage,
+  safeSaveAssetsToStorage,
+  slimAssetForStorage,
+  type StoredAssets,
+} from "@/lib/brand/asset-storage";
+import { showErrorToast } from "@/lib/toast/show-toast";
 
-const STORAGE_KEY = "identiq_generated_assets";
 const REFERENCES_KEY = "identiq_brand_references";
 
-type StoredAssets = Record<string, GeneratedBrandAsset[]>;
 type StoredReferences = Record<string, BrandReference[]>;
-
-function loadFromStorage(): StoredAssets {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as StoredAssets;
-  } catch {
-    return {};
-  }
-}
 
 function loadReferencesFromStorage(): StoredReferences {
   if (typeof window === "undefined") return {};
@@ -43,14 +39,13 @@ function loadReferencesFromStorage(): StoredReferences {
   }
 }
 
-function saveToStorage(data: StoredAssets) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 function saveReferencesToStorage(data: StoredReferences) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(REFERENCES_KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(REFERENCES_KEY, JSON.stringify(data));
+  } catch {
+    // References are small; skip on quota errors.
+  }
 }
 
 function mergeAssetsById(
@@ -67,11 +62,20 @@ function mergeAssetsById(
   );
 }
 
+type RegisterAssetOptions = {
+  billing?: IdeasAssetBilling;
+  onSaved?: (balance?: number) => void;
+};
+
 type BrandAssetsContextValue = {
   savedAssets: GeneratedBrandAsset[];
   pendingAssets: GeneratedBrandAsset[];
   brandReferences: BrandReference[];
-  registerPendingAsset: (asset: Omit<GeneratedBrandAsset, "status">) => void;
+  isLoadingAssets: boolean;
+  registerPendingAsset: (
+    asset: Omit<GeneratedBrandAsset, "status">,
+    options?: RegisterAssetOptions,
+  ) => void;
   saveAssetsForBrand: (
     brandId: string,
     assets: Omit<GeneratedBrandAsset, "status">[],
@@ -93,11 +97,21 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   const [referencesByBrand, setReferencesByBrand] = useState<StoredReferences>(
     {},
   );
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const [isFetchingServer, setIsFetchingServer] = useState(false);
+  const allByBrandRef = useRef<StoredAssets>({});
 
   useEffect(() => {
-    setAllByBrand(loadFromStorage());
+    const loaded = loadAssetsFromStorage();
+    setAllByBrand(loaded);
+    allByBrandRef.current = loaded;
     setReferencesByBrand(loadReferencesFromStorage());
+    setHasHydrated(true);
   }, []);
+
+  useEffect(() => {
+    allByBrandRef.current = allByBrand;
+  }, [allByBrand]);
 
   useEffect(() => {
     if (!brandKit.id?.trim()) return;
@@ -113,28 +127,37 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   }, [brandKit.id]);
 
   useEffect(() => {
-    if (!brandKit.id?.trim()) return;
+    if (!brandKit.id?.trim()) {
+      setIsFetchingServer(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsFetchingServer(true);
 
     void (async () => {
       try {
         const res = await fetch(`/api/brands/${brandKit.id}/assets`, {
           credentials: "same-origin",
         });
-        if (!res.ok) return;
+        if (!res.ok || cancelled) return;
         const data = (await res.json()) as {
           assets: GeneratedBrandAsset[];
           references: BrandReference[];
         };
-        setAllByBrand((prev) => ({
-          ...prev,
-          [brandKit.id]: mergeAssetsById(
-            prev[brandKit.id] ?? [],
-            data.assets.map((a) => ({
-              ...a,
-              status: a.status ?? "saved",
-            })),
-          ),
-        }));
+        const merged = mergeAssetsById(
+          allByBrandRef.current[brandKit.id] ?? [],
+          data.assets.map((a) => ({
+            ...a,
+            status: a.status ?? "saved",
+          })),
+        );
+        if (cancelled) return;
+        setAllByBrand((prev) => {
+          const next = { ...prev, [brandKit.id]: merged };
+          safeSaveAssetsToStorage(next);
+          return next;
+        });
         setReferencesByBrand((prev) => {
           const next = {
             ...prev,
@@ -145,9 +168,18 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
         });
       } catch {
         // Keep local cache.
+      } finally {
+        if (!cancelled) setIsFetchingServer(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [brandKit.id]);
+
+  const isLoadingAssets =
+    !hasHydrated || (Boolean(brandKit.id?.trim()) && isFetchingServer);
 
   const brandAssets = useMemo(
     () => allByBrand[brandKit.id] ?? [],
@@ -180,11 +212,9 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
     (updater: (prev: GeneratedBrandAsset[]) => GeneratedBrandAsset[]) => {
       setAllByBrand((prev) => {
         const current = prev[brandKit.id] ?? [];
-        const next = {
-          ...prev,
-          [brandKit.id]: updater(current),
-        };
-        saveToStorage(next);
+        const updated = updater(current);
+        const next = { ...prev, [brandKit.id]: updated };
+        safeSaveAssetsToStorage(next);
         return next;
       });
     },
@@ -192,18 +222,69 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
   );
 
   const registerPendingAsset = useCallback(
-    (asset: Omit<GeneratedBrandAsset, "status">) => {
-      updateBrand((prev) => {
-        if (prev.some((a) => a.id === asset.id)) return prev;
-        const next = [{ ...asset, status: "saved" as const }, ...prev];
-        void fetch(`/api/brands/${asset.brandId}/assets`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ assets: [asset] }),
-        }).catch(() => undefined);
-        return next;
-      });
+    (
+      asset: Omit<GeneratedBrandAsset, "status">,
+      options?: RegisterAssetOptions,
+    ) => {
+      const savedAsset: GeneratedBrandAsset = {
+        ...asset,
+        status: "saved",
+      };
+      const forStorage = slimAssetForStorage(savedAsset);
+
+      try {
+        updateBrand((prev) => {
+          if (prev.some((a) => a.id === asset.id)) return prev;
+          return [forStorage, ...prev];
+        });
+      } catch {
+        showErrorToast(
+          "Could not cache this asset locally. It may still save to your library.",
+          { dedupeKey: "asset-cache-failed" },
+        );
+      }
+
+      void (async () => {
+        try {
+          const res = await fetch(`/api/brands/${asset.brandId}/assets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              assets: [asset],
+              billing: options?.billing,
+            }),
+          });
+          if (res.status === 402) {
+            const data = (await res.json()) as { message?: string };
+            showErrorToast(
+              data.message ??
+                "Not enough tokens to save this asset to your library.",
+              { dedupeKey: "asset-save-insufficient-tokens" },
+            );
+            return;
+          }
+          if (res.status === 403) {
+            showErrorToast(
+              "Your asset storage is full. Upgrade your plan or remove older assets.",
+              { dedupeKey: "asset-storage-limit" },
+            );
+            return;
+          }
+          if (!res.ok) {
+            showErrorToast("Could not save this asset to your library.", {
+              dedupeKey: "asset-save-failed",
+            });
+            return;
+          }
+          const data = (await res.json()) as { balance?: number };
+          options?.onSaved?.(data.balance);
+        } catch {
+          showErrorToast("Could not save this asset to your library.", {
+            dedupeKey: "asset-save-failed",
+          });
+        }
+      })();
     },
     [updateBrand],
   );
@@ -213,17 +294,13 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
       brandId: string,
       assets: Omit<GeneratedBrandAsset, "status">[],
     ) => {
+      const saved = assets.map((a) =>
+        slimAssetForStorage({ ...a, status: "saved" as const }),
+      );
       setAllByBrand((prev) => {
         const current = prev[brandId] ?? [];
-        const saved = assets.map((a) => ({
-          ...a,
-          status: "saved" as const,
-        }));
-        const next = {
-          ...prev,
-          [brandId]: [...saved, ...current],
-        };
-        saveToStorage(next);
+        const next = { ...prev, [brandId]: [...saved, ...current] };
+        safeSaveAssetsToStorage(next);
         return next;
       });
       void fetch(`/api/brands/${brandId}/assets`, {
@@ -318,6 +395,7 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
       savedAssets,
       pendingAssets,
       brandReferences,
+      isLoadingAssets,
       registerPendingAsset,
       saveAssetsForBrand,
       saveReferencesForBrand,
@@ -329,6 +407,7 @@ export function BrandAssetsProvider({ children }: { children: React.ReactNode })
       savedAssets,
       pendingAssets,
       brandReferences,
+      isLoadingAssets,
       registerPendingAsset,
       saveAssetsForBrand,
       saveReferencesForBrand,

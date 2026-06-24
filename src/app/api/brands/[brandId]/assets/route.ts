@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePurchasedPlan, withAuth } from "@/lib/api/with-auth";
+import { deductTokensOrResponse } from "@/lib/auth/guard-api";
 import {
   discardAssetForBrand,
   listAssetsForBrand,
@@ -8,11 +9,25 @@ import {
   saveAssetsForBrand,
 } from "@/lib/db/repositories/assets";
 import { AssetStorageQuotaError } from "@/lib/db/repositories/entitlements";
+import { getTokenBalance } from "@/lib/db/repositories/credits";
 import { userOwnsBrand } from "@/lib/db/repositories/brands";
+import { calculateGenerationTokenCost } from "@/lib/generation/token-cost";
 import type { GeneratedBrandAsset } from "@/lib/brand/types";
+
+const billingSchema = z.object({
+  tokenCost: z.number().int().min(0),
+  generationId: z.string().min(1),
+  presetCount: z.number().int().min(0),
+  hasPrompt: z.boolean(),
+  isLibraryRemix: z.boolean().optional().default(false),
+  quantity: z.number().int().min(1).max(4),
+  resolution: z.enum(["1K", "2K"]),
+  referenceImageCount: z.number().int().min(0),
+});
 
 const saveSchema = z.object({
   assets: z.array(z.custom<Omit<GeneratedBrandAsset, "status">>()),
+  billing: billingSchema.optional(),
 });
 const discardSchema = z.object({
   id: z.string().min(1),
@@ -57,9 +72,46 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Invalid assets payload" }, { status: 400 });
     }
 
+    const hasIdeasAsset = parsed.data.assets.some((a) => a.source === "ideas");
+    const billing = parsed.data.billing;
+
+    if (hasIdeasAsset && billing) {
+      const expectedCost = calculateGenerationTokenCost({
+        presetCount: billing.presetCount,
+        hasPrompt: billing.hasPrompt,
+        isLibraryRemix: billing.isLibraryRemix,
+        quantity: billing.quantity,
+        resolution: billing.resolution,
+        referenceImageCount: billing.referenceImageCount,
+      });
+      if (expectedCost !== billing.tokenCost) {
+        return NextResponse.json(
+          { error: "Invalid billing metadata" },
+          { status: 400 },
+        );
+      }
+      if (expectedCost > 0) {
+        const primaryJobId =
+          parsed.data.assets.find((a) => a.source === "ideas")?.jobId ??
+          parsed.data.assets[0]?.jobId;
+        if (!primaryJobId) {
+          return NextResponse.json({ error: "Missing job id" }, { status: 400 });
+        }
+        const deduct = await deductTokensOrResponse({
+          userId: user.id,
+          amount: expectedCost,
+          referenceType: "ideas_generate",
+          referenceId: billing.generationId,
+          idempotencyKey: `ideas_save_${primaryJobId}`,
+        });
+        if (deduct) return deduct;
+      }
+    }
+
     try {
       await saveAssetsForBrand(user.id, brandId, parsed.data.assets);
-      return NextResponse.json({ ok: true });
+      const balance = await getTokenBalance(user.id);
+      return NextResponse.json({ ok: true, balance });
     } catch (err) {
       if (err instanceof AssetStorageQuotaError) {
         return NextResponse.json(

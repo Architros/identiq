@@ -43,6 +43,7 @@ import {
   defaultRemixPrompt,
   resolveRemixMode,
 } from "@/lib/generation/remix-mode";
+import type { IdeasAssetBilling } from "@/lib/brand/asset-storage";
 
 const MAX_REFERENCE_IMAGES = 4;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -265,6 +266,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const lastPresetPhaseRef = useRef<string | null>(null);
 
   const pendingTokenCostRef = useRef(0);
+  const pendingBillingRef = useRef<IdeasAssetBilling | null>(null);
   const registeredJobsRef = useRef<Set<string>>(new Set());
   const messagesRef = useRef<IdentiqUIMessage[]>([]);
   const referenceImagesRef = useRef<ReferenceImage[]>([]);
@@ -354,6 +356,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         libraryTemplateIdRef.current ?? libraryTemplateId,
       );
     return {
+      generationId: pendingBillingRef.current?.generationId,
       chatId: activeChatIdRef.current ?? activeChatId ?? undefined,
       brandId: brandKit.id,
       brandDisplayName: brandKit.displayName,
@@ -569,10 +572,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             },
           );
         }
-        if (!isAbort && (!isError || treatAsSuccess) && pendingTokenCostRef.current > 0) {
-          void refreshBalance();
-          pendingTokenCostRef.current = 0;
-        }
         const resolvedTitle = deriveChatTitle(finishedMessages, chatTitle);
         if (resolvedTitle !== chatTitle) setChatTitle(resolvedTitle);
         void saveMessages(finishedMessages, resolvedTitle);
@@ -638,26 +637,53 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             : data.presetTitles[0]
               ? selectedPresets.find((p) => p.title === data.presetTitles[0])
               : undefined;
-          registerPendingAsset({
-            id: data.jobId,
-            brandId: brandKit.id,
-            jobId: data.jobId,
-            source: "ideas",
-            category:
-              preset?.category === "social" ? "social" : "advertising",
-            catalogId: preset?.id ?? data.presetId,
-            presetId: preset?.id ?? data.presetId,
-            presetTitle: data.presetTitle ?? data.presetTitles[0],
-            prompt: data.userPrompt,
-            composedPrompt: data.composedPrompt,
-            previewUrl:
-              first.url ??
-              `data:${first.mediaType};base64,${first.base64 ?? ""}`,
-            mediaType: first.mediaType,
-            aspectRatio: data.aspectRatio,
-            model: data.model,
-            createdAt: data.completedAt ?? new Date().toISOString(),
-          });
+
+          const displayPreviewUrl =
+            first.url ??
+            (first.base64
+              ? `data:${first.mediaType};base64,${first.base64}`
+              : "");
+          const persistPreviewUrl = first.url ?? "";
+
+          try {
+            registerPendingAsset(
+              {
+                id: data.jobId,
+                brandId: brandKit.id,
+                jobId: data.jobId,
+                source: "ideas",
+                category:
+                  preset?.category === "social" ? "social" : "advertising",
+                catalogId: preset?.id ?? data.presetId,
+                presetId: preset?.id ?? data.presetId,
+                presetTitle: data.presetTitle ?? data.presetTitles[0],
+                prompt: data.userPrompt,
+                composedPrompt: data.composedPrompt,
+                previewUrl: persistPreviewUrl || displayPreviewUrl,
+                mediaType: first.mediaType,
+                aspectRatio: data.aspectRatio,
+                model: data.model,
+                createdAt: data.completedAt ?? new Date().toISOString(),
+              },
+              {
+                billing: pendingBillingRef.current ?? undefined,
+                onSaved: (balance) => {
+                  pendingTokenCostRef.current = 0;
+                  pendingBillingRef.current = null;
+                  if (typeof balance === "number") {
+                    void refreshBalance(balance);
+                  } else {
+                    void refreshBalance();
+                  }
+                },
+              },
+            );
+          } catch {
+            showErrorToast(
+              "Image generated but could not be cached. Check Brand assets shortly.",
+              { dedupeKey: "asset-register-failed" },
+            );
+          }
         }
       },
       onError: (err) => {
@@ -1210,6 +1236,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
     lastReportedErrorRef.current = null;
     pendingTokenCostRef.current = tokenCost;
+    pendingBillingRef.current = {
+      tokenCost,
+      generationId: crypto.randomUUID(),
+      presetCount: remixingLibrary ? 0 : selectedPresets.length,
+      hasPrompt: prompt.trim().length > 0,
+      isLibraryRemix: remixingLibrary,
+      quantity,
+      resolution: remixingLibrary ? "1K" : resolution,
+      referenceImageCount: composerReferences.length,
+    };
     lastPresetPhaseRef.current = null;
     setGenerationPresetTitle(selectedPresets[0]?.title);
 
@@ -1308,6 +1344,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const stopGeneration = useCallback(() => {
     stopRef.current?.();
     pendingTokenCostRef.current = 0;
+    pendingBillingRef.current = null;
     setIsStartingGeneration(false);
     setPendingUserTurnText(null);
     setGenerationStartedAt(null);
@@ -1339,6 +1376,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     if (isGenerating) {
       stopRef.current?.();
       pendingTokenCostRef.current = 0;
+      pendingBillingRef.current = null;
     }
     setGenerationStartedAt(null);
     setLibraryTemplateId(null);
