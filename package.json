@@ -12,6 +12,7 @@
     "library:sync:brand-assets": "node --env-file=.env.local --import tsx scripts/sync-library-catalog.ts",
     "auth:templates:sync": "node --env-file=.env.local --import tsx scripts/sync-supabase-auth-templates.ts",
     "stripe:listen": "node --env-file=.env.local --import tsx scripts/stripe-listen.ts",
+    "stripe:seed-prices": "node --env-file=.env.local --import tsx scripts/stripe-seed-prices.ts",
     "stripe": "node --env-file=.env.local --import tsx scripts/stripe-cli.ts"
   },
   "dependencies": {
