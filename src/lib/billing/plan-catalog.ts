@@ -14,6 +14,9 @@ export type PlanBadge = "most_popular" | "best_value";
 /** Typical 2K Ideas generation (no reference images) ≈ 4 tokens. */
 export const TOKENS_PER_IMAGE_ESTIMATE = 4;
 
+/** When false, the one-time welcome pack is hidden from UI/APIs and checkout is blocked. */
+export const WELCOME_OFFER_ENABLED = false;
+
 const ANNUAL_MONTHS_CHARGED = 10;
 const ANNUAL_MONTHS_GRANTED = 12;
 

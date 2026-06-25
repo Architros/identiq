@@ -7,6 +7,7 @@ import {
 import {
   resolveCustomPack,
   resolvePack,
+  WELCOME_OFFER_ENABLED,
   type BillingInterval,
   type PackPlanId,
   type ResolvedPack,
@@ -25,6 +26,9 @@ export async function resolveCheckoutPack(
   const interval = input.interval ?? "monthly";
 
   if (input.planId === "welcome") {
+    if (!WELCOME_OFFER_ENABLED) {
+      throw new Error("Welcome offer is not available");
+    }
     const plan = await getPlan("welcome");
     if (plan) return resolvePackFromDb(plan, "monthly");
     return resolvePack("welcome", "monthly");
