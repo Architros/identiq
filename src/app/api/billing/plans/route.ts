@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
-import { formatUsd, type BillingInterval } from "@/lib/billing/plan-catalog";
+import {
+  formatUsd,
+  WELCOME_OFFER_ENABLED,
+  type BillingInterval,
+} from "@/lib/billing/plan-catalog";
 import {
   listSubscriptionDisplayPacksFromDb,
   welcomeDisplayFromDb,
@@ -18,11 +22,13 @@ export async function GET(request: Request) {
       searchParams.get("interval") === "annual" ? "annual" : "monthly"
     ) as BillingInterval;
 
-    const [dbPlans, welcomeEligible, scaleTiers] = await Promise.all([
+    const [dbPlans, redeemedWelcome, scaleTiers] = await Promise.all([
       listActivePlans(),
-      userHasRedeemedWelcomeOffer(user.id).then((redeemed) => !redeemed),
+      userHasRedeemedWelcomeOffer(user.id),
       listActiveScalePlanPrices(),
     ]);
+    const welcomeEligible =
+      WELCOME_OFFER_ENABLED && !redeemedWelcome;
 
     const packs = listSubscriptionDisplayPacksFromDb(dbPlans, interval);
     const welcomePlan = dbPlans.find((p) => p.id === "welcome") ?? null;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/api/with-auth";
 import { getBillingProvider } from "@/lib/billing";
+import { WELCOME_OFFER_ENABLED } from "@/lib/billing/plan-catalog";
 
 const bodySchema = z.object({
   planId: z.enum(["starter", "pro", "studio", "welcome", "custom"]),
@@ -28,6 +29,13 @@ export async function POST(request: Request) {
     if (planId === "custom" && customTokenAmount == null) {
       return NextResponse.json(
         { error: "customTokenAmount is required for custom packs" },
+        { status: 400 },
+      );
+    }
+
+    if (planId === "welcome" && !WELCOME_OFFER_ENABLED) {
+      return NextResponse.json(
+        { error: "Welcome offer is not available" },
         { status: 400 },
       );
     }

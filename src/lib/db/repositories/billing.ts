@@ -4,7 +4,11 @@ import {
   normalizeSubscriptionPlanId,
 } from "@/lib/billing/subscription-status";
 
-import type { BillingInterval, PackPlanId } from "@/lib/billing/plan-catalog";
+import {
+  WELCOME_OFFER_ENABLED,
+  type BillingInterval,
+  type PackPlanId,
+} from "@/lib/billing/plan-catalog";
 import {
   monthlyTokenBasisFromGrantedCustomTokens,
   resolveStorageLimitForPlan,
@@ -105,6 +109,9 @@ export async function createCheckoutSession(params: {
   if (!plan) throw new Error("Plan not found");
 
   if (params.planId === "welcome") {
+    if (!WELCOME_OFFER_ENABLED) {
+      throw new Error("Welcome offer is not available");
+    }
     const redeemed = await userHasRedeemedWelcomeOffer(params.userId);
     if (redeemed) {
       throw new Error("Welcome offer has already been claimed");

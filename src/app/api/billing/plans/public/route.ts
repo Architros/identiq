@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { formatUsd, type BillingInterval } from "@/lib/billing/plan-catalog";
+import {
+  formatUsd,
+  WELCOME_OFFER_ENABLED,
+  type BillingInterval,
+} from "@/lib/billing/plan-catalog";
 import {
   listSubscriptionDisplayPacksFromDb,
   welcomeDisplayFromDb,
@@ -30,7 +34,7 @@ export async function GET(request: Request) {
   const packs = listSubscriptionDisplayPacksFromDb(dbPlans, interval);
   const welcomePlan = dbPlans.find((p) => p.id === "welcome") ?? null;
   const welcomeDisplay = welcomeDisplayFromDb(welcomePlan);
-  const welcomeEligible = welcomeDisplay != null;
+  const welcomeEligible = WELCOME_OFFER_ENABLED && welcomeDisplay != null;
 
   const body = NextResponse.json({
     interval,
